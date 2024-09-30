@@ -1,0 +1,4 @@
+#ifndef DISCAMB_DEC_CONFIG_H
+#define DISCAMB_DEC_CONFIG_H
+    #cmakedefine CMAKE_DETECTED_WIN32
+#endif

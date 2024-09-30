@@ -1,0 +1,42 @@
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../third-party/vflib/vflib-2.0.6/include")
+
+SET(TARGET_H 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/atom_typing_utilities.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/AtomInStructureDescriptors.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/AtomType.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/ChiralityComparator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/CrystalAtomTypeAssigner.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/GraphVertex.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/GraphVertexComparator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystem.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystemAssigner.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MatchMap.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MolecularAtomTypeAssigner.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MolecularLcsCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/RingMatchChecker.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/RingMatchCheckerTypeType.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/StructureWithDescriptors.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/TypeMatchAlgorithm.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/TypeTree.h"
+    )
+
+SET(TARGET_SRC
+    atom_typing_utilities.cpp 
+    AtomType.cpp 
+    ChiralityComparator.cpp 
+    CrystalAtomTypeAssigner.cpp 
+    GraphVertex.cpp 
+    GraphVertexComparator.cpp 
+    LocalCoordinateSystem.cpp 
+    LocalCoordinateSystemAssigner.cpp 
+    LocalCoordinateSystemCalculator.cpp 
+    MolecularAtomTypeAssigner.cpp 
+    MolecularLcsCalculator.cpp 
+    RingMatchChecker.cpp
+    RingMatchCheckerTypeType.cpp
+    StructureWithDescriptors.cpp 
+    TypeMatchAlgorithm.cpp
+    TypeTree.cpp)
+
+SETUP_OBJ_LIB(AtomTyping)

@@ -1,0 +1,16 @@
+file src/argraph.cc has been modified by removing keyword register in line 253 and 283.
+in both cases
+register int a, b, c;
+was changed to:
+int a, b, c;
+
+file include/argloader.h
+has been modified, the following lines were added starting from line 67:
+
+#ifndef _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
+#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
+#endif
+
+to silence msvc warning caused by deprecation of strstream, 
+warning caused by line: #include <strstream>
+

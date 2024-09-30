@@ -1,0 +1,15 @@
+################################################################################
+#                                    AUTHOR                                    #
+################################################################################
+Szymon Migacz, mailto: szmigacz(at)gmail.com
+
+
+################################################################################
+#                                 REQUIREMENTS                                 #
+################################################################################
+- NVIDIA Kepler (GK110 or GK110b, arch sm_35) GPU
+- CUDA Toolkit ( >= 6.0)
+
+Code was tested using Tesla K20C and GeForce Titan Black.
+CUDA Toolkit (with appropriate driver) 6.0 or 6.5 (6.5 offers slightly improved
+performance).
