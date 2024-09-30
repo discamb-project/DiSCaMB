@@ -8,7 +8,6 @@
 #include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
 #include "discamb/IO/MATTS_BankReader.h"
-#include "discamb/Scattering/MATTS_Default.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 
 
@@ -126,16 +125,6 @@ namespace discamb {
 
     }
 
-
-    void BankHcFunctions::setDefault(
-        bool addSpherical)
-    {
-        string bankString;
-        stringstream bankStream;
-        default_ubdb_bank_string(bankString);
-        bankStream << bankString;
-        set(bankStream, addSpherical);
-    }
 
     std::complex<double> BankHcFunctions::calculateComplex(
         HC_ModelParameters& hcParams,

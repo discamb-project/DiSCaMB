@@ -18,7 +18,6 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HcFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HirshfeldAtomModelSettings.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/IamFormFactorCalculationsManager.h" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/MATTS_Default.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/multipole_scattering.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactor.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactorsTable.h"
@@ -56,7 +55,6 @@ SET(TARGET_SRC
     HcFormFactorCalculationsManager.cpp
     HirshfeldAtomModelSettings.cpp
     IamFormFactorCalculationsManager.cpp
-    MATTS_Default.cpp
     multipole_scattering.cpp 
     NGaussianFormFactorsTable.cpp 
     NGaussianFormFactor.cpp 

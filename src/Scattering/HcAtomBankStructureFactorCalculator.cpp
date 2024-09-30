@@ -16,7 +16,7 @@
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/Scattering/taam_utilities.h"
-#include "discamb/Scattering/MATTS_Default.h"
+
 
 #include <omp.h>
 
@@ -141,11 +141,12 @@ namespace discamb {
 
             if (bnkFiles.empty())
             {
-                string bankString;
-                stringstream bankStream;
-                default_ubdb_bank_string(bankString);
-                bankStream << bankString;
-                bankReader.read(bankStream, types, hcParameters, bankSettings, true);
+                on_error::throwException("no bank file specified or found in working directory", __FILE__, __LINE__);
+                //string bankString;
+                //stringstream bankStream;
+                //default_ubdb_bank_string(bankString);
+                //bankStream << bankString;
+                //bankReader.read(bankStream, types, hcParameters, bankSettings, true);
             }
             else
             {

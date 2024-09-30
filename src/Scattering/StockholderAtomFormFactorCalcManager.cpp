@@ -30,7 +30,6 @@
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/IO/MATTS_BankReader.h"
-#include "discamb/Scattering/MATTS_Default.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/AtomTyping/atom_typing_utilities.h"
 
@@ -1690,109 +1689,109 @@ namespace discamb {
 	}
 
 
-	void StockholderAtomFormFactorCalcManager::setMultipolesfromTaam()
-	{
-        MATTS_BankReader bankReader;
-		vector<AtomType> atomTypes;
-		vector<AtomTypeHC_Parameters> hcParameters;
-		BankSettings bankSettings;
-		string bankString;
-		stringstream bankStream;
-		default_ubdb_bank_string(bankString);
-		bankStream << bankString;
-		bankReader.read(bankStream, atomTypes, hcParameters, bankSettings, true);
+	//void StockholderAtomFormFactorCalcManager::setMultipolesfromTaam()
+	//{
+ //       MATTS_BankReader bankReader;
+	//	vector<AtomType> atomTypes;
+	//	vector<AtomTypeHC_Parameters> hcParameters;
+	//	BankSettings bankSettings;
+	//	string bankString;
+	//	stringstream bankStream;
+	//	default_ubdb_bank_string(bankString);
+	//	bankStream << bankString;
+	//	bankReader.read(bankStream, atomTypes, hcParameters, bankSettings, true);
 
 
-		CrystalAtomTypeAssigner assigner;
-		assigner.setAtomTypes(atomTypes);
-		assigner.setDescriptorsSettings(DescriptorsSettings());
-		vector < LocalCoordinateSystem<AtomInCrystalID> > lcs;
-		vector<int> types;
-		assigner.assign(mCrystal, types, lcs);
+	//	CrystalAtomTypeAssigner assigner;
+	//	assigner.setAtomTypes(atomTypes);
+	//	assigner.setDescriptorsSettings(DescriptorsSettings());
+	//	vector < LocalCoordinateSystem<AtomInCrystalID> > lcs;
+	//	vector<int> types;
+	//	assigner.assign(mCrystal, types, lcs);
 
-		ofstream out("TAAM_assignment");
-		assigner.printAssignment(out, mCrystal, types, lcs);
-		
+	//	ofstream out("TAAM_assignment");
+	//	assigner.printAssignment(out, mCrystal, types, lcs);
+	//	
 
-		HC_ModelParameters multipoleModelPalameters;
-
-
-		vector<int> atomicNumbers;
-		vector<int> nonMultipolarAtoms;
-		crystal_structure_utilities::atomicNumbers(mCrystal, atomicNumbers);
-        taam_utilities::type_assignment_to_unscaled_HC_parameters(
-			hcParameters, types, atomicNumbers,
-			multipoleModelPalameters, true, nonMultipolarAtoms);
-
-        vector<bool> nonMultipolar(atomicNumbers.size(), false);
-        for (auto atomIdx : nonMultipolarAtoms)
-            nonMultipolar[atomIdx] = true;
-
-		vector<shared_ptr<LocalCoordinateSystemInCrystal> > lcaCalculators;
-		for (auto coordinateSystem : lcs)
-			lcaCalculators.push_back(
-				shared_ptr<LocalCoordinateSystemInCrystal>(
-					new LocalCoordinateSystemCalculator(coordinateSystem, mCrystal)));
-
-		
-		vector<double> coreElectronCharges;
-		for (auto& wfn : multipoleModelPalameters.wfn_parameters)
-		{
-			double q_core_el = 0;
-			for (auto idx : wfn.core_orbitals_indices)
-				q_core_el -= wfn.orbital_occupancy[idx];
-			coreElectronCharges.push_back(q_core_el);
-		}
-
-		int atomIdx, nAtoms = mCrystal.atoms.size();
-		int typeIdx, wfnTypeIdx;
-		Matrix3d localCoordinatesMatrix;
-        mMultipoles.assign(nAtoms, ElectricMultipoles());
-
-		out << "\n\n Multipoles from TAAM (charge, dipole):\n\n";
-
-		for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-		{
-			out << setw(8) << mCrystal.atoms[atomIdx].label << " ";
-
-            if (nonMultipolar[atomIdx])
-            {
-                mMultipoles[atomIdx].charge = 0;
-                mMultipoles[atomIdx].dipole = Vector3d();
-            }
-            else
-            {
-                typeIdx = multipoleModelPalameters.atom_to_type_map[atomIdx];
-                wfnTypeIdx = multipoleModelPalameters.atom_to_wfn_map[atomIdx];
-
-                mMultipoles[atomIdx].charge = atomicNumbers[atomIdx] -
-                    multipoleModelPalameters.type_parameters[typeIdx].p_val +
-                    coreElectronCharges[wfnTypeIdx];
-                lcaCalculators[atomIdx]->calculate(localCoordinatesMatrix, mCrystal);
-                if (multipoleModelPalameters.type_parameters[typeIdx].p_lm.size() > 1)
-                {
-                    vector<double>& p = multipoleModelPalameters.type_parameters[typeIdx].p_lm[1];
-                    mMultipoles[atomIdx].dipole =
-                        dipoleMoment(
-                            { p[2],p[0],p[1] },
-                            localCoordinatesMatrix,
-                            multipoleModelPalameters.wfn_parameters[wfnTypeIdx].deformation_valence_power[1],
-                            multipoleModelPalameters.type_parameters[typeIdx].kappa_deformation_valence,
-                            multipoleModelPalameters.wfn_parameters[wfnTypeIdx].deformation_valence_exponent);
-                }
-                else
-                    mMultipoles[atomIdx].dipole.set(0.0, 0.0, 0.0);
-            }
-
-			out << setw(12) << setprecision(4) << fixed << mMultipoles[atomIdx].charge
-				<< setw(12) << mMultipoles[atomIdx].dipole[0]
-				<< setw(12) << mMultipoles[atomIdx].dipole[1]
-				<< setw(12) << mMultipoles[atomIdx].dipole[2] << "\n";
-		}
+	//	HC_ModelParameters multipoleModelPalameters;
 
 
-		out.close();
-	}
+	//	vector<int> atomicNumbers;
+	//	vector<int> nonMultipolarAtoms;
+	//	crystal_structure_utilities::atomicNumbers(mCrystal, atomicNumbers);
+ //       taam_utilities::type_assignment_to_unscaled_HC_parameters(
+	//		hcParameters, types, atomicNumbers,
+	//		multipoleModelPalameters, true, nonMultipolarAtoms);
+
+ //       vector<bool> nonMultipolar(atomicNumbers.size(), false);
+ //       for (auto atomIdx : nonMultipolarAtoms)
+ //           nonMultipolar[atomIdx] = true;
+
+	//	vector<shared_ptr<LocalCoordinateSystemInCrystal> > lcaCalculators;
+	//	for (auto coordinateSystem : lcs)
+	//		lcaCalculators.push_back(
+	//			shared_ptr<LocalCoordinateSystemInCrystal>(
+	//				new LocalCoordinateSystemCalculator(coordinateSystem, mCrystal)));
+
+	//	
+	//	vector<double> coreElectronCharges;
+	//	for (auto& wfn : multipoleModelPalameters.wfn_parameters)
+	//	{
+	//		double q_core_el = 0;
+	//		for (auto idx : wfn.core_orbitals_indices)
+	//			q_core_el -= wfn.orbital_occupancy[idx];
+	//		coreElectronCharges.push_back(q_core_el);
+	//	}
+
+	//	int atomIdx, nAtoms = mCrystal.atoms.size();
+	//	int typeIdx, wfnTypeIdx;
+	//	Matrix3d localCoordinatesMatrix;
+ //       mMultipoles.assign(nAtoms, ElectricMultipoles());
+
+	//	out << "\n\n Multipoles from TAAM (charge, dipole):\n\n";
+
+	//	for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+	//	{
+	//		out << setw(8) << mCrystal.atoms[atomIdx].label << " ";
+
+ //           if (nonMultipolar[atomIdx])
+ //           {
+ //               mMultipoles[atomIdx].charge = 0;
+ //               mMultipoles[atomIdx].dipole = Vector3d();
+ //           }
+ //           else
+ //           {
+ //               typeIdx = multipoleModelPalameters.atom_to_type_map[atomIdx];
+ //               wfnTypeIdx = multipoleModelPalameters.atom_to_wfn_map[atomIdx];
+
+ //               mMultipoles[atomIdx].charge = atomicNumbers[atomIdx] -
+ //                   multipoleModelPalameters.type_parameters[typeIdx].p_val +
+ //                   coreElectronCharges[wfnTypeIdx];
+ //               lcaCalculators[atomIdx]->calculate(localCoordinatesMatrix, mCrystal);
+ //               if (multipoleModelPalameters.type_parameters[typeIdx].p_lm.size() > 1)
+ //               {
+ //                   vector<double>& p = multipoleModelPalameters.type_parameters[typeIdx].p_lm[1];
+ //                   mMultipoles[atomIdx].dipole =
+ //                       dipoleMoment(
+ //                           { p[2],p[0],p[1] },
+ //                           localCoordinatesMatrix,
+ //                           multipoleModelPalameters.wfn_parameters[wfnTypeIdx].deformation_valence_power[1],
+ //                           multipoleModelPalameters.type_parameters[typeIdx].kappa_deformation_valence,
+ //                           multipoleModelPalameters.wfn_parameters[wfnTypeIdx].deformation_valence_exponent);
+ //               }
+ //               else
+ //                   mMultipoles[atomIdx].dipole.set(0.0, 0.0, 0.0);
+ //           }
+
+	//		out << setw(12) << setprecision(4) << fixed << mMultipoles[atomIdx].charge
+	//			<< setw(12) << mMultipoles[atomIdx].dipole[0]
+	//			<< setw(12) << mMultipoles[atomIdx].dipole[1]
+	//			<< setw(12) << mMultipoles[atomIdx].dipole[2] << "\n";
+	//	}
+
+
+	//	out.close();
+	//}
 
 //	bool StockholderAtomFormFactorCalcManager::tryToFindAndReadMultipolesFile(
 //		int &previousStep, string &fName)
@@ -1941,7 +1940,7 @@ namespace discamb {
 
 			if (useTaamMultipolesIfNoOtherProvided && !hasMultipolesFromFile)
 			{
-				setMultipolesfromTaam();
+				//setMultipolesfromTaam();
 			}
 		}
 		else
