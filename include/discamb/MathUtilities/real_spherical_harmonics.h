@@ -2,7 +2,7 @@
 #define _DISCAMB_MATHUTILITIES_REALSPHERICALHARMONICS_H_
 
 #include "discamb/MathUtilities/Vector3.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 #include <cstddef>
 #include <vector>

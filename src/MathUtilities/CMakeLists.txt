@@ -5,7 +5,7 @@ SET(TARGET_H
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/graph_algorithms.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/InjectionsIterator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/lebedev_laikov.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/MathUtilities.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/math_utilities.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/Matrix3.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/MixedRadixNumberIterator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/MathUtilities/molecular_radial_grids.h"

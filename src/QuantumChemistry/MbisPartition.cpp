@@ -2,7 +2,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/IO/wfn_io.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
 #include "discamb/MathUtilities/radial_grid.h"
 

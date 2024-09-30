@@ -3,7 +3,7 @@
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/IO/wfn_io.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/QuantumChemistry/ElectronDensityCalculator.h"
 #include "discamb/QuantumChemistry/WaveFunctionDataGeneratorRunner.h"
 

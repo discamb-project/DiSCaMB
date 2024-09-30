@@ -4,7 +4,7 @@
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/CrystalStructure/StructuralParametersConverter.h"
 

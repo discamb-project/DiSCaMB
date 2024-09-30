@@ -5,7 +5,7 @@
 #include "discamb/StructuralProperties/atom_selection.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/StructuralProperties/SimpleAIF_ScoreCalculator.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
 #include "discamb/MathUtilities/radial_grid.h"
 #include "discamb/BasicUtilities/on_error.h"

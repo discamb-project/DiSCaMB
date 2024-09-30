@@ -1,5 +1,5 @@
 #include "discamb/MathUtilities/SphericalHarmonics.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>

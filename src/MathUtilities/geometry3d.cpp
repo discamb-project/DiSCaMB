@@ -7,7 +7,7 @@
 //#include "glm/gtx/transform.hpp"
 
 #include <cmath>
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 using namespace std;
 

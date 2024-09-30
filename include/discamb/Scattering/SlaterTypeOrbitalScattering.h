@@ -2,7 +2,7 @@
 #define _DISCAMB_SCATTERING_SLATERTYPEORBITALSCATTERING_H_
 
 #include "Real.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include <vector>
 #include <cassert>
 #include <cstddef>

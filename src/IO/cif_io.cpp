@@ -6,7 +6,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 #include "builder.h"
 #include "parser.h"

@@ -17,7 +17,7 @@
 #include "discamb/IO/xyz_io.h"
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/MathUtilities/radial_grid.h"
 #include "discamb/MathUtilities/real_spherical_harmonics.h"
 //#include "discamb/QuantumChemistry/electric_multipoles.h"

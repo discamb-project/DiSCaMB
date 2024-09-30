@@ -1,5 +1,5 @@
 #include "discamb/Scattering/NumericalSphericalAtomFormFactor.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/BasicUtilities/Constants.h"
 
 #include <cmath>

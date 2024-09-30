@@ -8,7 +8,7 @@
 #include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "NGaussianFormFactor.h"
 
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "NGaussianFormFactorsTable.h"
 

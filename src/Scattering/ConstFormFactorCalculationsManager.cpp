@@ -1,6 +1,6 @@
 #include "discamb/Scattering/ConstFormFactorCalculationsManager.h"
 #include "discamb/BasicUtilities/on_error.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 using namespace std;
 

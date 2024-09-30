@@ -1,6 +1,6 @@
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 #include <omp.h>
 

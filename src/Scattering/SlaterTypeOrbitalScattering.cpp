@@ -1,5 +1,5 @@
 #include "discamb/Scattering/SlaterTypeOrbitalScattering.h"
-#include "discamb/MathUtilities/MathUtilities.h"
+#include "discamb/MathUtilities/math_utilities.h"
 
 namespace discamb {
 
