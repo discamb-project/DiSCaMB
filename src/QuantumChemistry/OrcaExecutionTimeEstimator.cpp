@@ -1,6 +1,6 @@
 #include "discamb/QuantumChemistry/OrcaExecutionTimeEstimator.h"
 #include "discamb/QuantumChemistry/basis_set_data.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/MathUtilities/Vector3.h"
 
 using namespace std;

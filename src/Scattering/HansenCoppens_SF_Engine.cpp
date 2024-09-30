@@ -4,8 +4,8 @@
 #include "discamb/Scattering/NGaussianFormFactorsTable.h"
 #include "discamb/Scattering/scattering_utilities.h"
 #include "discamb/MathUtilities/MathUtilities.h"
-#include "discamb/BasicUtilities/OnError.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/Timer.h"
 
 #include <cmath>

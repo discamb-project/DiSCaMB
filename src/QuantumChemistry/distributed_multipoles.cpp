@@ -1,8 +1,8 @@
 #include "discamb/QuantumChemistry/distributed_multipoles.h"
 
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/utilities.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/StructuralProperties/structural_properties.h"

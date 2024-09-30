@@ -1,6 +1,6 @@
 #include "discamb/Scattering/ElectronFromXrayFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 using namespace std;
 

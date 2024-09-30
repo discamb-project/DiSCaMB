@@ -6,9 +6,9 @@
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/StructuralProperties/SimpleAIF_ScoreCalculator.h"
 #include "discamb/MathUtilities/MathUtilities.h"
-#include "discamb/MathUtilities/LebedevGrid.h"
-#include "discamb/MathUtilities/RadialGrid.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/MathUtilities/lebedev_laikov.h"
+#include "discamb/MathUtilities/radial_grid.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 using namespace std;
 

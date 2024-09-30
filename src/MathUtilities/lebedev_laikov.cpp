@@ -1,4 +1,4 @@
-#include "discamb/MathUtilities/LebedevGrid.h"
+#include "discamb/MathUtilities/lebedev_laikov.h"
 
 #include <vector>
 #include <map>

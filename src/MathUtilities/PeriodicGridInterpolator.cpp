@@ -1,7 +1,7 @@
 #include "discamb/MathUtilities/PeriodicGridInterpolator.h"
 #include "discamb/MathUtilities/MathUtilities.h"
 #include "discamb/MathUtilities/algebra3d.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 using namespace std;
 

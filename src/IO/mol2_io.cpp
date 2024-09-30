@@ -1,10 +1,10 @@
 
 #include "discamb/IO/mol2_io.h"
-#include "discamb/BasicUtilities/OnError.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
 #include "discamb/StructuralProperties/GenericConnectivityAlgorithm.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 #include <fstream>
 

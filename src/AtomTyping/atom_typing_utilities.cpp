@@ -1,11 +1,11 @@
 #include "discamb/AtomTyping/atom_typing_utilities.h"
 #include "discamb/AtomTyping/TypeMatchAlgorithm.h"
 #include "discamb/AtomTyping/TypeTree.h"
-#include "discamb/MathUtilities/GraphAlgorithms.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
 #include "discamb/StructuralProperties/RingCalculator.h"
 #include "discamb/HC_Model/ClementiRoettiData.h"
 #include "discamb/HC_Model/DeformationValenceParameters.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 #include <set>
 #include <map>

@@ -1,8 +1,8 @@
 #include "discamb/IO/olex2_io.h"
 #include "npy.hpp"
 
-#include "discamb/BasicUtilities/StringUtilities.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/string_utilities.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <fstream>
 #include <sstream>

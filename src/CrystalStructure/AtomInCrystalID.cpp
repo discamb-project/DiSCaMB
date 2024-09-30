@@ -1,5 +1,5 @@
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <algorithm>
 

@@ -1,5 +1,5 @@
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/MathUtilities/MathUtilities.h"
 
 #include <fstream>

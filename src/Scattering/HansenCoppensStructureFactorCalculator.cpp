@@ -11,10 +11,10 @@
     #include "cuda/HC_SF_GPU.h" 
 #endif
 
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
 #include "discamb/HC_Model/HC_WfnData.h"
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/Scattering/scattering_utilities.h"
 

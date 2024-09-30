@@ -1,6 +1,6 @@
 #include "discamb/Scattering/multipole_scattering.h"
 #include "discamb/Scattering/SlaterTypeOrbitalScattering.h"
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "discamb/HC_Model/HC_WfnData.h"
 
 #include <cmath>

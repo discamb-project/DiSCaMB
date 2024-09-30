@@ -1,6 +1,6 @@
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 using namespace std;
 

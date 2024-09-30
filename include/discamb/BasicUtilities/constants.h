@@ -5,7 +5,7 @@
 #include <exception>
 
 #include "Exception.h"
-#include "StringUtilities.h"
+#include "string_utilities.h"
 
 namespace discamb{
 

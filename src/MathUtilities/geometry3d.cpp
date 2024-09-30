@@ -1,6 +1,6 @@
 #include "discamb/MathUtilities/geometry3d.h"
 #include "discamb/MathUtilities/algebra3d.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 //#include "glm/glm.hpp"
 //#include "glm/gtx/vector_angle.hpp"

@@ -5,11 +5,11 @@
 #include "Real.h"
 #include "SF_Engine_DataTypes.h"
 #include "SF_CalcDataTypes.h"
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "NGaussianFormFactor.h"
 
 #include "discamb/MathUtilities/MathUtilities.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "NGaussianFormFactorsTable.h"
 
 #include <cassert>

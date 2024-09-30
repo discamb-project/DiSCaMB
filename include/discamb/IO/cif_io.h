@@ -6,7 +6,7 @@
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/AtomTyping/LocalCoordinateSystem.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 
 

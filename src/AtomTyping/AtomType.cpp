@@ -1,8 +1,8 @@
 #include "discamb/AtomTyping/AtomType.h"
-#include "discamb/MathUtilities/GraphAlgorithms.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
-#include "discamb/BasicUtilities/OnError.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
+#include "discamb/BasicUtilities/string_utilities.h"
+#include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 #include <iostream>
 #include <map>

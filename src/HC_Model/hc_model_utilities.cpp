@@ -1,6 +1,6 @@
 #include "discamb/HC_Model/hc_model_utilities.h"
 #include "discamb/MathUtilities/SphConverter.h"
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
 
 using namespace std;
 

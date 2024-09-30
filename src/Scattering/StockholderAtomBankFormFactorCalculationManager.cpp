@@ -1,13 +1,13 @@
 #include "discamb/Scattering/StockholderAtomBankFormFactorCalculationManager.h"
 
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/Constants.h"
 #include "discamb/IO/atom_type_io.h"
 #include "discamb/IO/tham_io.h"
-#include "discamb/MathUtilities/RadialGrid.h"
-#include "discamb/MathUtilities/LebedevGrid.h"
+#include "discamb/MathUtilities/radial_grid.h"
+#include "discamb/MathUtilities/lebedev_laikov.h"
 #include "discamb/MathUtilities/MathUtilities.h"
-#include "discamb/MathUtilities/RealSphericalHarmonics.h"
+#include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 
 

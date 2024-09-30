@@ -1,9 +1,9 @@
 #include "discamb/AtomTyping/TypeMatchAlgorithm.h"
-#include "discamb/MathUtilities/GraphAlgorithms.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
 #include "discamb/AtomTyping/GraphVertexComparator.h"
 
 
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include "argedit.h"
 #include "argraph.h"

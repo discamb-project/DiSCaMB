@@ -1,5 +1,5 @@
 #include "discamb/StructuralProperties/MolecularDisorder.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 using namespace std;
 namespace discamb {

@@ -1,8 +1,8 @@
 #include "discamb/QuantumChemistry/WaveFunctionCalculationData.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
 
-#include "discamb/BasicChemistry/PeriodicTable.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 using namespace std;
 

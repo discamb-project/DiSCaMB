@@ -1,5 +1,5 @@
 #include "discamb/BasicUtilities/parse_cmd.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 using namespace discamb;
 using namespace std;

@@ -1,6 +1,6 @@
 #include "discamb/CrystalStructure/ConstantLocalCoordinateSystem.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/string_utilities.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 using namespace std;
 

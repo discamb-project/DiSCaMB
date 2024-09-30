@@ -1,7 +1,7 @@
 #include "discamb/StructuralProperties/SimpleAIF_ScoreCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
-#include "discamb/MathUtilities/GraphAlgorithms.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
 
 using namespace std;
 

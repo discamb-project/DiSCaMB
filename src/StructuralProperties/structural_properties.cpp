@@ -2,7 +2,7 @@
 #include "discamb/BasicChemistry/chemical_element_data.h"
 
 #include "discamb/BasicUtilities/Constants.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include "discamb/CrystalStructure/UnitCellContent.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
@@ -17,7 +17,7 @@
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
 #include "discamb/StructuralProperties/GenericConnectivityAlgorithm.h"
 
-#include "discamb/MathUtilities/GraphAlgorithms.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
 #include "discamb/IO/MATTS_BankReader.h"
 #include "discamb/AtomTyping/MolecularAtomTypeAssigner.h"
 
@@ -31,7 +31,7 @@
 
 //--------
 #include <fstream>
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 //--------
 
 using namespace std;

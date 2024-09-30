@@ -1,7 +1,7 @@
 #include "discamb/QuantumChemistry/ElectronDensityPartition.h"
 #include "discamb/QuantumChemistry/HirshfeldPartition.h"
 #include "discamb/QuantumChemistry/MbisPartition.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 using namespace std;
 

@@ -1,9 +1,9 @@
 #include "discamb/IO/atom_type_io.h"
 #include "discamb/IO/MATTS_BankReader.h"
-#include "discamb/BasicUtilities/OnError.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 #include "json.hpp"
 

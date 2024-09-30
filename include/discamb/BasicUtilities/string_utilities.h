@@ -1,6 +1,6 @@
 #pragma once
 
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <map>
 #include <sstream>

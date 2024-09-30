@@ -1,7 +1,7 @@
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
 
 #include "discamb/StructuralProperties/RingCalculator.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include <algorithm>

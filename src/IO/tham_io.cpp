@@ -1,5 +1,5 @@
 #include "discamb/IO/tham_io.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <fstream>
 

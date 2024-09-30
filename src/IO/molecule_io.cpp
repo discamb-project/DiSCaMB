@@ -1,7 +1,7 @@
 #include "discamb/IO/molecule_io.h"
 #include "discamb/IO/mol2_io.h"
 #include "discamb/IO/xyz_io.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <filesystem>
 

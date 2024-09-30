@@ -1,5 +1,5 @@
 #include "discamb/BasicUtilities/file_system_utilities.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb//MathUtilities/MixedRadixNumberIterator.h"
 
 #include <filesystem>

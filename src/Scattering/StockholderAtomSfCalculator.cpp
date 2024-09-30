@@ -1,9 +1,9 @@
 #include "discamb/Scattering/StockholderAtomSfCalculator.h"
 
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/discamb_env.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/IO/hkl_io.h"
 #include "discamb/IO/mol2_io.h"

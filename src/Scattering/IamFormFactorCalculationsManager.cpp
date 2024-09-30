@@ -1,8 +1,8 @@
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/Scattering/NGaussianFormFactorsTable.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <map>
 

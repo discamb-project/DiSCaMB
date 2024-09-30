@@ -1,13 +1,13 @@
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 
 
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/CrystalStructure/LocalCoordinateSystemInCrystal.h"
 #include "discamb/HC_Model/ClementiRoettiData.h"
 #include "discamb/HC_Model/DeformationValenceParameters.h"
 
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/Scattering/AnyHcCalculator.h"
 #include "discamb/Scattering/AnyIamCalculator.h"

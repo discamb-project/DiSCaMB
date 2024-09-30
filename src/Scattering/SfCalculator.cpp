@@ -1,7 +1,7 @@
 
 #include "discamb/Scattering/SfCalculator.h"
 
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/Scattering/AnyHcCalculator.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"

@@ -1,5 +1,5 @@
 #include "discamb/AtomTyping/GraphVertexComparator.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/MathUtilities/set_theory.h"
 
 #include <algorithm>

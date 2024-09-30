@@ -1,6 +1,6 @@
 #include "discamb/IO/xyz_io.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #include <fstream>
 #include <iomanip>

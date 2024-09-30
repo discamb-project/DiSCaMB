@@ -1,4 +1,4 @@
-#include "discamb/MathUtilities/GraphAlgorithms.h"
+#include "discamb/MathUtilities/graph_algorithms.h"
 
 using namespace std;
 

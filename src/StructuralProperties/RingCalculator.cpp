@@ -1,5 +1,5 @@
 #include "discamb/StructuralProperties/RingCalculator.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 
 #include <set>

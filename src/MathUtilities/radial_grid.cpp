@@ -1,6 +1,6 @@
-#include "discamb/MathUtilities/RadialGrid.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/MathUtilities/radial_grid.h"
+#include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/BasicUtilities/on_error.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

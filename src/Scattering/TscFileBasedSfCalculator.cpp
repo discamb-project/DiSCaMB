@@ -1,7 +1,7 @@
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 
 #include <fstream>
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
 #include "discamb/BasicUtilities/Timer.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"

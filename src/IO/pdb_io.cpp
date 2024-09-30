@@ -1,5 +1,5 @@
 #include "discamb/IO/pdb_io.h"
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 
 #include <fstream>

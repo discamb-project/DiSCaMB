@@ -1,8 +1,8 @@
 #include "discamb/QuantumChemistry/SphericalAtomicDensity.h"
 
-#include "discamb/BasicUtilities/StringUtilities.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/IO/wfn_io.h"
-#include "discamb/MathUtilities/LebedevGrid.h"
+#include "discamb/MathUtilities/lebedev_laikov.h"
 #include "discamb/MathUtilities/MathUtilities.h"
 #include "discamb/QuantumChemistry/ElectronDensityCalculator.h"
 #include "discamb/QuantumChemistry/WaveFunctionDataGeneratorRunner.h"

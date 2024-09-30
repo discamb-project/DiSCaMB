@@ -1,7 +1,7 @@
 #ifndef _DISCAMB_BASICCHEMISTRY_CHEMICAL_ELEMENT_DATA_H_
 #define _DISCAMB_BASICCHEMISTRY_CHEMICAL_ELEMENT_DATA_H_
 
-#include "discamb/BasicChemistry/PeriodicTable.h"
+#include "discamb/BasicChemistry/periodic_table.h"
 
 #include <vector>
 

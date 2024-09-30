@@ -1,5 +1,5 @@
 #include "discamb/CrystalStructure/SpaceGroup.h"
-#include "discamb/BasicUtilities/OnError.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/MathUtilities/algebra3d.h"
 
 #include <algorithm>
