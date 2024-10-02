@@ -1,12 +1,12 @@
 #include "discamb/BasicChemistry/chemical_element_data.h"
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 
 
 namespace {
 
 
-    //Beatriz Cordero, VerÛnica GÛmez, Ana E. Platero-Prats, Marc RevÈs, 
-    // Jorge EcheverrÌa, Eduard Cremades, Flavia Barrag·n and Santiago Alvarez. 
+    //Beatriz Cordero, Ver√≥nica G√≥mez, Ana E. Platero-Prats, Marc Rev√©s, 
+    // Jorge Echeverr√≠a, Eduard Cremades, Flavia Barrag√°n and Santiago Alvarez. 
     // Covalent radii revisited. Dalton Trans., 2008, 2832-2838	
     // au
     const double _covalentRadius[] = {

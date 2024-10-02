@@ -1,6 +1,6 @@
 #include "discamb/HC_Model/ClementiRaimondiData.h"
 
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
 

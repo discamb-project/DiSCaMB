@@ -1,7 +1,7 @@
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
 #include "discamb/BasicChemistry/chemical_element_data.h"
 
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 
 #include <cmath>
 
