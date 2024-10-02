@@ -1,7 +1,7 @@
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicChemistry/chemical_element_data.h"
 
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/BasicUtilities/on_error.h"
 
 #include "discamb/CrystalStructure/UnitCellContent.h"
@@ -792,7 +792,7 @@ namespace
     {"C(ar)-H",1.083},         // Allen 2010
     {"Z2-Csp3-H2",1.091},      // Allen 2010
     {"Z3-Csp3-H",1.098},       // Allen 2010
-    {"H-O-H",0.959},           // Woiñska et al. (2016, Sci. Adv. 2, e1600192) 
+    {"H-O-H",0.959},           // WoiÃ±ska et al. (2016, Sci. Adv. 2, e1600192) 
     {"Csp3-O-H",0.97},         // Allen 2010
     {"C(ar)-O-H",0.992},       // Allen 2010
     {"O=Csp2-O-H",1.018},      // Allen 2010

@@ -1,4 +1,4 @@
-SET(TARGET_H "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/BasicUtilities/Constants.h"
+SET(TARGET_H "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/BasicUtilities/constants.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/BasicUtilities/discamb_env.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/BasicUtilities/discamb_version.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/BasicUtilities/file_system_utilities.h"

@@ -1,7 +1,7 @@
 #include "discamb/Scattering/StockholderAtomBankFormFactorCalculationManager.h"
 
 #include "discamb/BasicUtilities/on_error.h"
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/IO/atom_type_io.h"
 #include "discamb/IO/tham_io.h"
 #include "discamb/MathUtilities/radial_grid.h"

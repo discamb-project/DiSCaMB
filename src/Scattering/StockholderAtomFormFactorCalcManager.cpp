@@ -2,7 +2,7 @@
 #include "discamb/MathUtilities/SphericalHarmonics.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/Timer.h"

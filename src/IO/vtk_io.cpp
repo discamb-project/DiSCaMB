@@ -1,6 +1,6 @@
 #include "discamb/IO/vtk_io.h"
 #include "discamb/BasicUtilities/on_error.h"
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/IO/xyz_io.h"
 #include "discamb/IO/pdb_io.h"
 
