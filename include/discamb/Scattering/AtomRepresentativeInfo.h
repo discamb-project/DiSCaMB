@@ -11,7 +11,7 @@ namespace discamb{
 
 
     struct AtomRepresentativeInfo{
-        int subsystemIdx = 0;
+        int fragmentIdx = 0;
         int idxInSubsystem = 0;
         std::string atomLabel;
         std::string symmetryCode;

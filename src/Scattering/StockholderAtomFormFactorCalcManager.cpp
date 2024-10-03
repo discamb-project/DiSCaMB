@@ -125,7 +125,7 @@ namespace discamb {
         mWfnGeneratorRunner->set(settings.wfnCalculation.qmProgramSpecificData);
 		crystal_structure_utilities::atomicNumbers(crystal, mAtomicNumbers);
         
-        setSubsystems(settings.subsystems, settings.representatives);       
+        setSubsystems(settings.crystalFragments, settings.representatives);
         setDistributedMultipoleCenters();
         printDiagnosticInfo();
 	}
@@ -134,12 +134,12 @@ namespace discamb {
     {
         if (mSettings.diagnostics.printSubsystemsToXyz)
             for (int i = 0; i < mSubsystemAtomicNumbers.size(); i++)
-                xyz_io::writeXyz(mSettings.subsystems[i].label + ".xyz", mSubsystemAtomicNumbers[i], mSubsystemAtomicPositions[i]);
+                xyz_io::writeXyz(mSettings.crystalFragments[i].label + ".xyz", mSubsystemAtomicNumbers[i], mSubsystemAtomicPositions[i]);
 
 
         if (mSettings.diagnostics.printSubsystemsToMol2)
             for (int i = 0; i < mSubsystemAtomicNumbers.size(); i++)
-                mol2_io::write(mSettings.subsystems[i].label + ".mol2", mSubsystemAtomicNumbers[i], mSubsystemAtomicPositions[i], true);
+                mol2_io::write(mSettings.crystalFragments[i].label + ".mol2", mSubsystemAtomicNumbers[i], mSubsystemAtomicPositions[i], true);
 
         if (mSettings.diagnostics.printMultipoleClustersToXyz || mSettings.diagnostics.printMultipoleClusterToMol2)
             for (int i = 0; i < mSubsystemAtomicNumbers.size(); i++)
@@ -155,9 +155,9 @@ namespace discamb {
                     atomicNumbers.push_back(periodic_table::atomicNumber(symbols.back()));
                 }
                 if (mSettings.diagnostics.printMultipoleClustersToXyz || mSettings.diagnostics.printMultipoleClusterToMol2)
-                    xyz_io::writeXyz(string("multipole_cluster_") + mSettings.subsystems[i].label + ".xyz", symbols, positions);
+                    xyz_io::writeXyz(string("multipole_cluster_") + mSettings.crystalFragments[i].label + ".xyz", symbols, positions);
                 if (mSettings.diagnostics.printMultipoleClustersToXyz || mSettings.diagnostics.printMultipoleClusterToMol2)
-                    mol2_io::write(string("multipole_cluster_")+ mSettings.subsystems[i].label + ".mol2", atomicNumbers, positions, false);
+                    mol2_io::write(string("multipole_cluster_")+ mSettings.crystalFragments[i].label + ".mol2", atomicNumbers, positions, false);
             }
 
     }
@@ -171,13 +171,13 @@ namespace discamb {
             return;
 
         UnitCellContent ucContent(mCrystal);
-        int subsystemIdx, nSubsystems = mSettings.subsystems.size();
+        int subsystemIdx, nSubsystems = mSettings.crystalFragments.size();
         vector<optional<DistributedMultipoleCentersSettings> > subsystemSpecificDmSettings(nSubsystems);
-        if (!mSettings.subsystemWfnCalculation.empty())
+        if (!mSettings.fragmentWfnCalculation.empty())
             for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
-                subsystemSpecificDmSettings[subsystemIdx] = mSettings.subsystemWfnCalculation[subsystemIdx].distributedMultipoleCluster;
+                subsystemSpecificDmSettings[subsystemIdx] = mSettings.fragmentWfnCalculation[subsystemIdx].distributedMultipoleCluster;
         vector<FragmentAtoms> fragmentAtoms;
-        for (auto const subsystem : mSettings.subsystems)
+        for (auto const subsystem : mSettings.crystalFragments)
             fragmentAtoms.push_back(subsystem.atoms);
 
         vector< vector<pair<string, string > > > multipoleClusterAtoms(nSubsystems);
@@ -213,7 +213,7 @@ namespace discamb {
 		for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
 			for (auto& rep : mSettings.representatives[atomIdx])
 			{
-                clusterAtom = mSettings.subsystems[rep.subsystemIdx].atoms.atomList[rep.idxInSubsystem];
+                clusterAtom = mSettings.crystalFragments[rep.fragmentIdx].atoms.atomList[rep.idxInSubsystem];
 				mTransforms[atomIdx].push_back(shared_ptr<AtomicDensityTransform>(
 					AtomicDensityTransform::create(rep.transformType, mCrystal, rep.transformSetting, clusterAtom, rep.atomLabel )));
 			}
@@ -221,7 +221,7 @@ namespace discamb {
 
 
     void StockholderAtomFormFactorCalcManager::setSubsystems(
-        const std::vector<ham_settings::Subsystem>& subsystems,
+        const std::vector<ham_settings::QmFragmentInCrystal>& subsystems,
         const std::vector<std::vector<AtomRepresentativeInfo> >& representatives)
     {
         
@@ -244,14 +244,14 @@ namespace discamb {
         for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
         {
 
-            for (auto& atom : mSettings.subsystems[subsystemIdx].atoms.atomList)
+            for (auto& atom : mSettings.crystalFragments[subsystemIdx].atoms.atomList)
             {
                 mSubsystemAtomicNumbers[subsystemIdx].push_back(atomicNumbers[labelToIndex[atom.first]]);
                 mSubsystemAtomicPositions[subsystemIdx].push_back(
                     crystal_structure_utilities::atomPosition(atom.first, atom.second, mCrystal));
             }
 
-            for (auto& capH : mSettings.subsystems[subsystemIdx].atoms.cappingHydrogens)
+            for (auto& capH : mSettings.crystalFragments[subsystemIdx].atoms.cappingHydrogens)
             {
                 mSubsystemAtomicNumbers[subsystemIdx].push_back(1);
                 mSubsystemAtomicPositions[subsystemIdx].push_back(fragmentation::capping_h_position(mCrystal, capH));
@@ -268,7 +268,7 @@ namespace discamb {
 	void StockholderAtomFormFactorCalcManager::setAndPrintRepresentatives(
 		const std::vector < std::vector<AtomRepresentativeInfo> >& representatives) 
     {
-        int nAtoms, subsystemIdx, nSubsystems =  mSettings.subsystems.size();
+        int nAtoms, subsystemIdx, nSubsystems =  mSettings.crystalFragments.size();
         
 		nAtoms = mCrystal.atoms.size();
 		
@@ -277,12 +277,12 @@ namespace discamb {
 
 		for (int atomIdx = 0; atomIdx < mSettings.representatives.size(); atomIdx++)
 			for (int i = 0; i < mSettings.representatives[atomIdx].size(); i++)
-                mListOfRepresentativesInSubsystem[mSettings.representatives[atomIdx][i].subsystemIdx].push_back({ atomIdx,i });
+                mListOfRepresentativesInSubsystem[mSettings.representatives[atomIdx][i].fragmentIdx].push_back({ atomIdx,i });
 		
 		mSubsystemAtomsWhichAreRepresentatives.resize(nSubsystems);
 		for (auto &representatives: mSettings.representatives)
 			for (auto &representative: representatives)
-                mSubsystemAtomsWhichAreRepresentatives[representative.subsystemIdx].insert(representative.idxInSubsystem);
+                mSubsystemAtomsWhichAreRepresentatives[representative.fragmentIdx].insert(representative.idxInSubsystem);
 
 
         for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
@@ -298,13 +298,13 @@ namespace discamb {
             {
                 int nRepresentatives = 0;
                 for (int i = 0; i < mSettings.representatives[atomIdx].size(); i++)
-					if (mSettings.representatives[atomIdx][i].subsystemIdx == subsystemIdx)
+					if (mSettings.representatives[atomIdx][i].fragmentIdx == subsystemIdx)
 						nRepresentatives++;
 					
 
                 out << nRepresentatives << endl;
                 for (int i = 0; i < mSettings.representatives[atomIdx].size(); i++)
-					if (mSettings.representatives[atomIdx][i].subsystemIdx == subsystemIdx)
+					if (mSettings.representatives[atomIdx][i].fragmentIdx == subsystemIdx)
 					{
 						out << mSettings.representatives[atomIdx][i].idxInSubsystem << endl;
 						mAtomsInSubsystemWhichAreRepresentatives[subsystemIdx].push_back(mSettings.representatives[atomIdx][i].idxInSubsystem);
@@ -323,15 +323,15 @@ namespace discamb {
 	{
 		int atomIdx, nAtoms, capH_Idx, nCapH, nSubsystems, subsystemIdx;
 
-        nSubsystems = mSettings.subsystems.size();
+        nSubsystems = mSettings.crystalFragments.size();
 
         for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
         {
-            auto& atoms = mSettings.subsystems[subsystemIdx].atoms.atomList;
+            auto& atoms = mSettings.crystalFragments[subsystemIdx].atoms.atomList;
             nAtoms = atoms.size(); 
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 mSubsystemAtomicPositions[subsystemIdx][atomIdx] = crystal_structure_utilities::atomPosition( mAtomLabel2IdxInAsymmUnit[atoms[atomIdx].first], atoms[atomIdx].second, crystal);
-            auto& capH = mSettings.subsystems[subsystemIdx].atoms.cappingHydrogens;
+            auto& capH = mSettings.crystalFragments[subsystemIdx].atoms.cappingHydrogens;
             nCapH = capH.size();
             for(capH_Idx=0; capH_Idx<nCapH; capH_Idx++)
                 mSubsystemAtomicPositions[subsystemIdx][nAtoms+capH_Idx] = fragmentation::capping_h_position(crystal, capH[capH_Idx]);
@@ -387,7 +387,7 @@ namespace discamb {
 		{
 			densityTransform = mTransforms[atomIdx][representativeIdx]->getTransformMatrix(mCrystal);
 
-            subsystemIdx = mSettings.representatives[atomIdx][representativeIdx].subsystemIdx;
+            subsystemIdx = mSettings.representatives[atomIdx][representativeIdx].fragmentIdx;
 			atomInSubsystemIdx = mSettings.representatives[atomIdx][representativeIdx].idxInSubsystem;
 			
 
@@ -509,7 +509,7 @@ namespace discamb {
                     if (i > 0)
                         on_error::throwException("it works only for 1 representative - coordination systems adjustment is not introduced", __FILE__, __LINE__);
 
-                    int subsystemIdx = mSettings.representatives[atomIdx][i].subsystemIdx;
+                    int subsystemIdx = mSettings.representatives[atomIdx][i].fragmentIdx;
                     int atomInSubsystemIdx = mSettings.representatives[atomIdx][i].idxInSubsystem;
 
                     const vector<double>& density = mAtomInClusterElectronDensity[subsystemIdx][atomInSubsystemIdx];
@@ -752,7 +752,7 @@ namespace discamb {
                 {
                     twoPiHklRotated = hTransforms[atomIdx][i] * twoPiHklCartAu;
 
-                    clusterIdx = mSettings.representatives[atomIdx][i].subsystemIdx;
+                    clusterIdx = mSettings.representatives[atomIdx][i].fragmentIdx;
                     atomInClusterIdx = mSettings.representatives[atomIdx][i].idxInSubsystem;
 
                     const vector<double>& density = mAtomInClusterElectronDensity[clusterIdx][atomInClusterIdx];
@@ -911,7 +911,7 @@ namespace discamb {
 					//hklRotated = (hTransforms[atomIdx][i] * hklCart) / constants::Angstrom;
 					twoPiHklRotated = hTransforms[atomIdx][i] * twoPiHklCartAu;
 
-					clusterIdx = mSettings.representatives[atomIdx][i].subsystemIdx;
+					clusterIdx = mSettings.representatives[atomIdx][i].fragmentIdx;
 					atomInClusterIdx = mSettings.representatives[atomIdx][i].idxInSubsystem;
 
 					const vector<double>& density = mAtomInClusterElectronDensity[clusterIdx][atomInClusterIdx];
@@ -1017,8 +1017,8 @@ namespace discamb {
 			hTransform = algebra3d::transpose3d(densityTransform);
 			hklRotated = (hTransform * hklCart) / constants::Angstrom;
 			
-			clusterIdx = mSettings.representatives[atomIdx][i].subsystemIdx;
-			atomInClusterIdx = mSettings.representatives[atomIdx][i].subsystemIdx;
+			clusterIdx = mSettings.representatives[atomIdx][i].fragmentIdx;
+			atomInClusterIdx = mSettings.representatives[atomIdx][i].fragmentIdx;
 
 			const vector<Vector3d>& points = mElementGridPoints[z];
 			const vector<double>& density = mAtomInClusterElectronDensity[clusterIdx][atomInClusterIdx];
@@ -1219,7 +1219,7 @@ namespace discamb {
                 positionAsymm[atomIdx], chargeAsymm[atomIdx]);
 		
 
-		int subsystemIdx, nSubsystems = mSettings.subsystems.size();
+		int subsystemIdx, nSubsystems = mSettings.crystalFragments.size();
 		
 		charge.resize(nSubsystems);
 		position.resize(nSubsystems);
@@ -1330,16 +1330,16 @@ namespace discamb {
         data.qmSystem.pointChargeValue = pointCharges;
         data.qmSystem.pointChargePosition = pointChargePosition;
 
-        if(!mSettings.subsystemWfnCalculation.empty())
-            data.atomIdx2BasisSetMap = mSettings.subsystemWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap;
+        if(!mSettings.fragmentWfnCalculation.empty())
+            data.atomIdx2BasisSetMap = mSettings.fragmentWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap;
 
         auto wfnCalculation = mSettings.wfnCalculation;
         
-        if (!mSettings.subsystemWfnCalculation.empty())
-            if (mSettings.subsystemWfnCalculation[subsystemIdx].wfnCalculation)
-                wfnCalculation = mSettings.subsystemWfnCalculation[subsystemIdx].wfnCalculation.value();
+        if (!mSettings.fragmentWfnCalculation.empty())
+            if (mSettings.fragmentWfnCalculation[subsystemIdx].wfnCalculation)
+                wfnCalculation = mSettings.fragmentWfnCalculation[subsystemIdx].wfnCalculation.value();
 
-        auto& subsystem = mSettings.subsystems[subsystemIdx];
+        auto& subsystem = mSettings.crystalFragments[subsystemIdx];
 
         data.hardware = wfnCalculation.hardwareSettings.value_or(mSettings.hardware);
 
@@ -1359,7 +1359,7 @@ namespace discamb {
 	void StockholderAtomFormFactorCalcManager::calculateWfns(
 		int indexAddedToFileNames)
 	{       
-        int subsystemIdx, nSubsystems = mSettings.subsystems.size();
+        int subsystemIdx, nSubsystems = mSettings.crystalFragments.size();
 		string wfnFileName;
         string format = WaveFunctionDataGeneratorRunner::wfnFormatAsString(getFormat());
 		vector< vector<double> > charge(nSubsystems);
@@ -1382,7 +1382,7 @@ namespace discamb {
 		for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
 		{
 
-			wfnFileName = mJobName + string("_") + mSettings.subsystems[subsystemIdx].label +
+			wfnFileName = mJobName + string("_") + mSettings.crystalFragments[subsystemIdx].label +
 				          string("_wfn_") + numberTo000string(indexAddedToFileNames) + "." + format;
 
             setSubsystemWfnCalcData(subsystemIdx, wfnCalcData[subsystemIdx], charge[subsystemIdx],
@@ -1429,14 +1429,14 @@ namespace discamb {
                 std::set<string> uniqueBasisSets;
                 map<string, int> basisSet2Idx;
                 auto wfnSettings = mSettings.wfnCalculation;
-                if (!mSettings.subsystemWfnCalculation.empty())
-                    if (mSettings.subsystemWfnCalculation[subsystemIdx].wfnCalculation.has_value())
-                        wfnSettings = mSettings.subsystemWfnCalculation[subsystemIdx].wfnCalculation.value();
+                if (!mSettings.fragmentWfnCalculation.empty())
+                    if (mSettings.fragmentWfnCalculation[subsystemIdx].wfnCalculation.has_value())
+                        wfnSettings = mSettings.fragmentWfnCalculation[subsystemIdx].wfnCalculation.value();
                 for (auto item : wfnSettings.qmSettings.atomicNumber2BasisSetMap)
                     uniqueBasisSets.insert(item.second);
 
-                if(!mSettings.subsystemWfnCalculation.empty())
-                    for (auto item : mSettings.subsystemWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap)
+                if(!mSettings.fragmentWfnCalculation.empty())
+                    for (auto item : mSettings.fragmentWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap)
                         uniqueBasisSets.insert(item.second);
 
 
@@ -1448,8 +1448,8 @@ namespace discamb {
                     atomicNumber2BasisSetMap[item.first] = basisSet2Idx[item.second];
 
 
-                if(!mSettings.subsystemWfnCalculation.empty())
-                    for (auto item : mSettings.subsystemWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap)
+                if(!mSettings.fragmentWfnCalculation.empty())
+                    for (auto item : mSettings.fragmentWfnCalculation[subsystemIdx].atomicIdx2BasisSetMap)
                         atomIdx2BasisSetMap[item.first] = basisSet2Idx[item.second];
 
 
@@ -1486,7 +1486,7 @@ namespace discamb {
         timer.start();
         string format = WaveFunctionDataGeneratorRunner::wfnFormatAsString(getFormat());
 
-		string wfnFileName = mJobName + string("_") + mSettings.subsystems[subsystemIdx].label +
+		string wfnFileName = mJobName + string("_") + mSettings.crystalFragments[subsystemIdx].label +
 			string("_wfn_") + numberTo000string(indexAddedToFileNames) + "." + format;
 
 		
@@ -1589,7 +1589,7 @@ namespace discamb {
 		// Hirshfeld density
         string format = WaveFunctionDataGeneratorRunner::wfnFormatAsString(getFormat());// mWfnGeneratorRunner->defaultFileFormat());
 
-		string wfnFileName = mJobName + string("_") + mSettings.subsystems[subsystemIdx].label +
+		string wfnFileName = mJobName + string("_") + mSettings.crystalFragments[subsystemIdx].label +
 			string("_wfn_") + numberTo000string(indexAddedToFileNames) + "." + format;
 
 		vector<shared_ptr<ElectronDensityPartition> > edPartitions(1);
@@ -1674,7 +1674,7 @@ namespace discamb {
 		int indexAddedToFileNames)
 	{
 
-		int subsystemIdx, nSubsystems = mSettings.subsystems.size();
+		int subsystemIdx, nSubsystems = mSettings.crystalFragments.size();
 		string wfnFileName, densityFileName, representativesFileName;
 		string format = WaveFunctionDataGeneratorRunner::wfnFormatAsString(mWfnGeneratorRunner->defaultFileFormat());
 
@@ -2013,12 +2013,12 @@ namespace discamb {
 		//}
 
 		// new things
-        int subsystemIdx, nSubsystems = mSettings.subsystems.size();
+        int subsystemIdx, nSubsystems = mSettings.crystalFragments.size();
 		mAtomInClusterElectronDensity.resize(nSubsystems);
         for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
         {
-            int nAtomsInSubsystem = mSettings.subsystems[subsystemIdx].atoms.atomList.size() +
-                mSettings.subsystems[subsystemIdx].atoms.cappingHydrogens.size();
+            int nAtomsInSubsystem = mSettings.crystalFragments[subsystemIdx].atoms.atomList.size() +
+                mSettings.crystalFragments[subsystemIdx].atoms.cappingHydrogens.size();
             mAtomInClusterElectronDensity[subsystemIdx].resize(nAtomsInSubsystem);
         }
 		

@@ -200,7 +200,7 @@ namespace discamb {
 
                             representatives[refAtomIdx].resize(representatives[refAtomIdx].size() + 1);
                             representatives[refAtomIdx].back().idxInSubsystem = clusterAtomIdx;
-                            representatives[refAtomIdx].back().subsystemIdx = clusterIdx;
+                            representatives[refAtomIdx].back().fragmentIdx = clusterIdx;
                             representatives[refAtomIdx].back().atomLabel = crystalAtomLabel;
                             representatives[refAtomIdx].back().symmetryCode = symmOpStr;
 
@@ -276,7 +276,7 @@ namespace discamb {
 
                             representatives[refAtomIdx].resize(representatives[refAtomIdx].size() + 1);
                             representatives[refAtomIdx].back().idxInSubsystem = clusterAtomIdx;
-                            representatives[refAtomIdx].back().subsystemIdx = clusterIdx;
+                            representatives[refAtomIdx].back().fragmentIdx = clusterIdx;
                             representatives[refAtomIdx].back().atomLabel = crystalAtomLabel;
                             representatives[refAtomIdx].back().symmetryCode = symmOpStr;
 

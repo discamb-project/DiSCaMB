@@ -54,14 +54,14 @@ namespace discamb {
             std::optional<HardwareResources> hardwareSettings;
         };
 
-        struct SubsystemWfnCalculation {
+        struct CrystalFragmentWfnCalculation {
             void set(const nlohmann::json& data, double clusterThreshold);
             std::optional<WfnCalculation> wfnCalculation;
             std::map<int, std::string> atomicIdx2BasisSetMap;
             std::optional<DistributedMultipoleCentersSettings> distributedMultipoleCluster;
         };
 
-        struct Subsystem {
+        struct QmFragmentInCrystal {
             std::string label = "system";
             FragmentAtoms atoms;
             int charge = 0;
@@ -108,21 +108,21 @@ namespace discamb {
         /**
         subsystems are set with default method if no specified in data
         */
-        void setSubsystems(
+        void setCrystalFragments(
             const nlohmann::json& data, 
             const Crystal &crystal,
-            std::vector<Subsystem>& subsystems);
+            std::vector<QmFragmentInCrystal>& crystalFragments);
 
         void setRepresentatives(const nlohmann::json& data,
             const Crystal& crystal,
-            const std::vector<Subsystem>& subsystems,
+            const std::vector<QmFragmentInCrystal>& subsystems,
             std::vector<std::vector<AtomRepresentativeInfo> > &representatives);
 
         void setSubsystemsWfnCalculation(
             const nlohmann::json& data,
-            const std::vector<Subsystem>& subsystems,
+            const std::vector<QmFragmentInCrystal>& subsystems,
             double clusterThreshold,
-            std::vector< SubsystemWfnCalculation > & subsystemWfnCalculation);
+            std::vector< CrystalFragmentWfnCalculation > & subsystemWfnCalculation);
 
         //void subsystemWfnCalcData(
         //    const Crystal& crystal, 
@@ -140,9 +140,9 @@ namespace discamb {
     struct HirshfeldAtomModelSettings
     {
         void set(const nlohmann::json &data, const Crystal& crystal);
-        std::vector<ham_settings::Subsystem> subsystems;
+        std::vector<ham_settings::QmFragmentInCrystal> crystalFragments;
         ham_settings::WfnCalculation wfnCalculation;
-        std::vector<ham_settings::SubsystemWfnCalculation> subsystemWfnCalculation;
+        std::vector<ham_settings::CrystalFragmentWfnCalculation> fragmentWfnCalculation;
         ham_settings::PartitionData electronDensityPartition;
         ham_settings::MultipoleExpansionCalculation multipoleExpansion;
         ham_settings::FormFactorsCalculation formFactorsCalculation;

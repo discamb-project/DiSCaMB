@@ -124,7 +124,7 @@ namespace discamb {
 
                     int idx = representatives[atomIdx].size();
                     representatives[atomIdx].resize(idx + 1);
-                    representatives[atomIdx][idx].subsystemIdx = clusterIdx;
+                    representatives[atomIdx][idx].fragmentIdx = clusterIdx;
                     representatives[atomIdx][idx].idxInSubsystem = atomInClusterIdx;
                     representatives[atomIdx][idx].atomLabel = atom.first;
                     representatives[atomIdx][idx].fixedWeightValue = 1.0;

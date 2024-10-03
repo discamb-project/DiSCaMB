@@ -87,7 +87,7 @@ namespace discamb {
         clusterAtoms[i] ith atom of the cluster used in calculations, .first - atom label, .second - symmetry card
         representatives[i] - list of atoms in cluster to represent i-th atom in asymmetric unit
         */
-        void setSubsystems(const std::vector<ham_settings::Subsystem>& subsystems,
+        void setSubsystems(const std::vector<ham_settings::QmFragmentInCrystal>& subsystems,
             const std::vector<std::vector<AtomRepresentativeInfo> >& representatives);
 
         void setSubsystemWfnCalcData(

@@ -34,7 +34,7 @@ namespace discamb {
 
         }
 
-        void Subsystem::toXyzMol(
+        void QmFragmentInCrystal::toXyzMol(
             const Crystal& crystal,
             std::vector<ChemicalElement>& elements,
             std::vector<Vector3d>& positions)
@@ -177,13 +177,13 @@ namespace discamb {
 
         };
 
-        void SubsystemWfnCalculation::set(
+        void CrystalFragmentWfnCalculation::set(
             const nlohmann::json& _data,
             double clusterThreshold)
         {
             nlohmann::json data = _data;
             
-            *this = SubsystemWfnCalculation();
+            *this = CrystalFragmentWfnCalculation();
             if (data.find("multipole sites") != data.end())
             {
                 //auto const& multipoleSitesData = *data.find("multipole sites");
@@ -281,12 +281,12 @@ namespace discamb {
 
 
 
-        void setSubsystems(
+        void setCrystalFragments(
             const nlohmann::json& data,
             const Crystal& crystal,
-            std::vector<Subsystem>& subsystems)
+            std::vector<QmFragmentInCrystal>& crystalFragments)
         {
-            subsystems.clear();
+            crystalFragments.clear();
             string errorMessage = "invalid format of subsystems definition for Hirshfeld Atom Model calculations";
             
 
@@ -414,13 +414,13 @@ namespace discamb {
                     }
                 }
                 size_t fragIdx, nFrag = subsystemAtoms.size();
-                subsystems.resize(nFrag);
+                crystalFragments.resize(nFrag);
                 for (fragIdx = 0; fragIdx < nFrag; fragIdx++)
                 {
-                    subsystems[fragIdx].atoms.atomList = subsystemAtoms[fragIdx];
-                    subsystems[fragIdx].charge = subsystemCharges[fragIdx];
-                    subsystems[fragIdx].label = subsystemLabels[fragIdx];
-                    subsystems[fragIdx].spin_multiplicity = subsystemSpinMultiplicity[fragIdx];
+                    crystalFragments[fragIdx].atoms.atomList = subsystemAtoms[fragIdx];
+                    crystalFragments[fragIdx].charge = subsystemCharges[fragIdx];
+                    crystalFragments[fragIdx].label = subsystemLabels[fragIdx];
+                    crystalFragments[fragIdx].spin_multiplicity = subsystemSpinMultiplicity[fragIdx];
                 }
                 return;
             }
@@ -508,7 +508,7 @@ namespace discamb {
             {
                 fragmentAtoms.clear();
                 atomList.clear();
-                Subsystem subsystem;
+                QmFragmentInCrystal subsystem;
                 subsystem.charge = fragment.charge;
                 subsystem.label = fragment.label;
                 subsystem.spin_multiplicity = fragment.spin_multiplicity;
@@ -535,7 +535,7 @@ namespace discamb {
                     capH.directingAtom = label;
                     capH.directingAtomSymmOp = symmetryOperationStr;
                 }
-                subsystems.push_back(subsystem);
+                crystalFragments.push_back(subsystem);
             }
         }
 
@@ -592,7 +592,7 @@ namespace discamb {
         void setRepresentatives(
             const nlohmann::json& data,
             const Crystal& crystal,
-            const std::vector<Subsystem>& subsystems,
+            const std::vector<QmFragmentInCrystal>& subsystems,
             std::vector<std::vector<AtomRepresentativeInfo> > &representatives)
         {
             string atomFile = data.value("qm atoms use", string());
@@ -615,9 +615,9 @@ namespace discamb {
 
         void setSubsystemsWfnCalculation(
             const nlohmann::json& data,
-            const std::vector<Subsystem>& subsystems,
+            const std::vector<QmFragmentInCrystal>& subsystems,
             double clusterThreshold,
-            std::vector<SubsystemWfnCalculation> & subsystemWfnCalculation)
+            std::vector<CrystalFragmentWfnCalculation> & subsystemWfnCalculation)
         {
             subsystemWfnCalculation.clear();
             subsystemWfnCalculation.resize(subsystems.size());
@@ -641,15 +641,15 @@ namespace discamb {
         const nlohmann::json& data,
         const Crystal& crystal)
     {
-        setSubsystems(data, crystal, subsystems);
+        setCrystalFragments(data, crystal, crystalFragments);
         electronDensityPartition.set(data);
         wfnCalculation.set(data);
         multipoleExpansion.set(data);
-        ham_settings::setSubsystemsWfnCalculation(data, subsystems, multipoleExpansion.clusterThreshold, subsystemWfnCalculation);
+        ham_settings::setSubsystemsWfnCalculation(data, crystalFragments, multipoleExpansion.clusterThreshold, fragmentWfnCalculation);
         formFactorsCalculation.set(data);
         hardware.set(data);
         diagnostics.set(data);
-        ham_settings::setRepresentatives(data, crystal, subsystems, representatives);
+        ham_settings::setRepresentatives(data, crystal, crystalFragments, representatives);
         sphericalHarmonicsExpansionLevel = data.value("spherical harmonics expansion level", sphericalHarmonicsExpansionLevel);
     }
     
