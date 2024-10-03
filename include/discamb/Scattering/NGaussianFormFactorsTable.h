@@ -12,7 +12,7 @@ namespace discamb {
 
 namespace n_gaussian_form_factors_table
 {
-    /** Possible values for table: "Waasmeier-Kirfel", "IT92", "electron-IT"*/
+    /** Possible values for table: "Waasmeier-Kirfel", "IT92", "electron-IT", "electron-cctbx"*/
     NGaussianFormFactor getFormFactor(const std::string &label,const std::string &table=std::string("Waasmeier-Kirfel"));
     bool hasFormFactor(const std::string &label, const std::string &table = std::string("Waasmeier-Kirfel"));
 }
