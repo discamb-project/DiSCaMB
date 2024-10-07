@@ -98,7 +98,7 @@ const
 {
     double result=0;
     int  n = mA.size();
-    for(int i=0; i < mN; i++)
+    for(int i=0; i < n; i++)
         result += mA[i] * exp( -mB[i] * x * x );
 
     return result + mC;
