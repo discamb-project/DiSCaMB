@@ -3,7 +3,6 @@
 #include "MolecularAtomTypeAssigner.h"
 #include "AtomType.h"
 #include "StructureWithDescriptors.h"
-#include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/MathUtilities/Vector3.h"
 #include "discamb/Scattering/AtomRepresentativeInfo.h"
 
@@ -32,7 +31,7 @@ namespace discamb {
 
         void assign(
             const Crystal& crystal, 
-            const std::vector<FragmentAtoms>& fragments,
+            const std::vector<std::vector<AtomInCrystalID> >& fragments,
             const std::vector< std::vector<AtomRepresentativeInfo> > &atomRepresentatives,
             std::vector< std::vector<int> >& typeID, 
             std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
