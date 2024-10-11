@@ -3,7 +3,9 @@
 #include "MolecularAtomTypeAssigner.h"
 #include "AtomType.h"
 #include "StructureWithDescriptors.h"
+#include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/MathUtilities/Vector3.h"
+#include "discamb/Scattering/AtomRepresentativeInfo.h"
 
 #include <memory>
 #include <vector>
@@ -22,10 +24,19 @@ namespace discamb {
 
         void setAtomTypes(const std::vector<AtomType> &atomTypes);
         void setDescriptorsSettings(const DescriptorsSettings &settings);
+
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
         void assign(const Crystal& crystal, std::vector<int>& typeID, std::vector<std::vector<Vector3d> > &lcs) const;
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs,
                     StructureWithDescriptors &descriptors) const;
+
+        void assign(
+            const Crystal& crystal, 
+            const std::vector<FragmentAtoms>& fragments,
+            const std::vector< std::vector<AtomRepresentativeInfo> > &atomRepresentatives,
+            std::vector< std::vector<int> >& typeID, 
+            std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
+
         std::string typeLabel(int typeId) const;
         void printAssignment(std::ostream &out, const Crystal &crystal, const std::vector<int> &typeID,
                                 const std::vector< LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
