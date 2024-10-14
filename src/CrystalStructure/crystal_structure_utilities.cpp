@@ -426,6 +426,27 @@ namespace discamb {
                 atomListConverted.push_back({ label2idx[atom.first], atom.second });
         }
 
+        void convertAtomList(
+            const Crystal& crystal,
+            const std::vector<std::pair<std::string, std::string> >& atomList,
+            std::vector<AtomInCrystalID>& atomListConverted)
+        {
+            vector<pair<int, string > > atomListIntStr;
+            convertAtomList(crystal, atomList, atomListIntStr);
+            convertAtomList(atomListIntStr, atomListConverted);
+        }
+
+        void convertAtomList(
+            const vector<pair<int, string> >& atomList,
+            vector<AtomInCrystalID>& atomListConverted)
+        {
+            atomListConverted.clear();
+            for (auto const& atom : atomList)
+                atomListConverted.push_back(AtomInCrystalID(atom.first, SpaceGroupOperation(atom.second)));
+        }
+
+
+
         double interatomicDistance(
             const Crystal& crystal,
             const std::string& atomLabel1,

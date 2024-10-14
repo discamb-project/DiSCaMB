@@ -2,6 +2,7 @@
 
 #include "discamb/BasicChemistry/ChemicalElement.h"
 
+#include "discamb/CrystalStructure/AtomInCrystalID.h"
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/CrystalStructure/UnitCellContent.h"
 
@@ -16,6 +17,7 @@ namespace discamb {
 
     namespace crystal_structure_utilities {
 
+        
         void stringToAtomList(const std::string& str, std::vector<std::pair<std::string, std::string> >& atomList, char separator);
 
 
@@ -86,6 +88,14 @@ namespace discamb {
             const std::vector < std::pair < std::string, std::string > >& atomList,
             std::vector < std::pair < int, std::string > >& atomListConverted); 
 
+        void convertAtomList(
+            const Crystal& crystal,
+            const std::vector<std::pair<std::string, std::string> >& atomList,
+            std::vector<AtomInCrystalID>& atomListConverted);
+
+        void convertAtomList(
+            const std::vector<std::pair<int, std::string> >& atomList,
+            std::vector<AtomInCrystalID>& atomListConverted);
 
 
         double interatomicDistance(

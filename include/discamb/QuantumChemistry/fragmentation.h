@@ -78,7 +78,7 @@ namespace fragmentation{
     //void fragmentsData2fragments(const std::vector<FragmentData>& fragmentsData, );
     void make_qm_fragments(
         const Crystal& crystal,
-        std::vector<FragmentConstructionData>& fragmentConstructionData,
+        const std::vector<FragmentConstructionData>& fragmentConstructionData,
         std::vector<QmFragmentInCrystal>& qmFragments);
 
 //    void find_fragments_atoms(

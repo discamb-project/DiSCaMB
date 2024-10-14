@@ -6,6 +6,8 @@
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/AtomTyping/atom_typing_utilities.h"
 
+#include "discamb/IO/xyz_io.h"
+
 #include <iomanip>
 #include <map>
 #include <set>
@@ -309,11 +311,11 @@ namespace discamb {
                 atom2Assign[representative.fragmentIdx].insert(representative.idxInSubsystem);
 
 
-        vector<int> atomicNumbers, z;
+        vector<int> atomicNumbersAsymmetricUnit, atomicNumbersFragment;
         vector<Vector3d> positions;
 
 
-        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersAsymmetricUnit);
 
         for (fragmentIdx = 0; fragmentIdx < nFragments; fragmentIdx++)
         {
@@ -321,7 +323,7 @@ namespace discamb {
             int nAtoms = fragments[fragmentIdx].size();
          
             positions.clear();
-            z.clear();
+            atomicNumbersFragment.clear();
 
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
             {
@@ -331,15 +333,16 @@ namespace discamb {
                 spaceGroupOperation.apply(r0_frac, r_frac);
                 crystal.unitCell.fractionalToCartesian(r_frac, r_cart);
                 positions.push_back(r_cart);
-                z.push_back(atomicNumbers[atomIdxInCrystal]);
+                atomicNumbersFragment.push_back(atomicNumbersAsymmetricUnit[atomIdxInCrystal]);
             }
 
+            //xyz_io::writeXyz(string("fragment_") + to_string(fragmentIdx + 1), atomicNumbersFragment, positions);
 
             vector<LocalCoordinateSystem<int> > lcsMolecule;
             StructureWithDescriptors structureWithDescriptors;
             vector<int> atomToAssign(atom2Assign[fragmentIdx].begin(), atom2Assign[fragmentIdx].end());
             
-            structureWithDescriptors.set(atomicNumbers, positions);
+            structureWithDescriptors.set(atomicNumbersFragment, positions);
             mAssigner.assign(structureWithDescriptors, atomToAssign, typeId[fragmentIdx], lcsMolecule);
 
             // convert lcs molecule to lcs crystal
