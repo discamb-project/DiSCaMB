@@ -12,14 +12,14 @@ namespace{
 
     void readClusters(
         std::istream& in,
-        std::vector<discamb::FragmentData>& fragments)
+        std::vector<discamb::FragmentConstructionData>& fragmentsConstructionData)
     {
-        fragments.clear();
+        fragmentsConstructionData.clear();
 
         string line;
         vector<string> words;
         
-        discamb::FragmentConstructionData fragmentConstructionData;
+        discamb::FragmentPartConstructionData fragmentPartConstructionData;
 
         while (getline(in, line))
         {
@@ -30,19 +30,19 @@ namespace{
 
             if (words[0][0] == '$' || nWords == 1 || nWords==2)
             {
-                if (fragments.empty())
+                if (fragmentsConstructionData.empty())
                     discamb::on_error::throwException("invalid fragment definition line: '" + line + "'", __FILE__, __LINE__);
-                fragmentConstructionData.set(words);
-                fragments.back().fragmentConstructionData.push_back(fragmentConstructionData);
+                fragmentPartConstructionData.set(words);
+                fragmentsConstructionData.back().fragmentPartConstructionData.push_back(fragmentPartConstructionData);
             }
             else
             {
                 if (words.size() == 4)
                 {
-                    fragments.resize(fragments.size() + 1);
-                    fragments.back().label = words[1];
-                    fragments.back().charge = stoi(words[2]);
-                    fragments.back().spin_multiplicity = stoi(words[3]);
+                    fragmentsConstructionData.resize(fragmentsConstructionData.size() + 1);
+                    fragmentsConstructionData.back().label = words[1];
+                    fragmentsConstructionData.back().charge = stoi(words[2]);
+                    fragmentsConstructionData.back().spin_multiplicity = stoi(words[3]);
                 }
                 else
                     discamb::on_error::throwException("invalid fragment definition line: '" + line + "'", __FILE__, __LINE__);
@@ -53,7 +53,7 @@ namespace{
         
         std::set<string> uniqueLabels;
         
-        for (auto& fragment : fragments)
+        for (auto& fragment : fragmentsConstructionData)
         {
             if (uniqueLabels.find(fragment.label) != uniqueLabels.end())
             {
@@ -122,20 +122,20 @@ namespace discamb {
         }
 
         void readPlainText(
-            const std::string& fileName, std::vector<FragmentData>& fragments)
+            const std::string& fileName, std::vector<FragmentConstructionData>& fragmentsConstructionData)
         {
             ifstream in(fileName);
             if (!in.good())
                 on_error::throwException("cannot read file definining wavefunction calculation units: '"
                     + fileName + "'", __FILE__, __LINE__);
 
-            readClusters(in, fragments);
+            readClusters(in, fragmentsConstructionData);
             in.close();
         }
 
         void readJson(
             const std::string& fileName, 
-            std::vector<FragmentData>& fragments)
+            std::vector<FragmentConstructionData>& fragmentsConstructionData)
         {
             on_error::not_implemented(__FILE__, __LINE__);
             std::ifstream f(fileName);
@@ -148,7 +148,7 @@ namespace discamb {
 
         void read(
             const std::string& fileName,
-            std::vector<FragmentData>& fragments)
+            std::vector<FragmentConstructionData>& fragments)
         {
             on_error::not_implemented(__FILE__, __LINE__);
             //fragments.clear();
@@ -175,7 +175,7 @@ namespace discamb {
 
         void readHirsFrag(
             const std::string& fileName,
-            std::vector<FragmentData>& fragments)
+            std::vector<FragmentConstructionData>& fragments)
         {
             ifstream in(fileName);
             if (!in.good())

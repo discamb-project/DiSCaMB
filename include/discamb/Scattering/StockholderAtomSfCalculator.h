@@ -67,11 +67,11 @@ class StockholderAtomSfCalculator : public SfCalculator
 
 
         void printSubsystemsToXyz(const Crystal crystal,
-            const std::vector<ham_settings::QmFragmentInCrystal>& subsystems);
+            const std::vector<QmFragmentInCrystal>& subsystems);
 
 
         void printSubsystemsToMol2(const Crystal crystal,
-            const std::vector<ham_settings::QmFragmentInCrystal>& subsystems);
+            const std::vector<QmFragmentInCrystal>& subsystems);
 
 
         virtual void calculateFormFactors(const Vector3i& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const;

@@ -2,6 +2,7 @@
 
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/CrystalStructure/UnitCellContent.h"
+#include "discamb/BasicChemistry/ChemicalElement.h"
 
 
 #include "json.hpp"
@@ -15,8 +16,8 @@ namespace discamb{
     * @{
     */
 
-
-    struct FragmentConstructionData {
+    // fragment subset recipe
+    struct FragmentPartConstructionData {
         typedef std::vector < std::pair<std::string, std::string> > AtomList;
         AtomList include;
         AtomList connect;
@@ -34,11 +35,12 @@ namespace discamb{
             std::vector<std::pair<UnitCellContent::AtomID, UnitCellContent::AtomID> >& cappingHydrogens) const;
     };
 
-    struct FragmentData {
-        std::vector<FragmentConstructionData> fragmentConstructionData;
+    struct FragmentConstructionData {
+        std::vector<FragmentPartConstructionData> fragmentPartConstructionData;
         std::string label;
         int spin_multiplicity;
         int charge;
+        bool set(const nlohmann::json& data);
     };
 
     struct CappingHydrogen {
@@ -63,7 +65,27 @@ namespace discamb{
         std::vector <CappingHydrogen> cappingHydrogens;
     };
 
+    struct QmFragmentInCrystal {
+        std::string label = "system";
+        FragmentAtoms atoms;
+        int charge = 0;
+        int spin_multiplicity = 1;
+        void toXyzMol(const Crystal& crystal, std::vector<ChemicalElement>& elements, std::vector<Vector3d>& positions) const;
+    };
+
+
 namespace fragmentation{
+    //void fragmentsData2fragments(const std::vector<FragmentData>& fragmentsData, );
+    void make_qm_fragments(
+        const Crystal& crystal,
+        std::vector<FragmentConstructionData>& fragmentConstructionData,
+        std::vector<QmFragmentInCrystal>& qmFragments);
+
+//    void find_fragments_atoms(
+//        const Crystal& crystal,
+//        std::vector<FragmentData>& fragmentData,
+//        std::vector<FragmentAtoms>& fragmentsAtoms);
+
 
     Vector3d capping_h_position(const Crystal& crystal,
         const std::string& bondedAtom, const SpaceGroupOperation& bondedAtomSymmOp,

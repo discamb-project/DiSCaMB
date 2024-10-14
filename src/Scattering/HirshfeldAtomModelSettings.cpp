@@ -34,39 +34,6 @@ namespace discamb {
 
         }
 
-        void QmFragmentInCrystal::toXyzMol(
-            const Crystal& crystal,
-            std::vector<ChemicalElement>& elements,
-            std::vector<Vector3d>& positions)
-            const
-        {
-            positions.clear();
-            elements.clear();
-
-            map<string, int> label2idx;
-            for (int atomIdx = 0; atomIdx < int(crystal.atoms.size()) ; atomIdx++)
-                label2idx[crystal.atoms[atomIdx].label] = atomIdx;
-
-            vector<int> atomicNumbersAsymmUnit;
-            crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersAsymmUnit);
-
-            for (auto const& atom : atoms.atomList)
-            {
-                if (label2idx.find(atom.first) != label2idx.end())
-                {
-                    positions.push_back(crystal_structure_utilities::atomPosition(atom.first, atom.second, crystal));
-                    elements.push_back(ChemicalElement(int(atomicNumbersAsymmUnit[label2idx[atom.first]])));
-                }
-                else
-                    on_error::throwException(string("invalid atom label '") + atom.first + string("'"), __FILE__, __LINE__);
-            }
-            for (auto const& capH : atoms.cappingHydrogens)
-            {
-                positions.push_back(fragmentation::capping_h_position(crystal, capH.bondedAtom, capH.bondedAtomSymmOp, capH.directingAtom, capH.directingAtomSymmOp));
-                elements.push_back(ChemicalElement(1));
-            }
-
-        }
 
         void PartitionData::set(
             const nlohmann::json& data)
@@ -426,117 +393,70 @@ namespace discamb {
             }
 
 
-            std::vector<FragmentData> fragments;
+            std::vector<FragmentConstructionData> fragmentsConstructionData;
 
             if (definitionType == DefinitionType::FROM_FILE)
-                fragmentation_io::readPlainText(subsystemsData.get<string>(), fragments);
+                fragmentation_io::readPlainText(subsystemsData.get<string>(), fragmentsConstructionData);
 
             if (definitionType == DefinitionType::OBJECT_ARRAY)
             {
-                fragments.resize(subsystemsData.size());
+                fragmentsConstructionData.resize(subsystemsData.size());
                 int subsystemIdx = 0;
                 for (auto& sub : subsystemsData)
                 {
-
-                    if (sub.find("name") != sub.end())
-                        fragments[subsystemIdx].label = sub.find("name")->get<string>();
-                    else
-                        fragments[subsystemIdx].label = "subsystem_" + to_string(subsystemIdx + 1);
-
-                    if (sub.find("charge") != sub.end())
-                        fragments[subsystemIdx].charge = sub.find("charge")->get<int>();
-                    else
-                        fragments[subsystemIdx].charge = 0;
-
-                    if (sub.find("spin multiplicity") != sub.end())
-                        fragments[subsystemIdx].spin_multiplicity = sub.find("spin multiplicity")->get<int>();
-                    else
-                        fragments[subsystemIdx].spin_multiplicity = 1;
-
-
-                    if(sub.find("atoms")!=sub.end())
-                        on_error::throwException(errorMessage, __FILE__, __LINE__);
-
-                    FragmentConstructionData fragmentConstructionData;
-
-                    if (sub["atoms"].is_string())  //list of atoms
-                    {
-                        vector<string> words;
-                        string_utilities::split(sub["atom"].get<string>(), words);
-                        crystal_structure_utilities::splitIntoAtomAndSymmOp(words, fragmentConstructionData.include, true);
-                        fragments[subsystemIdx].fragmentConstructionData.push_back(fragmentConstructionData);
-                    }
-                    else
-                    {
-                        if (sub["atoms"].is_object())
-                        {    
-                            fragmentConstructionData.set(sub["atoms"]);
-                            fragments[subsystemIdx].fragmentConstructionData.push_back(fragmentConstructionData);
-                        }
-                        else
-                        {
-                            if (sub["atoms"].is_array())
-                            {
-                                for (auto &group : sub["atoms"])
-                                {
-                                    fragmentConstructionData.set(group);
-                                    fragments[subsystemIdx].fragmentConstructionData.push_back(fragmentConstructionData);
-                                }
-                            }
-                            else
-                                on_error::throwException(errorMessage, __FILE__, __LINE__);
-                        }
-                    }
+                    fragmentsConstructionData[subsystemIdx].set(sub);
+                    if(fragmentsConstructionData[subsystemIdx].label.empty())
+                        fragmentsConstructionData[subsystemIdx].label = "subsystem_" + to_string(subsystemIdx + 1);
                     subsystemIdx++;
                 }
             }
+            fragmentation::make_qm_fragments(crystal, fragmentsConstructionData, crystalFragments);
+            // fragmentPartConstructionData to atom list
 
-            // fragmentConstructionData to atom list
+        //    UnitCellContent unitCellContent;
+        //    unitCellContent.set(crystal);
+        //    set<UnitCellContent::AtomID> fragmentAtoms;
+        //    set<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogens;
+        //    vector<UnitCellContent::AtomID> atomList;
+        //    vector<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogenList;
+        //    vector<vector<UnitCellContent::AtomID> > connectivity;
+        //    
+        //    structural_properties::calcUnitCellConnectivity(unitCellContent, connectivity, 0.4);
+        //    string label, symmetryOperationStr;
 
-            UnitCellContent unitCellContent;
-            unitCellContent.set(crystal);
-            set<UnitCellContent::AtomID> fragmentAtoms;
-            set<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogens;
-            vector<UnitCellContent::AtomID> atomList;
-            vector<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogenList;
-            vector<vector<UnitCellContent::AtomID> > connectivity;
-            
-            structural_properties::calcUnitCellConnectivity(unitCellContent, connectivity, 0.4);
-            string label, symmetryOperationStr;
+        //    for (auto& fragment : fragments)
+        //    {
+        //        fragmentAtoms.clear();
+        //        atomList.clear();
+        //        QmFragmentInCrystal subsystem;
+        //        subsystem.charge = fragment.charge;
+        //        subsystem.label = fragment.label;
+        //        subsystem.spin_multiplicity = fragment.spin_multiplicity;
 
-            for (auto& fragment : fragments)
-            {
-                fragmentAtoms.clear();
-                atomList.clear();
-                QmFragmentInCrystal subsystem;
-                subsystem.charge = fragment.charge;
-                subsystem.label = fragment.label;
-                subsystem.spin_multiplicity = fragment.spin_multiplicity;
-
-                for (auto& fragmentConstructionData : fragment.fragmentConstructionData)
-                {
-                    fragmentConstructionData.getAtomList(unitCellContent, connectivity, atomList, cappingHydrogenList);
-                    fragmentAtoms.insert(atomList.begin(), atomList.end());
-                    cappingHydrogens.insert(cappingHydrogenList.begin(), cappingHydrogenList.end());
-                }
-                for (auto& atom : fragmentAtoms)
-                {
-                    unitCellContent.interpreteAtomID(atom, label, symmetryOperationStr);
-                    subsystem.atoms.atomList.push_back({ label, symmetryOperationStr });
-                }
-                for (auto& cappingH : cappingHydrogens)
-                {
-                    subsystem.atoms.cappingHydrogens.resize(subsystem.atoms.cappingHydrogens.size() + 1);
-                    auto& capH = subsystem.atoms.cappingHydrogens.back();
-                    unitCellContent.interpreteAtomID(cappingH.first, label, symmetryOperationStr);
-                    capH.bondedAtom = label;
-                    capH.bondedAtomSymmOp = symmetryOperationStr;
-                    unitCellContent.interpreteAtomID(cappingH.second, label, symmetryOperationStr);
-                    capH.directingAtom = label;
-                    capH.directingAtomSymmOp = symmetryOperationStr;
-                }
-                crystalFragments.push_back(subsystem);
-            }
+        //        for (auto& fragmentConstructionData : fragment.fragmentPartConstructionData)
+        //        {
+        //            fragmentConstructionData.getAtomList(unitCellContent, connectivity, atomList, cappingHydrogenList);
+        //            fragmentAtoms.insert(atomList.begin(), atomList.end());
+        //            cappingHydrogens.insert(cappingHydrogenList.begin(), cappingHydrogenList.end());
+        //        }
+        //        for (auto& atom : fragmentAtoms)
+        //        {
+        //            unitCellContent.interpreteAtomID(atom, label, symmetryOperationStr);
+        //            subsystem.atoms.atomList.push_back({ label, symmetryOperationStr });
+        //        }
+        //        for (auto& cappingH : cappingHydrogens)
+        //        {
+        //            subsystem.atoms.cappingHydrogens.resize(subsystem.atoms.cappingHydrogens.size() + 1);
+        //            auto& capH = subsystem.atoms.cappingHydrogens.back();
+        //            unitCellContent.interpreteAtomID(cappingH.first, label, symmetryOperationStr);
+        //            capH.bondedAtom = label;
+        //            capH.bondedAtomSymmOp = symmetryOperationStr;
+        //            unitCellContent.interpreteAtomID(cappingH.second, label, symmetryOperationStr);
+        //            capH.directingAtom = label;
+        //            capH.directingAtomSymmOp = symmetryOperationStr;
+        //        }
+        //        crystalFragments.push_back(subsystem);
+        //    }
         }
 
         /*
@@ -641,7 +561,7 @@ namespace discamb {
         const nlohmann::json& data,
         const Crystal& crystal)
     {
-        setCrystalFragments(data, crystal, crystalFragments);
+        ham_settings::setCrystalFragments(data, crystal, crystalFragments);
         electronDensityPartition.set(data);
         wfnCalculation.set(data);
         multipoleExpansion.set(data);

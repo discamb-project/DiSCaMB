@@ -12,9 +12,9 @@ namespace discamb {
     namespace fragmentation_io {
 
         //void read(const std::string& fileName, std::vector<FragmentData>& fragments);
-        void readPlainText(const std::string& fileName, std::vector<FragmentData>& fragments);
-        void readJson(const std::string& fileName, std::vector<FragmentData>& fragments);
-        void readHirsFrag(const std::string& fileName, std::vector<FragmentData>& fragments);
+        void readPlainText(const std::string& fileName, std::vector<FragmentConstructionData>& fragmentsConstructionData);
+        void readJson(const std::string& fileName, std::vector<FragmentConstructionData>& fragmentsConstructionData);
+        void readHirsFrag(const std::string& fileName, std::vector<FragmentConstructionData>& fragmentsConstructionData);
 
         void parseCappingAtomInfo(
             const std::string word1,

@@ -61,13 +61,6 @@ namespace discamb {
             std::optional<DistributedMultipoleCentersSettings> distributedMultipoleCluster;
         };
 
-        struct QmFragmentInCrystal {
-            std::string label = "system";
-            FragmentAtoms atoms;
-            int charge = 0;
-            int spin_multiplicity = 1;
-            void toXyzMol(const Crystal& crystal, std::vector<ChemicalElement>& elements, std::vector<Vector3d>& positions) const;
-        };
 
 
         struct MultipoleExpansionCalculation {
@@ -112,7 +105,7 @@ namespace discamb {
             const nlohmann::json& data, 
             const Crystal &crystal,
             std::vector<QmFragmentInCrystal>& crystalFragments);
-
+        
         void setRepresentatives(const nlohmann::json& data,
             const Crystal& crystal,
             const std::vector<QmFragmentInCrystal>& subsystems,
@@ -140,7 +133,7 @@ namespace discamb {
     struct HirshfeldAtomModelSettings
     {
         void set(const nlohmann::json &data, const Crystal& crystal);
-        std::vector<ham_settings::QmFragmentInCrystal> crystalFragments;
+        std::vector<QmFragmentInCrystal> crystalFragments;
         ham_settings::WfnCalculation wfnCalculation;
         std::vector<ham_settings::CrystalFragmentWfnCalculation> fragmentWfnCalculation;
         ham_settings::PartitionData electronDensityPartition;

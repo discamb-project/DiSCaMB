@@ -221,7 +221,7 @@ namespace discamb {
 
 
     void StockholderAtomFormFactorCalcManager::setSubsystems(
-        const std::vector<ham_settings::QmFragmentInCrystal>& subsystems,
+        const std::vector<QmFragmentInCrystal>& subsystems,
         const std::vector<std::vector<AtomRepresentativeInfo> >& representatives)
     {
         

@@ -30,7 +30,7 @@ namespace {
 namespace discamb{
 
 
-    void FragmentConstructionData::set(
+    void FragmentPartConstructionData::set(
         const std::string& line)
     {
         vector<string> words;
@@ -58,7 +58,7 @@ namespace discamb{
 
     */
 
-    void FragmentConstructionData::clear()
+    void FragmentPartConstructionData::clear()
     {
         include.clear();
         connect.clear();
@@ -66,7 +66,7 @@ namespace discamb{
         removeAndReplaceWithHydrogen.clear();
     }
 
-    void FragmentConstructionData::set(
+    void FragmentPartConstructionData::set(
         const nlohmann::json& data)
     {
         clear();
@@ -101,7 +101,7 @@ namespace discamb{
 
     }
 
-    void FragmentConstructionData::getAtomList(
+    void FragmentPartConstructionData::getAtomList(
         const UnitCellContent& ucContent,
         const std::vector<std::vector<UnitCellContent::AtomID> >& connectivity,
         std::vector<UnitCellContent::AtomID>& atomList,
@@ -161,11 +161,11 @@ namespace discamb{
     }
 
 
-    void FragmentConstructionData::set(
+    void FragmentPartConstructionData::set(
         const std::vector<std::string>& words)
     {
         clear();
-        *this = FragmentConstructionData();
+        *this = FragmentPartConstructionData();
         if (words.empty())
             return;
         std::set<string> validSectionNames { "$connect", "$remove", "$remove_and_cap" };
@@ -208,6 +208,91 @@ namespace discamb{
 
     }
 
+    bool FragmentConstructionData::set(
+        const nlohmann::json& data)
+    {
+        if (!data.is_object())
+            return false;
+
+        string errorMessage = "invalid format of JSON subsystems definition for Hirshfeld Atom Model calculations";
+
+        *this = FragmentConstructionData();
+        this->label = data.value("name", "");
+        this->charge = data.value("charge", 0);
+        this->spin_multiplicity = data.value("spin multiplicity", 1);
+
+        if (data.find("atoms") != data.end())
+            on_error::throwException(errorMessage, __FILE__, __LINE__);
+
+        FragmentPartConstructionData fragmentPartConstructionData;
+
+        if (data["atoms"].is_string())  //list of atoms
+        {
+            vector<string> words;
+            string_utilities::split(data["atom"].get<string>(), words);
+            crystal_structure_utilities::splitIntoAtomAndSymmOp(words, fragmentPartConstructionData.include, true);
+            this->fragmentPartConstructionData.push_back(fragmentPartConstructionData);
+        }
+        else
+        {
+            if (data["atoms"].is_object())
+            {
+                fragmentPartConstructionData.set(data["atoms"]);
+                this->fragmentPartConstructionData.push_back(fragmentPartConstructionData);
+            }
+            else
+            {
+                if (data["atoms"].is_array())
+                {
+                    for (auto& group : data["atoms"])
+                    {
+                        fragmentPartConstructionData.set(group);
+                        this->fragmentPartConstructionData.push_back(fragmentPartConstructionData);
+                    }
+                }
+                else
+                    on_error::throwException(errorMessage, __FILE__, __LINE__);
+            }
+        }
+
+
+        return true;
+    }
+
+    void QmFragmentInCrystal::toXyzMol(
+        const Crystal& crystal,
+        std::vector<ChemicalElement>& elements,
+        std::vector<Vector3d>& positions)
+        const
+    {
+        positions.clear();
+        elements.clear();
+
+        map<string, int> label2idx;
+        for (int atomIdx = 0; atomIdx < int(crystal.atoms.size()); atomIdx++)
+            label2idx[crystal.atoms[atomIdx].label] = atomIdx;
+
+        vector<int> atomicNumbersAsymmUnit;
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersAsymmUnit);
+
+        for (auto const& atom : atoms.atomList)
+        {
+            if (label2idx.find(atom.first) != label2idx.end())
+            {
+                positions.push_back(crystal_structure_utilities::atomPosition(atom.first, atom.second, crystal));
+                elements.push_back(ChemicalElement(int(atomicNumbersAsymmUnit[label2idx[atom.first]])));
+            }
+            else
+                on_error::throwException(string("invalid atom label '") + atom.first + string("'"), __FILE__, __LINE__);
+        }
+        for (auto const& capH : atoms.cappingHydrogens)
+        {
+            positions.push_back(fragmentation::capping_h_position(crystal, capH.bondedAtom, capH.bondedAtomSymmOp, capH.directingAtom, capH.directingAtomSymmOp));
+            elements.push_back(ChemicalElement(1));
+        }
+
+    }
+
 
 namespace fragmentation{
 
@@ -220,26 +305,83 @@ namespace fragmentation{
     }
 
     void from_fragment_construction_data(
-        const vector<vector< FragmentConstructionData> >& data,
+        const vector<vector< FragmentPartConstructionData> >& data,
         const Crystal& crystal,
         vector < pair<string, string> >& atomList)
     {
 
     }
 
-    void from_fragment_data(
-        const std::vector<FragmentData>& data,
+    void make_qm_fragments(
         const Crystal& crystal,
-        vector < pair<string, string> >& atomList)
+        const std::vector<FragmentConstructionData>& fragmentConstructionData,
+        std::vector<QmFragmentInCrystal>& qmFragments)
     {
-        int nFragments = data.size();
-        vector<vector< FragmentConstructionData> > fragmentConstructionData(nFragments);
+        qmFragments.clear();
+        
+        // fragmentPartConstructionData to atom list
 
-        for (int fragIdx = 0; fragIdx < nFragments; fragIdx++)
-            fragmentConstructionData[fragIdx] = data[fragIdx].fragmentConstructionData;
+        UnitCellContent unitCellContent;
+        unitCellContent.set(crystal);
+        set<UnitCellContent::AtomID> fragmentAtoms;
+        set<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogens;
+        vector<UnitCellContent::AtomID> atomList;
+        vector<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogenList;
+        vector<vector<UnitCellContent::AtomID> > connectivity;
 
-        from_fragment_construction_data(fragmentConstructionData, crystal, atomList);
+        structural_properties::calcUnitCellConnectivity(unitCellContent, connectivity, 0.4);
+        string label, symmetryOperationStr;
+
+        for (auto& fragmentData : fragmentConstructionData)
+        {
+            fragmentAtoms.clear();
+            atomList.clear();
+            QmFragmentInCrystal subsystem;
+            subsystem.charge = fragmentData.charge;
+            subsystem.label = fragmentData.label;
+            subsystem.spin_multiplicity = fragmentData.spin_multiplicity;
+
+            for (auto& fragmentPartConstructionData : fragmentData.fragmentPartConstructionData)
+            {
+                fragmentPartConstructionData.getAtomList(unitCellContent, connectivity, atomList, cappingHydrogenList);
+                fragmentAtoms.insert(atomList.begin(), atomList.end());
+                cappingHydrogens.insert(cappingHydrogenList.begin(), cappingHydrogenList.end());
+            }
+            for (auto& atom : fragmentAtoms)
+            {
+                unitCellContent.interpreteAtomID(atom, label, symmetryOperationStr);
+                subsystem.atoms.atomList.push_back({ label, symmetryOperationStr });
+            }
+            for (auto& cappingH : cappingHydrogens)
+            {
+                subsystem.atoms.cappingHydrogens.resize(subsystem.atoms.cappingHydrogens.size() + 1);
+                auto& capH = subsystem.atoms.cappingHydrogens.back();
+                unitCellContent.interpreteAtomID(cappingH.first, label, symmetryOperationStr);
+                capH.bondedAtom = label;
+                capH.bondedAtomSymmOp = symmetryOperationStr;
+                unitCellContent.interpreteAtomID(cappingH.second, label, symmetryOperationStr);
+                capH.directingAtom = label;
+                capH.directingAtomSymmOp = symmetryOperationStr;
+            }
+            qmFragments.push_back(subsystem);
+        }
+
     }
+
+
+    //void from_fragment_data(
+    //    const std::vector<FragmentData>& data,
+    //    const Crystal& crystal,
+    //    vector < pair<string, string> >& atomList)
+    //{
+    //    int nFragments = data.size();
+    //    vector<vector< FragmentPartConstructionData> > fragmentPartConstructionData(nFragments);
+
+    //    for (int fragIdx = 0; fragIdx < nFragments; fragIdx++)
+    //        fragmentPartConstructionData[fragIdx] = data[fragIdx].fragmentPartConstructionData;
+
+    //    from_fragment_construction_data(fragmentPartConstructionData, crystal, atomList);
+    //}
 
     Vector3d capping_h_position(
         const Crystal& crystal, 
@@ -346,6 +488,63 @@ namespace fragmentation{
                     cappingHydrogens.push_back({ atomIdx, neighbour });
             
     }
+
+//    void find_fragments_atoms(
+//        const Crystal& crystal,
+//        std::vector<FragmentConstructionData>& fragmentConstructionData,
+//        std::vector<FragmentAtoms>& fragmentsAtoms)
+//    {
+//        int fragmentIdx, nFragments = fragmentConstructionData.size();
+//        fragmentsAtoms.clear();
+//        fragmentsAtoms.resize(nFragments);
+//        UnitCellContent unitCellContent(crystal);
+//        vector<vector<UnitCellContent::AtomID> > connectivity;
+//        structural_properties::calcUnitCellConnectivity(unitCellContent, connectivity, 0.4);
+//        
+//        for (fragmentIdx = 0; fragmentIdx < nFragments; fragmentIdx++)
+//        {
+//            vector<UnitCellContent::AtomID> atomList;
+//            vector<pair<UnitCellContent::AtomID, UnitCellContent::AtomID> > cappingHydrogens;
+//            fragmentConstructionData[fragmentIdx].getAtomList(
+//                unitCellContent,
+//                connectivity,
+//                atomList,
+//                cappingHydrogens);
+//            UnitCellContent::AtomID id;
+//            string label, symmOpStr;
+//            int nAtoms = atomList.size();
+//            fragmentsAtoms[fragmentIdx].atomList.resize(nAtoms);
+//
+//            int nCappingHydrogens = cappingHydrogens.size();
+//            fragmentsAtoms[fragmentIdx].cappingHydrogens.resize(nCappingHydrogens);
+//            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+//            {
+//                unitCellContent.interpreteAtomID(atomList[atomIdx], label, symmOpStr);
+//                fragmentsAtoms[fragmentIdx].atomList[atomIdx].first = label;
+//                fragmentsAtoms[fragmentIdx].atomList[atomIdx].second = symmOpStr;
+//            }
+//            for (int capHydrogenIdx = 0; capHydrogenIdx < nCappingHydrogens; capHydrogenIdx++)
+//            {
+//                unitCellContent.interpreteAtomID(cappingHydrogens[capHydrogenIdx].first, label, symmOpStr);
+//                fragmentsAtoms[fragmentIdx].cappingHydrogens[capHydrogenIdx].bondedAtom = label;
+//                fragmentsAtoms[fragmentIdx].cappingHydrogens[capHydrogenIdx].bondedAtomSymmOp = symmOpStr;
+//                unitCellContent.interpreteAtomID(cappingHydrogens[capHydrogenIdx].second, label, symmOpStr);
+//                fragmentsAtoms[fragmentIdx].cappingHydrogens[capHydrogenIdx].directingAtom = label;
+//                fragmentsAtoms[fragmentIdx].cappingHydrogens[capHydrogenIdx].directingAtomSymmOp = symmOpStr;
+//            }
+//        }
+//
+//    }
+//
+//    void find_fragments_atoms(
+//        const Crystal& crystal,
+//        std::vector<FragmentData>& fragmentData,
+//        std::vector<FragmentAtoms>& fragmentsAtoms)
+//    {
+//        vector<FragmentConstructionData> fragmentConstructionData;
+//        for (auto& const data : fragmentData)
+//            fragmentConstructionData.push_back(data.fragmentConstructionData);
+//    }
 
     void findFragments(
         const vector<vector<int> >& connectivity, 
