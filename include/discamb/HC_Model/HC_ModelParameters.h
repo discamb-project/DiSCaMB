@@ -27,6 +27,15 @@ struct HC_ModelParameters
     std::vector<int> atom_to_type_map;
 };
 
+struct HC_ModelParametersDev
+{
+    std::vector<HC_WfnType> wfn_parameters;
+    std::vector<HC_AtomTypeParameters> type_parameters;
+    std::vector<int> atom_to_wfn_map;
+    std::vector< std::vector<int> > atom_to_type_map;
+};
+
+
 } //namespace discamb
 
 #endif /*_DISCAMB_HC_MODEL_HC_MODELPARAMETERS_H_*/
