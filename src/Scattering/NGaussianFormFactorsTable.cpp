@@ -12,7 +12,6 @@ struct FormFactorData{
     double c;
 };
 
-
 const int N_SCATTERER_TYPES_WK = 211;
 const int N_SCATTERER_TYPES_IT92 = 214;
 const int N_ELECTRON_IT_TYPES = 98;
