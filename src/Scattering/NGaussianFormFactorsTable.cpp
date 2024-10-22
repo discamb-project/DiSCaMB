@@ -13,7 +13,7 @@ struct FormFactorData{
 };
 
 
-const int N_SCATTERER_TYPES_WK = 210;
+const int N_SCATTERER_TYPES_WK = 211;
 const int N_SCATTERER_TYPES_IT92 = 214;
 const int N_ELECTRON_IT_TYPES = 98;
 const int N_ELECTRON_CCTBX = 98;
@@ -704,7 +704,7 @@ static const FormFactorData<5> Waasmeier_Kirfel[N_SCATTERER_TYPES_WK] =
 		-34.916604
 	},
 	{
-		"K+",
+		"K1+",
 		{ -17.609339, 1.494873, 7.150305, 10.899569, 15.808228 },
 		{ 18.840979, 0.053453, 0.81294, 22.264104, 14.351593 },
 		0.257164
@@ -1088,6 +1088,12 @@ static const FormFactorData<5> Waasmeier_Kirfel[N_SCATTERER_TYPES_WK] =
 		-33.950316
 	},
 	{
+		"Dy3+",
+        { 16.864344, 90.383461, 13.675473, 1.687078, 25.540652},
+        { 0.216275, 0.000593, 11.121207, 26.250975, 2.135930},
+        -85.150653
+	},
+	{
 		"Ho3+",
 		{ 16.837524, 63.221338, 13.703766, 2.061602, 26.202621 },
 		{ 0.206873, 0.000796, 10.500283, 24.031883, 2.05506 },
@@ -1172,7 +1178,7 @@ static const FormFactorData<5> Waasmeier_Kirfel[N_SCATTERER_TYPES_WK] =
 		4.094551
 	},
 	{
-		"Aul+",
+		"Au1+",
 		{ 32.124307, 16.716476, 16.814101, 7.311565, 0.993064 },
 		{ 1.216073, 7.165378, 0.118715, 20.442485, 53.095984 },
 		4.040792
