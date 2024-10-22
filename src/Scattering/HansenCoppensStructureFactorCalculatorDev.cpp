@@ -51,7 +51,7 @@ HansenCoppensStructureFactorCalculatorDev::HansenCoppensStructureFactorCalculato
 
 HansenCoppensStructureFactorCalculatorDev::HansenCoppensStructureFactorCalculatorDev(
     const Crystal &crystal, 
-    const HC_ModelParameters &parameters)
+    const HC_ModelParametersDev &parameters)
 {
     mWithGradients = true;
     mEngineType = CPU;
@@ -143,7 +143,7 @@ void HansenCoppensStructureFactorCalculatorDev::setEngineSpecificSpaceGroupRepre
 
 void HansenCoppensStructureFactorCalculatorDev::setModel(
     const Crystal &crystal,
-    const HC_ModelParameters &parameters)
+    const HC_ModelParametersDev &parameters)
 {
 	mSingleH_DataInitialized = false;
 
@@ -241,30 +241,55 @@ void HansenCoppensStructureFactorCalculatorDev::setModel(
         mTypeParameters[typeIndex].kappa_spherical = parameters.type_parameters[typeIndex].kappa_spherical_valence;
         mTypeParameters[typeIndex].p_val = parameters.type_parameters[typeIndex].p_val;
     }
-
-    copyVector(parameters.atom_to_wfn_map, mAtomToWfnTypeMap);
-    copyVector(parameters.atom_to_type_map, mAtomToAtomTypeMap);
-
-
-
+    // unfolded atoms - atoms with multiple atom types are represented as multiple atoms
+    
     int atomIndex, nAtoms;
     nAtoms = crystal.atoms.size();
-    mAtomicPositions.resize(crystal.atoms.size());
 
-    mAtomic_displacement_parameters.resize(nAtoms);
-    for (atomIndex = 0; atomIndex<nAtoms; atomIndex++)
-        mAtomic_displacement_parameters[atomIndex].resize(crystal.atoms[atomIndex].adp.size());
 
-    mAtomicOccupancy.resize(nAtoms);
-    mAtomicMultiplicityFactor.resize(nAtoms);
-    mAtomicMultiplicityWeights.resize(nAtoms);
+
+    mUnfoldedAtom2Atom.clear();
+    mAtomUnfoldedAtoms.clear();
+    mAtomUnfoldedAtoms.resize(nAtoms);
+    int unfoldedAtomIdx = 0;
+    
+    for (atomIndex = 0; atomIndex < nAtoms; atomIndex++)
+    {
+        int nConfigurations = parameters.atom_to_type_map[atomIndex].size();
+        for (int configurationIdx = 0; configurationIdx < nConfigurations; configurationIdx++)
+        {
+            mUnfoldedAtom2Atom.push_back(unfoldedAtomIdx);
+            mAtomUnfoldedAtoms[atomIndex].push_back(atomIndex);
+            unfoldedAtomIdx++;
+        }
+    }
+    int nUfoldedAtoms = unfoldedAtomIdx;
+    mUnfoldedAtomToWfnTypeMap.resize(nUfoldedAtoms);
+    mUnfoldedAtomToAtomTypeMap.resize(nUfoldedAtoms);
+    mUnfoldedAtomicPositions.resize(nUfoldedAtoms);
+    mUnfoldedAtomic_displacement_parameters.resize(nUfoldedAtoms);
+    mUnfoldedAtomicOccupancy.resize(nUfoldedAtoms);
+    mUnfoldedAtomicMultiplicityFactor.resize(nUfoldedAtoms);
+    mUnfoldedAtomicMultiplicityWeights.resize(nUfoldedAtoms);
     double nSymmOpsAsDouble = double(crystal.spaceGroup.nSymmetryOperations());
 
-    for(int i=0;i<nAtoms;i++)
+    unfoldedAtomIdx = 0;
+    for (atomIndex = 0; atomIndex < nAtoms; atomIndex++)
     {
-        mAtomicMultiplicityFactor[i] = crystal.atoms[i].multiplicity;
-        mAtomicMultiplicityWeights[i] = crystal.atoms[i].multiplicity / nSymmOpsAsDouble;
+        int nConfigurations = parameters.atom_to_type_map[atomIndex].size();
+        int nAdps = crystal.atoms[atomIndex].adp.size();
+        for (int configurationIdx = 0; configurationIdx < nConfigurations; configurationIdx++)
+        {
+            mUnfoldedAtomToWfnTypeMap[unfoldedAtomIdx] = parameters.atom_to_wfn_map[atomIndex];
+            mUnfoldedAtomToAtomTypeMap[unfoldedAtomIdx] = parameters.atom_to_type_map[atomIndex][configurationIdx];
+            mUnfoldedAtomic_displacement_parameters[unfoldedAtomIdx].resize(nAdps);
+            mUnfoldedAtomicMultiplicityFactor[unfoldedAtomIdx] = crystal.atoms[atomIndex].multiplicity;
+            mUnfoldedAtomicMultiplicityWeights[unfoldedAtomIdx] = crystal.atoms[atomIndex].multiplicity / nSymmOpsAsDouble;
+
+            unfoldedAtomIdx++;
+        }
     }
+
 	mReciprocalUnitCell.set(crystal.unitCell);
 
     mReciprocalUnitCell.fractionalToCartesian(Vector3d(1, 0, 0), mA_Star);
@@ -339,6 +364,7 @@ void HansenCoppensStructureFactorCalculatorDev::setCalculationMode(
     }
 }
 
+//uncomment
 
 
 void HansenCoppensStructureFactorCalculatorDev::calculateStructureFactorsAndDerivatives( 
@@ -351,99 +377,99 @@ const std::vector<std::complex<double> > &_dTarget_df,
 const std::vector<bool> &countAtomContribution)
 
 {
-    vector<complex<double> > dTarget_df = _dTarget_df;
-    vector<double> sfMultipliers;
-    char latticeCentering;
-    bool obverse;
-    
-    latticeCentering = mSpaceGroup.centering(obverse);
-    scattering_utilities::centeringSfMultipliers(latticeCentering, hkl, sfMultipliers, obverse);
-    
-    int hklIdx, nHkl =  hkl.size();
+    //vector<complex<double> > dTarget_df = _dTarget_df;
+    //vector<double> sfMultipliers;
+    //char latticeCentering;
+    //bool obverse;
+    //
+    //latticeCentering = mSpaceGroup.centering(obverse);
+    //scattering_utilities::centeringSfMultipliers(latticeCentering, hkl, sfMultipliers, obverse);
+    //
+    //int hklIdx, nHkl =  hkl.size();
 
-    if(dTarget_df.size() != hkl.size())
-        on_error::throwException("Inconsistent size of hkl vectors set and (d target/ d F) table when calculating multipolar structure factors.",__FILE__,__LINE__);
-    
-    for( hklIdx = 0 ; hklIdx<nHkl ; ++hklIdx)
-        dTarget_df[hklIdx] = conj(dTarget_df[hklIdx]) * sfMultipliers[hklIdx];
+    //if(dTarget_df.size() != hkl.size())
+    //    on_error::throwException("Inconsistent size of hkl vectors set and (d target/ d F) table when calculating multipolar structure factors.",__FILE__,__LINE__);
+    //
+    //for( hklIdx = 0 ; hklIdx<nHkl ; ++hklIdx)
+    //    dTarget_df[hklIdx] = conj(dTarget_df[hklIdx]) * sfMultipliers[hklIdx];
 
-    
-    prepareDataForEngine(atoms,hkl,f,dTarget_dparam);
-    
+    //
+    //prepareDataForEngine(atoms,hkl,f,dTarget_dparam);
+    //
 
-    vector<Matrix3i> rotations;
-    vector<Vector3d> translations;
-    Vector3d a, b, c, a_star, b_star, c_star;
-    Vector3<CrystallographicRational> translation;
-    ReciprocalLatticeUnitCell reciprocalLattice;
-    Matrix3d rotation;
+    //vector<Matrix3i> rotations;
+    //vector<Vector3d> translations;
+    //Vector3d a, b, c, a_star, b_star, c_star;
+    //Vector3<CrystallographicRational> translation;
+    //ReciprocalLatticeUnitCell reciprocalLattice;
+    //Matrix3d rotation;
 
-    switch(mEngineType)
-    {
-        case GPU:
-        {
-            Crystal crystal;
-            crystal.atoms = atoms;
-            crystal.spaceGroup = mSpaceGroup;
-            crystal.unitCell = mUnitCell;
+    //switch(mEngineType)
+    //{
+    //    case GPU:
+    //    {
+    //        Crystal crystal;
+    //        crystal.atoms = atoms;
+    //        crystal.spaceGroup = mSpaceGroup;
+    //        crystal.unitCell = mUnitCell;
 
-            mCpuTimer.start();
-            mWallClockTimer.start();
-            calculate_using_GPU_batched(crystal, localCoordinateSystems, hkl, f, dTarget_dparam, dTarget_df);
-            
+    //        mCpuTimer.start();
+    //        mWallClockTimer.start();
+    //        calculate_using_GPU_batched(crystal, localCoordinateSystems, hkl, f, dTarget_dparam, dTarget_df);
+    //        
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        mCpuTime = mCpuTimer.stop();
+    //        mWallClockTime = mWallClockTimer.stop();
 
-            break;
-        }
-        case CPU:
-        {
-            HansenCoppens_SF_Engine engine;
+    //        break;
+    //    }
+    //    case CPU:
+    //    {
+    //        HansenCoppens_SF_Engine engine;
 
-            mCpuTimer.start();
-            mWallClockTimer.start();
-            
-            engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
-                               mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-                               localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-                               mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
+    //        mCpuTimer.start();
+    //        mWallClockTimer.start();
+    //        
+    //        engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+    //                           mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+    //                           localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+    //                           mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        mCpuTime = mCpuTimer.stop();
+    //        mWallClockTime = mWallClockTimer.stop();
 
-            break;
-        }   
-        case CPU_IAM:
-        {
-            HansenCoppens_SF_Engine engine;
-            int wfnTypeIdx, nWfnTypes = mWfnParameters.size();
-            vector<complex<double> > anomalousScattering( nWfnTypes );
+    //        break;
+    //    }   
+    //    case CPU_IAM:
+    //    {
+    //        HansenCoppens_SF_Engine engine;
+    //        int wfnTypeIdx, nWfnTypes = mWfnParameters.size();
+    //        vector<complex<double> > anomalousScattering( nWfnTypes );
 
-            for(wfnTypeIdx=0 ; wfnTypeIdx<nWfnTypes ; wfnTypeIdx++ )
-                anomalousScattering[wfnTypeIdx] = mWfnParameters[wfnTypeIdx].anomalous_scattering;
-            mCpuTimer.start();
-            mWallClockTimer.start();
+    //        for(wfnTypeIdx=0 ; wfnTypeIdx<nWfnTypes ; wfnTypeIdx++ )
+    //            anomalousScattering[wfnTypeIdx] = mWfnParameters[wfnTypeIdx].anomalous_scattering;
+    //        mCpuTimer.start();
+    //        mWallClockTimer.start();
 
-            engine.calculateSF_IAM(mWfnTypeLabels, anomalousScattering, mAtomToWfnTypeMap,mAtomicPositions,
-                               mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-                               mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-                                   mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution,
-                               mN_Threads);
+    //        engine.calculateSF_IAM(mWfnTypeLabels, anomalousScattering, mAtomToWfnTypeMap,mAtomicPositions,
+    //                           mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+    //                           mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+    //                               mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution,
+    //                           mN_Threads);
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        mCpuTime = mCpuTimer.stop();
+    //        mWallClockTime = mWallClockTimer.stop();
 
-            break;
-        }
-        default:
-            on_error::throwException("wrong engine type",__FILE__,__LINE__);
-    } 
+    //        break;
+    //    }
+    //    default:
+    //        on_error::throwException("wrong engine type",__FILE__,__LINE__);
+    //} 
 
-    for (hklIdx = 0; hklIdx<nHkl; ++hklIdx)
-        f[hklIdx] *= sfMultipliers[hklIdx];
+    //for (hklIdx = 0; hklIdx<nHkl; ++hklIdx)
+    //    f[hklIdx] *= sfMultipliers[hklIdx];
 
-    convertDerivatives(dTarget_dparam);
+    //convertDerivatives(dTarget_dparam);
 
 }
 
@@ -479,34 +505,34 @@ const
         }
 }
 
-void HansenCoppensStructureFactorCalculatorDev::test(
-    const Crystal &crystal, 
-    const std::vector<Matrix3d> &localCoordinateSystems,
-    const std::vector<Vector3i> &hkl, 
-    std::vector<std::complex<double> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<double> > &dTarget_df)
-{
-    HansenCoppens_SF_Engine engine;
-
-    mCpuTimer.start();
-    mWallClockTimer.start();
-    vector<bool> countAtomContribution(crystal.atoms.size());
-
-    int i, nHkl = hkl.size();
-    vector<Vector3d> hkls(nHkl);
-    ReciprocalLatticeUnitCell rl(crystal.unitCell);
-    for(i=0;i<nHkl;i++)
-        rl.fractionalToCartesian(hkl[i],hkls[i]);
-
-    engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
-                       mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-                       localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-                       hkls, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
-
-    mCpuTime = mCpuTimer.stop();
-    mWallClockTime = mWallClockTimer.stop();
-}
+//void HansenCoppensStructureFactorCalculatorDev::test(
+//    const Crystal &crystal, 
+//    const std::vector<Matrix3d> &localCoordinateSystems,
+//    const std::vector<Vector3i> &hkl, 
+//    std::vector<std::complex<double> > &f,
+//    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
+//    const std::vector<std::complex<double> > &dTarget_df)
+//{
+//    HansenCoppens_SF_Engine engine;
+//
+//    mCpuTimer.start();
+//    mWallClockTimer.start();
+//    vector<bool> countAtomContribution(crystal.atoms.size());
+//
+//    int i, nHkl = hkl.size();
+//    vector<Vector3d> hkls(nHkl);
+//    ReciprocalLatticeUnitCell rl(crystal.unitCell);
+//    for(i=0;i<nHkl;i++)
+//        rl.fractionalToCartesian(hkl[i],hkls[i]);
+//
+//    engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+//                       mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+//                       localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+//                       hkls, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
+//
+//    mCpuTime = mCpuTimer.stop();
+//    mWallClockTime = mWallClockTimer.stop();
+//}
 
 void HansenCoppensStructureFactorCalculatorDev::calculate_using_GPU_batched(
     const Crystal &crystal, 
@@ -692,6 +718,8 @@ std::vector<double> &density_exponents)
         }
 }
 
+
+
 void HansenCoppensStructureFactorCalculatorDev::setDerivativesConvention(
     spc::XyzCoordinateSystem dXyzConvention,
     spc::AdpConvention dAdpConvention)
@@ -699,6 +727,8 @@ void HansenCoppensStructureFactorCalculatorDev::setDerivativesConvention(
     mD_XyzConvention = dXyzConvention;
     mD_AdpConvention = dAdpConvention;
 }
+
+
 
 void HansenCoppensStructureFactorCalculatorDev::getDerivativesConvention(
     spc::XyzCoordinateSystem &dXyzConvention,
@@ -710,122 +740,125 @@ const
 
 }
 
+// uncomment
+
 void HansenCoppensStructureFactorCalculatorDev::prepareDataForEngine_part(
     const std::vector<AtomInCrystal> &atoms,
     const std::vector<Vector3i> &hkl)
 const
 {
-    int atom_index, nAtoms, nAdpComponents;
-    double two_pi2 = 2.0*M_PI*M_PI;
-    Vector3d x, y, z;
-    ReciprocalLatticeUnitCell reciprocalLattice(mUnitCell);
-    nAtoms = mAtomicPositions.size();
-    spc::XyzCoordinateSystem xyzCoordinatesType;
-    spc::AdpConvention adpType;
-    
-
-    if(atoms.empty())
-        return;
-
-
-    xyzCoordinatesType = mXyzInputCoordinateSystem; 
-    adpType = mAdpInputType;
-
-
-    // convert ADP
-    for (atom_index = 0; atom_index<nAtoms; atom_index++)
-    {
-        nAdpComponents = atoms[atom_index].adp.size();
-
-        if (nAdpComponents == 6)
-        {
-            if (adpType == spc::AdpConvention::U_cart)
-                mAtomic_displacement_parameters[atom_index] = atoms[atom_index].adp;
-            else
-                mConverter.convertADP(atoms[atom_index].adp, mAtomic_displacement_parameters[atom_index], adpType, spc::AdpConvention::U_cart);
-            
-            for (int i = 0; i<6; i++)
-                mAtomic_displacement_parameters[atom_index][i] *= two_pi2;
-        }
-        else
-        {
-            if (nAdpComponents == 1)
-            {
-                mAtomic_displacement_parameters[atom_index] = atoms[atom_index].adp;
-                mAtomic_displacement_parameters[atom_index][0] *= two_pi2;
-            }
-        }
-    }
-
-    // convert atomic positions
-    
-    if (xyzCoordinatesType == spc::XyzCoordinateSystem::cartesian)
-        for (atom_index = 0; atom_index<nAtoms; atom_index++)
-            mAtomicPositions[atom_index] = atoms[atom_index].coordinates;
-    else
-        for (atom_index = 0; atom_index<nAtoms; atom_index++)
-            mConverter.xyzFractionalToCartesian(atoms[atom_index].coordinates, mAtomicPositions[atom_index]);
-
-    // set occupancy
-
-    for (atom_index = 0; atom_index<nAtoms; atom_index++)
-        mAtomicOccupancy[atom_index] = atoms[atom_index].occupancy;
-
+    //int atom_index, nAtoms, nAdpComponents;
+    //double two_pi2 = 2.0*M_PI*M_PI;
+    //Vector3d x, y, z;
+    //ReciprocalLatticeUnitCell reciprocalLattice(mUnitCell);
+    //nAtoms = mAtomicPositions.size();
+    //spc::XyzCoordinateSystem xyzCoordinatesType;
+    //spc::AdpConvention adpType;
     //
 
+    //if(atoms.empty())
+    //    return;
 
-    int i, n = hkl.size();
-    Vector3d a_star, b_star, c_star;
-    mHKL_Cartesian.resize(n);
 
-    reciprocalLattice.fractionalToCartesian(Vector3d(1, 0, 0), a_star);
-    reciprocalLattice.fractionalToCartesian(Vector3d(0, 1, 0), b_star);
-    reciprocalLattice.fractionalToCartesian(Vector3d(0, 0, 1), c_star);
+    //xyzCoordinatesType = mXyzInputCoordinateSystem; 
+    //adpType = mAdpInputType;
 
-    for (i = 0; i<n; i++)
-        mHKL_Cartesian[i] = a_star*double(hkl[i][0]) + b_star*double(hkl[i][1]) + c_star*double(hkl[i][2]);
 
-    if (mEngineType != CPU && !mPlmWfnNormalized)
-    {
-        vector<vector<double> > densityToWfnNormalization;
-        real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnNormalization);
+    //// convert ADP
+    //for (atom_index = 0; atom_index<nAtoms; atom_index++)
+    //{
+    //    nAdpComponents = atoms[atom_index].adp.size();
 
-        int l, m, nL;
-        int typeIndex, nTypes = mTypeParameters.size();
-        for (typeIndex = 0; typeIndex<nTypes; typeIndex++)
-        {
-            nL = mTypeParameters[typeIndex].p_lm.size();
+    //    if (nAdpComponents == 6)
+    //    {
+    //        if (adpType == spc::AdpConvention::U_cart)
+    //            mAtomic_displacement_parameters[atom_index] = atoms[atom_index].adp;
+    //        else
+    //            mConverter.convertADP(atoms[atom_index].adp, mAtomic_displacement_parameters[atom_index], adpType, spc::AdpConvention::U_cart);
+    //        
+    //        for (int i = 0; i<6; i++)
+    //            mAtomic_displacement_parameters[atom_index][i] *= two_pi2;
+    //    }
+    //    else
+    //    {
+    //        if (nAdpComponents == 1)
+    //        {
+    //            mAtomic_displacement_parameters[atom_index] = atoms[atom_index].adp;
+    //            mAtomic_displacement_parameters[atom_index][0] *= two_pi2;
+    //        }
+    //    }
+    //}
 
-            for (l = 0; l<nL; l++)
-                for (m = -l; m <= l; m++)
-                    mTypeParameters[typeIndex].p_lm[l][l + m] *= densityToWfnNormalization[l][abs(m)];
+    //// convert atomic positions
+    //
+    //if (xyzCoordinatesType == spc::XyzCoordinateSystem::cartesian)
+    //    for (atom_index = 0; atom_index<nAtoms; atom_index++)
+    //        mAtomicPositions[atom_index] = atoms[atom_index].coordinates;
+    //else
+    //    for (atom_index = 0; atom_index<nAtoms; atom_index++)
+    //        mConverter.xyzFractionalToCartesian(atoms[atom_index].coordinates, mAtomicPositions[atom_index]);
 
-        }
-        mPlmWfnNormalized = true;
-    }
+    //// set occupancy
 
-    if (mEngineType == CPU && mPlmWfnNormalized)
-    {
-        vector<vector<double> > densityToWfnMultipliers;//wfnToDensityNormalization;
-        real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnMultipliers);
-        //real_spherical_harmonics::get
+    //for (atom_index = 0; atom_index<nAtoms; atom_index++)
+    //    mAtomicOccupancy[atom_index] = atoms[atom_index].occupancy;
 
-        int l, m, nL;
-        int typeIndex, nTypes = mTypeParameters.size();
-        for (typeIndex = 0; typeIndex<nTypes; typeIndex++)
-        {
-            nL = mTypeParameters[typeIndex].p_lm.size();
+    ////
 
-            for (l = 0; l<nL; l++)
-                for (m = -l; m <= l; m++)
-                    mTypeParameters[typeIndex].p_lm[l][l + m] /= densityToWfnMultipliers[l][abs(m)];
 
-        }
-        mPlmWfnNormalized = false;
-    }
+    //int i, n = hkl.size();
+    //Vector3d a_star, b_star, c_star;
+    //mHKL_Cartesian.resize(n);
+
+    //reciprocalLattice.fractionalToCartesian(Vector3d(1, 0, 0), a_star);
+    //reciprocalLattice.fractionalToCartesian(Vector3d(0, 1, 0), b_star);
+    //reciprocalLattice.fractionalToCartesian(Vector3d(0, 0, 1), c_star);
+
+    //for (i = 0; i<n; i++)
+    //    mHKL_Cartesian[i] = a_star*double(hkl[i][0]) + b_star*double(hkl[i][1]) + c_star*double(hkl[i][2]);
+
+    //if (mEngineType != CPU && !mPlmWfnNormalized)
+    //{
+    //    vector<vector<double> > densityToWfnNormalization;
+    //    real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnNormalization);
+
+    //    int l, m, nL;
+    //    int typeIndex, nTypes = mTypeParameters.size();
+    //    for (typeIndex = 0; typeIndex<nTypes; typeIndex++)
+    //    {
+    //        nL = mTypeParameters[typeIndex].p_lm.size();
+
+    //        for (l = 0; l<nL; l++)
+    //            for (m = -l; m <= l; m++)
+    //                mTypeParameters[typeIndex].p_lm[l][l + m] *= densityToWfnNormalization[l][abs(m)];
+
+    //    }
+    //    mPlmWfnNormalized = true;
+    //}
+
+    //if (mEngineType == CPU && mPlmWfnNormalized)
+    //{
+    //    vector<vector<double> > densityToWfnMultipliers;//wfnToDensityNormalization;
+    //    real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnMultipliers);
+    //    //real_spherical_harmonics::get
+
+    //    int l, m, nL;
+    //    int typeIndex, nTypes = mTypeParameters.size();
+    //    for (typeIndex = 0; typeIndex<nTypes; typeIndex++)
+    //    {
+    //        nL = mTypeParameters[typeIndex].p_lm.size();
+
+    //        for (l = 0; l<nL; l++)
+    //            for (m = -l; m <= l; m++)
+    //                mTypeParameters[typeIndex].p_lm[l][l + m] /= densityToWfnMultipliers[l][abs(m)];
+
+    //    }
+    //    mPlmWfnNormalized = false;
+    //}
 
 }
 
+//uncomment
 
 void HansenCoppensStructureFactorCalculatorDev::prepareDataForEngine(
     const std::vector<AtomInCrystal> &atoms,
@@ -834,35 +867,35 @@ void HansenCoppensStructureFactorCalculatorDev::prepareDataForEngine(
     std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam)
     const
 {
-    prepareDataForEngine_part(atoms, hkl);
-    int atom_index, nAtoms, nAdpComponents;
-    nAtoms = mAtomicPositions.size();
+    //prepareDataForEngine_part(atoms, hkl);
+    //int atom_index, nAtoms, nAdpComponents;
+    //nAtoms = mAtomicPositions.size();
 
-    dTarget_dparam.resize(nAtoms);
-    f.resize(hkl.size());
+    //dTarget_dparam.resize(nAtoms);
+    //f.resize(hkl.size());
 
-    for (atom_index = 0; atom_index<nAtoms; atom_index++)
-    {
-        nAdpComponents = atoms[atom_index].adp.size();
+    //for (atom_index = 0; atom_index<nAtoms; atom_index++)
+    //{
+    //    nAdpComponents = atoms[atom_index].adp.size();
 
-        if (nAdpComponents == 6)
-            dTarget_dparam[atom_index].adp_derivatives.resize(6);
-        else if (nAdpComponents == 1)
-            dTarget_dparam[atom_index].adp_derivatives.resize(1);
-    }
+    //    if (nAdpComponents == 6)
+    //        dTarget_dparam[atom_index].adp_derivatives.resize(6);
+    //    else if (nAdpComponents == 1)
+    //        dTarget_dparam[atom_index].adp_derivatives.resize(1);
+    //}
 
 }
 
 
-void HansenCoppensStructureFactorCalculatorDev::copyVector(
-const std::vector<int> &from,
-std::vector<int> &to)
-{
-    int i,n=from.size();
-    to.resize(n);
-    for(i=0;i<n;i++)
-        to[i]=from[i];
-}
+//void HansenCoppensStructureFactorCalculatorDev::copyVector(
+//const std::vector<int> &from,
+//std::vector<int> &to)
+//{
+//    int i,n=from.size();
+//    to.resize(n);
+//    for(i=0;i<n;i++)
+//        to[i]=from[i];
+//}
 
 void HansenCoppensStructureFactorCalculatorDev::saveRawData(
     const Crystal &crystal,
@@ -901,161 +934,161 @@ void HansenCoppensStructureFactorCalculatorDev::saveRawData(
 
 
 
-void HansenCoppensStructureFactorCalculatorDev::saveRawData(
-    const Crystal &crystal,
-    const std::vector<Matrix3d> &localCoordinateSystems,
-    const std::vector<Vector3i> &hkl,
-    std::ostream &out)
-{
-    HC_SF_EngineId engineId = mEngineType;
-    setEngineType(GPU);
-    prepareDataForEngine_part(crystal.atoms,hkl);
-    mEngineType = engineId;
-
-    int atomIdx, nAtoms = mAtomicPositions.size();
-    
-    for (atomIdx = 0; atomIdx<nAtoms; atomIdx++)
-    {
-        if (mAtomic_displacement_parameters[atomIdx].size() == 6)
-        {
-            mAtomic_displacement_parameters[atomIdx][3] *= 2.0;
-            mAtomic_displacement_parameters[atomIdx][4] *= 2.0;
-            mAtomic_displacement_parameters[atomIdx][5] *= 2.0;
-        }
-    }
-
-
-    //------------------------------------------------------
-    
-    int i, j, k, n, p, maxL;
-    vector<TargetFunctionAtomicParamDerivatives> x;
-    vector<complex<double> > f;
-    prepareDataForEngine(crystal.atoms, hkl, f, x);
-
-    out << setprecision(14);
-
-    out << "n_symmetry_operations " << mSymmetryOperations.size() << endl;
-    out << "n_wfn_parameter_sets " << mWfnParameters.size() << endl;
-    out << "n_atom_types " << mTypeParameters.size() << endl;
-    out << "n_atoms " << mAtomicOccupancy.size() << endl;
-    out << "n_h_vectors " << mHKL_Cartesian.size() << endl;
-
-
-    out << endl << "symmetry operations" << endl << endl;
-
-    n = mSymmetryOperations.size();
-
-    for (i = 0; i<n; i++)
-    {
-        for (j = 0; j<3; j++)
-        {
-            for (k = 0; k<3; k++)
-                out << " " << mSymmetryOperations[i].rotation(j, k);
-            out << endl;
-        }
-
-        for (j = 0; j<3; j++)
-            out << " " << mSymmetryOperations[i].translation[j];
-        out << endl << endl;
-    }
-
-    out << endl << "wfn parameter sets " << endl << endl;
-
-    n = mWfnParameters.size();
-    for (i = 0; i<n; i++)
-    {
-        // core - coeff,pow,exp
-        p = mWfnParameters[i].core_coeff.size();
-        out << p << endl;
-        for (j = 0; j<p; j++)
-            out << 4 * M_PI * mWfnParameters[i].core_coeff[j] << " " << mWfnParameters[i].core_pow[j]
-            << " " << mWfnParameters[i].core_exp[j] << endl;
-
-        // spherical valence
-
-        p = mWfnParameters[i].valence_coeff.size();
-        out << p << endl;
-        for (j = 0; j<p; j++)
-            out << 4 * M_PI * mWfnParameters[i].valence_coeff[j] << " " << mWfnParameters[i].valence_pow[j]
-            << " " << mWfnParameters[i].valence_exp[j] << endl;
-
-        // deformation valence
-        out << mWfnParameters[i].def_valence_exp << endl;
-        p = mWfnParameters[i].def_valence_pow.size();
-        out << p;
-        for (j = 0; j<p; j++)
-            out << " " << mWfnParameters[i].def_valence_pow[j];
-        out << endl;
-    }
-
-    out << "atom type parameter sets " << endl << endl;
-
-    n = mTypeParameters.size();
-    for (i = 0; i<n; i++)
-    {
-        maxL = mTypeParameters[i].p_lm.size() - 1;
-        out << mTypeParameters[i].p_val << " " << mTypeParameters[i].kappa_spherical
-            << " " << mTypeParameters[i].kappa_def_valence << " " << maxL << endl;
-
-        for (j = 0; j <= maxL; j++)
-        {
-            for (k = 0; k<2 * j + 1; k++)
-                out << mTypeParameters[i].p_lm[j][k] << " ";
-            out << endl;
-        }
-
-        out << endl;
-    }
-
-    out << "atomic data" << endl;
-
-    n = mAtomicPositions.size();
-
-    for (i = 0; i<n; i++)
-    {
-        // wfn_index type_index
-        // position occupancy mutliplicity_f
-        // adps
-        // lcs
-
-        out << endl;
-        out << mAtomToWfnTypeMap[i] << " " << mAtomToAtomTypeMap[i] << endl;
-
-
-
-        for (j = 0; j<3; j++)
-            out << mAtomicPositions[i][j] << " ";
-
-        out << mAtomicOccupancy[i] << " " << mAtomicMultiplicityWeights[i] << endl;
-
-        p = mAtomic_displacement_parameters[i].size();
-
-        out << p;
-        for (j = 0; j<p; j++)
-            out << " " << mAtomic_displacement_parameters[i][j];
-        out << endl;
-        for (j = 0; j<3; j++)
-        {
-            for (k = 0; k<3; k++)
-                out << " " << localCoordinateSystems[i](j, k);
-            out << endl;
-        }
-
-    }
-
-    out << endl << "h vectors" << endl << endl;
-    
-    n = hkl.size();
-    ReciprocalLatticeUnitCell rl(crystal.unitCell);
-    Vector3d hklCartesian,hklFractional;
-    for (i = 0; i<n; i++)
-    {
-        hklFractional = hkl[i];
-        rl.fractionalToCartesian(hklFractional, hklCartesian);
-        out << hklCartesian[0] << " " << hklCartesian[1] << " " << hklCartesian[2] << endl;
-    }
-
-}
+//void HansenCoppensStructureFactorCalculatorDev::saveRawData(
+//    const Crystal &crystal,
+//    const std::vector<Matrix3d> &localCoordinateSystems,
+//    const std::vector<Vector3i> &hkl,
+//    std::ostream &out)
+//{
+//    HC_SF_EngineId engineId = mEngineType;
+//    setEngineType(GPU);
+//    prepareDataForEngine_part(crystal.atoms,hkl);
+//    mEngineType = engineId;
+//
+//    int atomIdx, nAtoms = mAtomicPositions.size();
+//    
+//    for (atomIdx = 0; atomIdx<nAtoms; atomIdx++)
+//    {
+//        if (mAtomic_displacement_parameters[atomIdx].size() == 6)
+//        {
+//            mAtomic_displacement_parameters[atomIdx][3] *= 2.0;
+//            mAtomic_displacement_parameters[atomIdx][4] *= 2.0;
+//            mAtomic_displacement_parameters[atomIdx][5] *= 2.0;
+//        }
+//    }
+//
+//
+//    //------------------------------------------------------
+//    
+//    int i, j, k, n, p, maxL;
+//    vector<TargetFunctionAtomicParamDerivatives> x;
+//    vector<complex<double> > f;
+//    prepareDataForEngine(crystal.atoms, hkl, f, x);
+//
+//    out << setprecision(14);
+//
+//    out << "n_symmetry_operations " << mSymmetryOperations.size() << endl;
+//    out << "n_wfn_parameter_sets " << mWfnParameters.size() << endl;
+//    out << "n_atom_types " << mTypeParameters.size() << endl;
+//    out << "n_atoms " << mAtomicOccupancy.size() << endl;
+//    out << "n_h_vectors " << mHKL_Cartesian.size() << endl;
+//
+//
+//    out << endl << "symmetry operations" << endl << endl;
+//
+//    n = mSymmetryOperations.size();
+//
+//    for (i = 0; i<n; i++)
+//    {
+//        for (j = 0; j<3; j++)
+//        {
+//            for (k = 0; k<3; k++)
+//                out << " " << mSymmetryOperations[i].rotation(j, k);
+//            out << endl;
+//        }
+//
+//        for (j = 0; j<3; j++)
+//            out << " " << mSymmetryOperations[i].translation[j];
+//        out << endl << endl;
+//    }
+//
+//    out << endl << "wfn parameter sets " << endl << endl;
+//
+//    n = mWfnParameters.size();
+//    for (i = 0; i<n; i++)
+//    {
+//        // core - coeff,pow,exp
+//        p = mWfnParameters[i].core_coeff.size();
+//        out << p << endl;
+//        for (j = 0; j<p; j++)
+//            out << 4 * M_PI * mWfnParameters[i].core_coeff[j] << " " << mWfnParameters[i].core_pow[j]
+//            << " " << mWfnParameters[i].core_exp[j] << endl;
+//
+//        // spherical valence
+//
+//        p = mWfnParameters[i].valence_coeff.size();
+//        out << p << endl;
+//        for (j = 0; j<p; j++)
+//            out << 4 * M_PI * mWfnParameters[i].valence_coeff[j] << " " << mWfnParameters[i].valence_pow[j]
+//            << " " << mWfnParameters[i].valence_exp[j] << endl;
+//
+//        // deformation valence
+//        out << mWfnParameters[i].def_valence_exp << endl;
+//        p = mWfnParameters[i].def_valence_pow.size();
+//        out << p;
+//        for (j = 0; j<p; j++)
+//            out << " " << mWfnParameters[i].def_valence_pow[j];
+//        out << endl;
+//    }
+//
+//    out << "atom type parameter sets " << endl << endl;
+//
+//    n = mTypeParameters.size();
+//    for (i = 0; i<n; i++)
+//    {
+//        maxL = mTypeParameters[i].p_lm.size() - 1;
+//        out << mTypeParameters[i].p_val << " " << mTypeParameters[i].kappa_spherical
+//            << " " << mTypeParameters[i].kappa_def_valence << " " << maxL << endl;
+//
+//        for (j = 0; j <= maxL; j++)
+//        {
+//            for (k = 0; k<2 * j + 1; k++)
+//                out << mTypeParameters[i].p_lm[j][k] << " ";
+//            out << endl;
+//        }
+//
+//        out << endl;
+//    }
+//
+//    out << "atomic data" << endl;
+//
+//    n = mAtomicPositions.size();
+//
+//    for (i = 0; i<n; i++)
+//    {
+//        // wfn_index type_index
+//        // position occupancy mutliplicity_f
+//        // adps
+//        // lcs
+//
+//        out << endl;
+//        out << mAtomToWfnTypeMap[i] << " " << mAtomToAtomTypeMap[i] << endl;
+//
+//
+//
+//        for (j = 0; j<3; j++)
+//            out << mAtomicPositions[i][j] << " ";
+//
+//        out << mAtomicOccupancy[i] << " " << mAtomicMultiplicityWeights[i] << endl;
+//
+//        p = mAtomic_displacement_parameters[i].size();
+//
+//        out << p;
+//        for (j = 0; j<p; j++)
+//            out << " " << mAtomic_displacement_parameters[i][j];
+//        out << endl;
+//        for (j = 0; j<3; j++)
+//        {
+//            for (k = 0; k<3; k++)
+//                out << " " << localCoordinateSystems[i](j, k);
+//            out << endl;
+//        }
+//
+//    }
+//
+//    out << endl << "h vectors" << endl << endl;
+//    
+//    n = hkl.size();
+//    ReciprocalLatticeUnitCell rl(crystal.unitCell);
+//    Vector3d hklCartesian,hklFractional;
+//    for (i = 0; i<n; i++)
+//    {
+//        hklFractional = hkl[i];
+//        rl.fractionalToCartesian(hklFractional, hklCartesian);
+//        out << hklCartesian[0] << " " << hklCartesian[1] << " " << hklCartesian[2] << endl;
+//    }
+//
+//}
 
 void HansenCoppensStructureFactorCalculatorDev::setDataForCpuEngineCallsForSingleHkl()
 {
@@ -1067,7 +1100,8 @@ void HansenCoppensStructureFactorCalculatorDev::setDataForCpuEngineCallsForSingl
 	double step = 0.001;
 	int nInterpolationPoints = 10000;
 
-	engine.pre_hkl_loop_sf_calc(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
+	engine.pre_hkl_loop_sf_calc(mWfnParameters, mTypeParameters, mUnfoldedAtomToWfnTypeMap, 
+        mUnfoldedAtomToAtomTypeMap, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
 
 	vector<double> h(nInterpolationPoints);
 	for (i = 0; i < nInterpolationPoints; i++)
@@ -1089,6 +1123,7 @@ void HansenCoppensStructureFactorCalculatorDev::setDataForCpuEngineCallsForSingl
 	mSingleH_DataInitialized = true;
 }
 
+//uncomment
 
 void HansenCoppensStructureFactorCalculatorDev::calculateFormFactors(
 	const std::vector<Matrix3d>& localCoordinateSystems,
@@ -1096,28 +1131,30 @@ void HansenCoppensStructureFactorCalculatorDev::calculateFormFactors(
 	std::vector<std::complex<double> >& f,
 	const std::vector<bool>& countAtom)
 {
-	//
-	if(!mSingleH_DataInitialized)
-		setDataForCpuEngineCallsForSingleHkl();
-	//
-	HansenCoppens_SF_Engine engine;
-	Vector3d h_cart;
-	mReciprocalUnitCell.fractionalToCartesian(hkl, h_cart);
-	int nAtoms = localCoordinateSystems.size();
-	f.resize(nAtoms);
-	int i, nTypes = mType2WfnType.size();
-	int nWfnTypes = mWfnParameters.size();
-	vector<double> f_sph(nTypes), f_core(nWfnTypes);
-	double h = sqrt(h_cart * h_cart);
-	for (i = 0; i < nWfnTypes; i++)
-		f_core[i] = mF_CoreInterpolators[i](h);
-	for (i = 0; i < nTypes; i++)
-		f_sph[i] = f_core[mType2WfnType[i]] + mF_SphericalValenceInterpolators[i](h);
+	////
+	//if(!mSingleH_DataInitialized)
+	//	setDataForCpuEngineCallsForSingleHkl();
+	////
+	//HansenCoppens_SF_Engine engine;
+	//Vector3d h_cart;
+	//mReciprocalUnitCell.fractionalToCartesian(hkl, h_cart);
+	//int nAtoms = localCoordinateSystems.size();
+	//f.resize(nAtoms);
+	//int i, nTypes = mType2WfnType.size();
+	//int nWfnTypes = mWfnParameters.size();
+	//vector<double> f_sph(nTypes), f_core(nWfnTypes);
+	//double h = sqrt(h_cart * h_cart);
+	//for (i = 0; i < nWfnTypes; i++)
+	//	f_core[i] = mF_CoreInterpolators[i](h);
+	//for (i = 0; i < nTypes; i++)
+	//	f_sph[i] = f_core[mType2WfnType[i]] + mF_SphericalValenceInterpolators[i](h);
 
-	engine.calculateFormFactors(mWfnParameters, mTypeParameters, f_sph, mAtomToWfnTypeMap, mAtomToAtomTypeMap,
-		                        localCoordinateSystems, h_cart, f, countAtom, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
-	//vector<double> 
+	//engine.calculateFormFactors(mWfnParameters, mTypeParameters, f_sph, mAtomToWfnTypeMap, mAtomToAtomTypeMap,
+	//	                        localCoordinateSystems, h_cart, f, countAtom, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
+	////vector<double> 
 }
+
+//uncomment
 
 void HansenCoppensStructureFactorCalculatorDev::calculateFormFactorsCart(
     const std::vector<Matrix3d>& localCoordinateSystems,
@@ -1125,27 +1162,27 @@ void HansenCoppensStructureFactorCalculatorDev::calculateFormFactorsCart(
     std::vector<std::complex<double> >& f,
     const std::vector<bool>& countAtom)
 {
-    //
-    if (!mSingleH_DataInitialized)
-        setDataForCpuEngineCallsForSingleHkl();
-    //
-    HansenCoppens_SF_Engine engine;
-    //Vector3d h_cart;
-    //mReciprocalUnitCell.fractionalToCartesian(hkl, h_cart);
-    int nAtoms = localCoordinateSystems.size();
-    f.resize(nAtoms);
-    int i, nTypes = mType2WfnType.size();
-    int nWfnTypes = mWfnParameters.size();
-    vector<double> f_sph(nTypes), f_core(nWfnTypes);
-    double h = sqrt(h_cart * h_cart);
-    for (i = 0; i < nWfnTypes; i++)
-        f_core[i] = mF_CoreInterpolators[i](h);
-    for (i = 0; i < nTypes; i++)
-        f_sph[i] = f_core[mType2WfnType[i]] + mF_SphericalValenceInterpolators[i](h);
+    ////
+    //if (!mSingleH_DataInitialized)
+    //    setDataForCpuEngineCallsForSingleHkl();
+    ////
+    //HansenCoppens_SF_Engine engine;
+    ////Vector3d h_cart;
+    ////mReciprocalUnitCell.fractionalToCartesian(hkl, h_cart);
+    //int nAtoms = localCoordinateSystems.size();
+    //f.resize(nAtoms);
+    //int i, nTypes = mType2WfnType.size();
+    //int nWfnTypes = mWfnParameters.size();
+    //vector<double> f_sph(nTypes), f_core(nWfnTypes);
+    //double h = sqrt(h_cart * h_cart);
+    //for (i = 0; i < nWfnTypes; i++)
+    //    f_core[i] = mF_CoreInterpolators[i](h);
+    //for (i = 0; i < nTypes; i++)
+    //    f_sph[i] = f_core[mType2WfnType[i]] + mF_SphericalValenceInterpolators[i](h);
 
-    engine.calculateFormFactors(mWfnParameters, mTypeParameters, f_sph, mAtomToWfnTypeMap, mAtomToAtomTypeMap,
-        localCoordinateSystems, h_cart, f, countAtom, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
-    //vector<double> 
+    //engine.calculateFormFactors(mWfnParameters, mTypeParameters, f_sph, mAtomToWfnTypeMap, mAtomToAtomTypeMap,
+    //    localCoordinateSystems, h_cart, f, countAtom, mType2WfnType, mDefValSlaterNormalization, mTypeMaxL);
+    ////vector<double> 
 }
 
 

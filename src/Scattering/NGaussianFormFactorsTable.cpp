@@ -3230,7 +3230,7 @@ bool hasFormFactor(
     }
 
     if (table == std::string("IT92"))
-        for (int i = 0; i<N_SCATTERER_TYPES_WK; i++)
+        for (int i = 0; i< N_SCATTERER_TYPES_IT92; i++)
             if (X_Ray_It95[i].label == label)
                 return true;
 

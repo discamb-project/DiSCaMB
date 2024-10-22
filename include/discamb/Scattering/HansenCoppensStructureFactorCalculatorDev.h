@@ -38,7 +38,7 @@ class HansenCoppensStructureFactorCalculatorDev
 
 public:
     /** Calculate structure factors and their derivatives*/
-    HansenCoppensStructureFactorCalculatorDev(const Crystal &crystal, const HC_ModelParameters &parameters);
+    HansenCoppensStructureFactorCalculatorDev(const Crystal &crystal, const HC_ModelParametersDev &parameters);
     
     ~HansenCoppensStructureFactorCalculatorDev();
 
@@ -48,7 +48,7 @@ public:
     void setN_Threads(int n);
     
     /** Sets model of the electron density (note that the model is also set in constructor).*/
-    void setModel(const Crystal &crystal, const HC_ModelParameters &parameters);
+    void setModel(const Crystal &crystal, const HC_ModelParametersDev &parameters);
 
     
 
@@ -276,20 +276,26 @@ private:
                              std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
                              const std::vector<std::complex<double> > &dTarget_df);
 
+    // unfolded atoms - atoms with multiple atom types are represented as multiple atoms
 
+    std::vector<int> mUnfoldedAtom2Atom;
+    std::vector<std::vector<int> > mAtomUnfoldedAtoms;
 
     mutable HC_SF_EngineId mEngineType;
     std::vector<sf_engine_data_types::HC_WfnParam> mWfnParameters;
     mutable std::vector<sf_engine_data_types::HC_TypeParam> mTypeParameters;
-    std::vector<int> mAtomToWfnTypeMap;
-    std::vector<int> mAtomToAtomTypeMap;
+
+
+    std::vector<int> mUnfoldedAtomToWfnTypeMap;
+    std::vector<int> mUnfoldedAtomToAtomTypeMap;
+    std::vector < std::vector <double> > mAtomConfigurationWeight;
     
-    mutable std::vector<Vector3d> mAtomicPositions;
+    mutable std::vector<Vector3d> mUnfoldedAtomicPositions;
     mutable bool mWithGradients;
-    mutable std::vector<std::vector<double> > mAtomic_displacement_parameters;
-    mutable std::vector<double> mAtomicOccupancy;
-    mutable std::vector<double> mAtomicMultiplicityFactor;
-    mutable std::vector<double> mAtomicMultiplicityWeights;
+    mutable std::vector<std::vector<double> > mUnfoldedAtomic_displacement_parameters;
+    mutable std::vector<double> mUnfoldedAtomicOccupancy;
+    mutable std::vector<double> mUnfoldedAtomicMultiplicityFactor;
+    mutable std::vector<double> mUnfoldedAtomicMultiplicityWeights;
     std::vector<sf_engine_data_types::SymmetryOperation> mSymmetryOperations;
     bool mIsCentrosymmetric;
     Vector3d mInversionCenterTranslation;
@@ -299,7 +305,7 @@ private:
     static double slaterNormalizationFactor(int powerR,double exponent);
     static void addOrbitalDensity(const SlaterTypeAtomicOrbitalRdf &orbital,int occupancy,std::vector<double> &density_coeff,
                                   std::vector<int> &density_powers,std::vector<double> &density_exponents);
-    static void copyVector(const std::vector<int> &from,std::vector<int> &to);
+    //static void copyVector(const std::vector<int> &from,std::vector<int> &to);
     
 
     void prepareDataForEngine(const std::vector<AtomInCrystal> &atoms, const std::vector<Vector3i> &hkl,
