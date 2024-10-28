@@ -7,28 +7,41 @@ using namespace std;
 namespace discamb {
     namespace basic_chemistry_utilities {
         
-        int atomicNumberFromLabel(const string &label)
+        // s can be atomic number or symbol or label/type e.g. O1- H(4) 
+        int atomicNumberFromString(const string& s)
         {
+            if(std::isdigit(s[0]))
+                return std::stoi(s);
+
             //OS = O + S or Os, HF = H + F or Hf, CN = C + N or Cn 
-            int nCharacters = label.size();
+            int nCharacters = s.size();
 
             if (nCharacters == 0)
                 return 0;
             if (nCharacters == 1)
-                return periodic_table::atomicNumber(string(1,toupper(label[0])));
+                return periodic_table::atomicNumber(string(1, toupper(s[0])));
 
-            if(isalpha(label[1]))
-                return periodic_table::atomicNumber(string(1, toupper(label[0]))+string(1,tolower(label[1])));
+            if (!isalpha(s[1]))
+                return 0;
 
-            return periodic_table::atomicNumber(string(1, toupper(label[0])));
-            
+            if (isalpha(s[1]))
+                return periodic_table::atomicNumber(string(1, toupper(s[0])) + string(1, tolower(s[1])));
+
+            return periodic_table::atomicNumber(string(1, toupper(s[0])));
+
+        }
+
+
+        int atomicNumberFromLabel(const string &label)
+        {
+            return atomicNumberFromString(label);            
         }
 
         // s can be atomic number or symbol
-        int atomicNumberFromString(const std::string& s)
-        {
-            return std::isdigit(s[0]) ? std::stoi(s) : periodic_table::atomicNumber(s);
-        }
+        //int atomicNumberFromString(const std::string& s)
+        //{
+        //    return std::isdigit(s[0]) ? std::stoi(s) : periodic_table::atomicNumber(s);
+        //}
 
         std::string formulaAsString(const std::map<int, int>& formula)
         {

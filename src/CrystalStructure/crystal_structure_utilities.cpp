@@ -505,12 +505,13 @@ namespace discamb {
             int atomicNumber;
             for (auto const &atom : crystal.atoms)
             {
-                atomicNumber = basic_chemistry_utilities::atomicNumberFromLabel(atom.type);
+                atomicNumber = basic_chemistry_utilities::atomicNumberFromString(atom.type);
                 if (atomicNumber == 0)
-                    atomicNumber = basic_chemistry_utilities::atomicNumberFromLabel(atom.label);
+                    atomicNumber = basic_chemistry_utilities::atomicNumberFromString(atom.label);
 
                 atomicNumbers.push_back(atomicNumber);
             }
+
         }
 
         bool findAtomSymmetry(

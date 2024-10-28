@@ -28,7 +28,7 @@ namespace discamb {
                 on_error::throwException("olex tsc file name not given and no file with tsc extension exists in current directory", __FILE__, __LINE__);
         }
 
-        cout << "reads tsc file " << tscFileName;
+        //cout << "reads tsc file " << tscFileName;
         WallClockTimer timer;
         timer.start();
 
@@ -74,7 +74,7 @@ namespace discamb {
 			}
 		}
 
-        cout << " " << timer.stop() << " ms" << endl;
+        //cout << " " << timer.stop() << " ms" << endl;
 		mCalculator = new AnyScattererStructureFactorCalculator(crystal);
 		shared_ptr<AtomicFormFactorCalculationsManager> manager = shared_ptr<AtomicFormFactorCalculationsManager>(
 			new ConstFormFactorCalculationsManager(crystal.unitCell, formFactors));

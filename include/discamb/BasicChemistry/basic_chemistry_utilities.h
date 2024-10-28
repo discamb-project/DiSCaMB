@@ -8,6 +8,7 @@
 namespace discamb{
     namespace basic_chemistry_utilities{
         
+        int atomicNumberFromString(const std::string& label);
         int atomicNumberFromLabel(const std::string &label);
 
         // s can be an atomic number or symbol
