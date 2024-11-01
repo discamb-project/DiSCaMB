@@ -52,7 +52,7 @@ SET(TARGET_SRC
     gar_utilities.cpp
     HansenCoppens_SF_Engine.cpp 
     HansenCoppensStructureFactorCalculator.cpp 
-    HansenCoppensStructureFactorCalculatorDev.cpp 
+    # HansenCoppensStructureFactorCalculatorDev.cpp 
     HcAtomBankStructureFactorCalculator.cpp
     HcFormFactorCalculationsManager.cpp
     HirshfeldAtomModelSettings.cpp
