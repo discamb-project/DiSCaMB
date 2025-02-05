@@ -32,6 +32,22 @@ namespace discamb {
             bool notAssignedRepresentedWithSlaters,
             std::vector<int>& nonMultipolarAtoms);
 
+        struct TaamAtomicChargeInfo {
+            std::vector<double> atomicChargesBeforeScaling;
+            std::vector<double> atomicChargesAfterScaling;
+        };
+
+        void type_assignment_to_HC_parameters(
+            const std::vector<AtomTypeHC_Parameters>& bankMultipoleParameters,
+            const std::vector<int>& atomTypeAssignment,
+            const std::vector<double>& multiplicityTimesOccupancy,
+            const std::vector<int>& atomicNumbers,
+            double totalCharge,
+            HC_ModelParameters& parameters,
+            bool notAssignedRepresentedWithSlaters,
+            std::vector<int>& nonMultipolarAtoms,
+            TaamAtomicChargeInfo &atomicChargesInfo);
+
 
         void void_atom_type(
             HC_WfnType &wfnType, 
@@ -47,6 +63,17 @@ namespace discamb {
             const std::vector <int> atomicNumbers,
             double targetCharge);
 
+        void electroneutrality_Faerman_Price(
+            std::vector<double>& typePval,
+            const std::vector<double>& typePvalSigma,
+            const std::vector<int>& atomToTypeMap,
+            const std::vector<double>& multiplicityTimesOccupancy,
+            const std::vector <int> atomicNumbers,
+            double targetCharge,
+            TaamAtomicChargeInfo& atomicChargesInfo);
+
+
+        
 
         int atomTypeRange(
             const AtomType &type,

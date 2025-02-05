@@ -23,5 +23,10 @@ endif(MT_MSVC_RUNTIME_LIB AND MSVC)
             RUNTIME DESTINATION bin
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib)
+message(STATUS "binary dir " ${CMAKE_CURRENT_BINARY_DIR})
+message(STATUS "binary dir " ${COMPILE_PDB_OUTPUT_DIRECTORY})
+message(STATUS "binary dir " ${TARGET_FILE_DIR})
+install(FILES "$<TARGET_FILE_DIR:discamb>/discambd.pdb" DESTINATION lib OPTIONAL)
+
 #ENDIF(GENERATE_INSTALL)
 

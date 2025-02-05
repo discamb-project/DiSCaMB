@@ -191,6 +191,175 @@ namespace discamb {
             bool notAssignedRepresentedWithSlaters,
             vector<int>& nonMultipolarAtoms)
         {
+            TaamAtomicChargeInfo atomicChargesInfo;
+            type_assignment_to_HC_parameters(
+                bankMultipoleParameters,
+                atomTypeAssignment,
+                multiplicityTimesOccupancy,
+                atomicNumbers,
+                targetCharge,
+                parameters,
+                notAssignedRepresentedWithSlaters,
+                nonMultipolarAtoms,
+                atomicChargesInfo);
+
+
+            //int atomIdx, nAtoms = atomTypeAssignment.size();
+
+
+            //// set the first type to void type if there is a need
+
+            //set<int> atomicNumbersInWfnBank, atomicNumbersNotInWfnBank;
+            //map<int, int> zToWfnIdx;
+            //checkIfAtomicNumbersRepresentedInWfnBank(atomicNumbers, atomicNumbersInWfnBank, atomicNumbersNotInWfnBank);
+            //// chceck if there are some atoms for which there are no slater wfn
+            //// make a void wfn type for them
+            //bool hasVoidType = !(atomicNumbersNotInWfnBank.empty());
+
+            //if (hasVoidType)
+            //{
+            //    parameters.wfn_parameters.resize(1);
+            //    parameters.type_parameters.resize(1);
+            //    void_atom_type(parameters.wfn_parameters[0], parameters.type_parameters[0]);
+            //}
+
+            //// if some atoms have not assigned type
+            //// and they should be represented with Hansen-Coppens model
+            //// then types for them needs to be created
+            //// (or alternatively they are put in bank of type on the end of it)
+            //// the latter is used at the moment
+
+
+            //// set wfn types
+            //int nVoidTypes = hasVoidType ? 1 : 0;
+            //parameters.wfn_parameters.resize(atomicNumbersInWfnBank.size() + nVoidTypes);
+            //int counter = nVoidTypes;
+            //discamb::ClementiRoettiData clementiRoettiData;
+            //DeformationValenceParameters def_val(DeformationValenceParameters::ParametersType::UBDB);
+
+            //for (auto z : atomicNumbersInWfnBank)
+            //{
+            //    zToWfnIdx[z] = counter;
+            //    parameters.wfn_parameters[counter] = clementiRoettiData.getEntry(periodic_table::symbol(z));
+            //    def_val.getParameters(periodic_table::symbol(z), parameters.wfn_parameters[counter].deformation_valence_exponent,
+            //        parameters.wfn_parameters[counter].deformation_valence_power);
+            //    counter++;
+            //}
+
+            //// set bank types
+
+            //set<int> bankTypes(atomTypeAssignment.begin(), atomTypeAssignment.end());
+            //map<int, int> type2idx;
+            //bankTypes.erase(-1);
+            //counter = nVoidTypes;
+            //parameters.type_parameters.resize(bankTypes.size() + nVoidTypes);
+
+            //for (int idx : bankTypes)
+            //{
+            //    type2idx[idx] = counter;
+            //    parameters.type_parameters[counter].kappa_deformation_valence = bankMultipoleParameters[idx].kappa_prime;
+            //    parameters.type_parameters[counter].kappa_spherical_valence = bankMultipoleParameters[idx].kappa;
+            //    parameters.type_parameters[counter].p_val = bankMultipoleParameters[idx].p_val;
+            //    int maxL = -1;
+            //    for (auto p : bankMultipoleParameters[idx].p_lm_indices)
+            //        maxL = std::max(maxL, int(p.first));
+
+            //    vector<vector<double> >& plm = parameters.type_parameters[counter].p_lm;
+            //    if (maxL > -1)
+            //    {
+            //        int maxL_plus_one = maxL + 1;
+            //        plm.resize(maxL_plus_one);
+            //        for (int i = 0; i < int(maxL_plus_one); i++)
+            //            plm[i].assign(2 * i + 1, 0);
+            //    }
+            //    const vector<pair<int, int> >& plm_indices = bankMultipoleParameters[idx].p_lm_indices;
+
+            //    for (int i = 0; i < bankMultipoleParameters[idx].p_lm_indices.size(); i++)
+            //    {
+            //        int l_plus_m = plm_indices[i].second + int(plm_indices[i].first);
+            //        plm[plm_indices[i].first][l_plus_m] = bankMultipoleParameters[idx].p_lms[i];
+            //    }
+            //    counter++;
+            //}
+
+            //// atom to types map 
+            //parameters.atom_to_type_map.resize(nAtoms);
+            //parameters.atom_to_wfn_map.resize(nAtoms);
+            //nonMultipolarAtoms.clear();
+
+            //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            //{
+            //    if (atomTypeAssignment[atomIdx] >= 0)
+            //    {
+            //        parameters.atom_to_type_map[atomIdx] = type2idx[atomTypeAssignment[atomIdx]];
+            //        parameters.atom_to_wfn_map[atomIdx] = zToWfnIdx[atomicNumbers[atomIdx]];
+
+            //    }
+            //    else
+            //    {
+            //        parameters.atom_to_type_map[atomIdx] = 0;
+
+            //        // atomicNumbersInWfnBank, atomicNumbersNotInWfnBank
+            //        if (notAssignedRepresentedWithSlaters &&
+            //            atomicNumbersInWfnBank.find(atomicNumbers[atomIdx]) != atomicNumbersInWfnBank.end())
+            //        {
+            //            parameters.atom_to_wfn_map[atomIdx] = zToWfnIdx[atomicNumbers[atomIdx]];
+            //        }
+            //        else
+            //        {
+            //            parameters.atom_to_wfn_map[atomIdx] = 0;
+            //            nonMultipolarAtoms.push_back(atomIdx);
+            //        }
+            //    }
+            //}
+
+            //int nTypes = parameters.type_parameters.size();
+            //vector<double> typePval(nTypes);
+            //vector<double> typePvalSigma(nTypes);
+            //if (hasVoidType)
+            //{
+            //    typePval[0] = 0.0;
+            //    typePvalSigma[0] = 0.0;
+            //}
+
+            //counter = (hasVoidType ? 1 : 0);
+            //for (int idx : bankTypes)
+            //{
+            //    typePval[counter] = bankMultipoleParameters[idx].p_val;
+            //    typePvalSigma[counter] = bankMultipoleParameters[idx].p_val_sigma;
+            //    counter++;
+            //}
+
+            ////vector<int> atomToTypeMap(parameters.atom_to_type_map.begin(), parameters.atom_to_type_map.end());
+            //vector<int> atomToTypeMap;
+            //for (auto a2t : parameters.atom_to_type_map)
+            //    atomToTypeMap.push_back(static_cast<int>(a2t));
+            //
+            ////electroneutrality_Faerman_Price(typePval, typePvalSigma, atomToTypeMap, atomicNumbers);
+            //electroneutrality_Faerman_Price(typePval, typePvalSigma, atomToTypeMap, multiplicityTimesOccupancy, atomicNumbers, targetCharge);
+
+
+            //counter = (hasVoidType ? 1 : 0);
+            //for (int idx : bankTypes)
+            //{
+            //    parameters.type_parameters[counter].p_val = typePval[counter];
+            //    counter++;
+            //}
+
+
+        }
+
+        void type_assignment_to_HC_parameters(
+            const vector<AtomTypeHC_Parameters>& bankMultipoleParameters,
+            const vector<int>& atomTypeAssignment,
+            const std::vector<double>& multiplicityTimesOccupancy,
+            const vector<int>& atomicNumbers,
+            double targetCharge,
+            HC_ModelParameters& parameters,
+            bool notAssignedRepresentedWithSlaters,
+            vector<int>& nonMultipolarAtoms,
+            TaamAtomicChargeInfo& atomicChargesInfo)
+        {
             int atomIdx, nAtoms = atomTypeAssignment.size();
 
 
@@ -321,9 +490,9 @@ namespace discamb {
             vector<int> atomToTypeMap;
             for (auto a2t : parameters.atom_to_type_map)
                 atomToTypeMap.push_back(static_cast<int>(a2t));
-            
+
             //electroneutrality_Faerman_Price(typePval, typePvalSigma, atomToTypeMap, atomicNumbers);
-            electroneutrality_Faerman_Price(typePval, typePvalSigma, atomToTypeMap, multiplicityTimesOccupancy, atomicNumbers, targetCharge);
+            electroneutrality_Faerman_Price(typePval, typePvalSigma, atomToTypeMap, multiplicityTimesOccupancy, atomicNumbers, targetCharge, atomicChargesInfo);
 
 
             counter = (hasVoidType ? 1 : 0);
@@ -335,7 +504,6 @@ namespace discamb {
 
 
         }
-
 
 
         void void_atom_type(
@@ -412,8 +580,11 @@ namespace discamb {
             const std::vector<int>& atomToTypeMap,
             const std::vector<double>& multiplicity,
             const std::vector <int> atomicNumbers,
-            double targetCharge)
+            double targetCharge,
+            TaamAtomicChargeInfo& atomicChargesInfo)
         {
+            atomicChargesInfo.atomicChargesAfterScaling.clear();
+            atomicChargesInfo.atomicChargesBeforeScaling.clear();
             int atomIdx, nAtoms = atomToTypeMap.size();
             double dQ, sigmaSum;
             vector<double> valenceOccupancy(37, 0);
@@ -439,6 +610,7 @@ namespace discamb {
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 if (atomToTypeMap[atomIdx] >= 0 && (allowedZ.find(atomicNumbers[atomIdx]) != allowedZ.end()))
                 {
+                    atomicChargesInfo.atomicChargesBeforeScaling.push_back(valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]);
                     atomPval[atomIdx] = typePval[atomToTypeMap[atomIdx]];
                     atomDq[atomIdx] = valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]];
                     //dQ += (valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]) * multiplicity[atomIdx];
@@ -446,6 +618,8 @@ namespace discamb {
                     sigmaSum += typePvalSigma[atomToTypeMap[atomIdx]] * multiplicity[atomIdx];
                     typeUsed[atomToTypeMap[atomIdx]] = true;
                 }
+                else
+                    atomicChargesInfo.atomicChargesBeforeScaling.push_back(0.0);
             dQ = targetCharge - currentQ;
             if (dQ == 0)
                 return;
@@ -460,6 +634,90 @@ namespace discamb {
                 if (typeUsed[i])
                     //typePval[i] += dQ * typePvalSigma[i] / sigmaSum;
                     typePval[i] -= dQ * typePvalSigma[i] / sigmaSum;
+
+            for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                if (atomToTypeMap[atomIdx] >= 0 && (allowedZ.find(atomicNumbers[atomIdx]) != allowedZ.end()))
+                {
+
+                    atomPval[atomIdx] = typePval[atomToTypeMap[atomIdx]];
+                    atomDq[atomIdx] = valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]];
+                    //dQ += (valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]) * multiplicity[atomIdx];
+                    currentQ += (valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]) * multiplicity[atomIdx];
+                    sigmaSum += typePvalSigma[atomToTypeMap[atomIdx]] * multiplicity[atomIdx];
+                    typeUsed[atomToTypeMap[atomIdx]] = true;
+                    atomicChargesInfo.atomicChargesAfterScaling.push_back(valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]);
+                }
+                else
+                    atomicChargesInfo.atomicChargesAfterScaling.push_back(0.0);
+
+        }
+
+
+        void electroneutrality_Faerman_Price(
+            std::vector<double>& typePval,
+            const std::vector<double>& _typePvalSigma,
+            const std::vector<int>& atomToTypeMap,
+            const std::vector<double>& multiplicity,
+            const std::vector <int> atomicNumbers,
+            double targetCharge)
+        {
+            TaamAtomicChargeInfo atomicChargesInfo;
+            electroneutrality_Faerman_Price(
+                typePval,
+                _typePvalSigma,
+                atomToTypeMap,
+                multiplicity,
+                atomicNumbers,
+                targetCharge,
+                atomicChargesInfo);
+
+
+            //int atomIdx, nAtoms = atomToTypeMap.size();
+            //double dQ, sigmaSum;
+            //vector<double> valenceOccupancy(37, 0);
+            //std::vector<double> typePvalSigma = _typePvalSigma;
+            //vector<bool> typeUsed(typePval.size(), false);
+            //discamb::ClementiRoettiData clementiRoettiData;
+            //vector<HC_WfnBankEntry> entries;
+            //clementiRoettiData.getEntries(entries);
+            //set<int> allowedZ;
+            //for (auto& entry : entries)
+            //    if (entry.charge == 0)
+            //    {
+            //        for (auto orbIdx : entry.valence_orbitals_indices)
+            //            valenceOccupancy[entry.atomic_number] += entry.orbital_occupancy[orbIdx];
+            //        allowedZ.insert(entry.atomic_number);
+            //    }
+
+            //dQ = 0;
+            //sigmaSum = 0;
+            //double currentQ = 0;
+            //vector<double> atomDq(nAtoms);
+            //vector<double> atomPval(nAtoms);
+            //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            //    if (atomToTypeMap[atomIdx] >= 0 && (allowedZ.find(atomicNumbers[atomIdx]) != allowedZ.end()))
+            //    {
+            //        atomPval[atomIdx] = typePval[atomToTypeMap[atomIdx]];
+            //        atomDq[atomIdx] = valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]];
+            //        //dQ += (valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]) * multiplicity[atomIdx];
+            //        currentQ += (valenceOccupancy[atomicNumbers[atomIdx]] - typePval[atomToTypeMap[atomIdx]]) * multiplicity[atomIdx];
+            //        sigmaSum += typePvalSigma[atomToTypeMap[atomIdx]] * multiplicity[atomIdx];
+            //        typeUsed[atomToTypeMap[atomIdx]] = true;
+            //    }
+            //dQ = targetCharge - currentQ;
+            //if (dQ == 0)
+            //    return;
+
+            //if (sigmaSum == 0)
+            //{
+            //    sigmaSum = double(nAtoms);
+            //    typePvalSigma.assign(typePvalSigma.size(), 1.0);
+            //}
+
+            //for (int i = 0; i < typePval.size(); i++)
+            //    if (typeUsed[i])
+            //        //typePval[i] += dQ * typePvalSigma[i] / sigmaSum;
+            //        typePval[i] -= dQ * typePvalSigma[i] / sigmaSum;
 
 
         }
