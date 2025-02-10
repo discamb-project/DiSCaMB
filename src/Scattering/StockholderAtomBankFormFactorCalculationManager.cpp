@@ -1,5 +1,6 @@
 #include "discamb/Scattering/StockholderAtomBankFormFactorCalculationManager.h"
 
+#include "discamb/config.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/constants.h"
 #include "discamb/IO/atom_type_io.h"
@@ -28,6 +29,12 @@ namespace discamb {
         bool useSphericalHarmonicsExpansion)
     {
         mUseSphericalHarmonicsExpansion = useSphericalHarmonicsExpansion;
+#ifndef HAS_SPH_BESSEL
+        if (mUseSphericalHarmonicsExpansion)
+            on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
+
         mN_Threads = nThreadas;
         mCrystal = crystal;
         crystal_structure_utilities::atomicNumbers(crystal, mAtomicNumber);
@@ -344,6 +351,9 @@ namespace discamb {
         const Vector3d& hkl)
         const
     {
+#ifndef HAS_SPH_BESSEL
+    on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
 
         vector<vector<double> > sphericalHarmonics(8);
         int l, m;
@@ -368,15 +378,12 @@ namespace discamb {
 
             int z = mAtomicNumber[atomIdx];
             int i, n = mRadialGrid[z].size();
-
+#ifdef HAS_SPH_BESSEL
             for (i = 0; i < n; i++)
                 mRadialIntegrationMultiplier[i] = 
                 sph_bessel(l, h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][i]) *
                 mRadialGrid[z][i] * mRadialGrid[z][i] * mRadialIntegrationWeights[mAtomicNumber[atomIdx]][i];
-
-                //sphericalBesselTransform += sph_bessel(l, h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][i]) *
-                //mRadialGrid[z][i] * mRadialGrid[z][i] * mSphericalHarmonicsCoefficients[atomIdx][l][l + m][i] *
-                //mRadialIntegrationWeights[mAtomicNumber[atomIdx]][i];
+#endif
 
             for (m = -l; m <= l; m++)
             {
@@ -433,6 +440,10 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_RecBes
     const std::vector<bool>& includeAtom)
     const
 {
+#ifndef HAS_SPH_BESSEL
+    on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
     double h_length = sqrt(hkl * hkl);
     if (h_length == 0.0)
         return calculateCart000(ff, includeAtom);
@@ -471,8 +482,10 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_RecBes
         {
             double x = h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][gridPointIdx];
             two_pi_h_r[gridPointIdx] = x;
+#ifdef HAS_SPH_BESSEL
             sph_bessel_7[gridPointIdx] = sph_bessel(7, x); // sin(x) / x;
             sph_bessel_6[gridPointIdx] = sph_bessel(6, x); //sph_bessel_0[gridPointIdx] / x - cos(x) / x;
+#endif
         }
 
         vector<double>& sph_bessel_n_plus_2 = sph_bessel_7;
@@ -516,26 +529,6 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_RecBes
         }
 
 
-        //        for (l = 2; l < 8; l++)
-        //        {
-        //            vector<double>& vv = v[l];
-        //            //double sb_l, x;
-        //            for (gridPointIdx = 0; gridPointIdx < gridSize; gridPointIdx++)
-        //            {
-        //            //    x = two_pi_h_r[gridPointIdx];
-        //            //    sb_l = (2 * l - 1) / x * sph_bessel_n_minus_1[gridPointIdx] - sph_bessel_n_minus_2[gridPointIdx];
-        //            //    //vv[gridPointIdx] = sph_bessel(l, two_pi_h_r[gridPointIdx]) * r2rw[gridPointIdx];
-        //            //    vv[gridPointIdx] = sb_l * r2rw[gridPointIdx];
-        //            //    sph_bessel_n_minus_2[gridPointIdx] = sph_bessel_n_minus_1[gridPointIdx];
-        //            //    sph_bessel_n_minus_1[gridPointIdx] = sb_l;
-        //                vv[gridPointIdx] = sph_bessel(l, two_pi_h_r[gridPointIdx]) * r2rw[gridPointIdx];
-        //            }
-        //            
-        //            //vv[gridPointIdx] =  mRadialGrid[z][gridPointIdx] * mRadialGrid[z][gridPointIdx] * mRadialIntegrationWeights[z][gridPointIdx];
-        ////vv[gridPointIdx] = 1.0;
-        ////sph_bessel(l, h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][gridPointIdx]) *
-        ////mRadialGrid[z][gridPointIdx] * mRadialGrid[z][gridPointIdx] * mRadialIntegrationWeights[z][gridPointIdx];
-        //        }
     }
 
 
@@ -548,16 +541,6 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_RecBes
         for (l = 0; l < 8; l++)
         {
 
-            //int i, n = mRadialGrid[z].size();
-
-            //for (i = 0; i < n; i++)
-            //    mRadialIntegrationMultiplier[i] =
-            //    sph_bessel(l, h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][i]) *
-            //    mRadialGrid[z][i] * mRadialGrid[z][i] * mRadialIntegrationWeights[mAtomicNumber[atomIdx]][i];
-
-            //sphericalBesselTransform += sph_bessel(l, h_length_atomic_units * 2.0 * M_PI * mRadialGrid[z][i]) *
-            //mRadialGrid[z][i] * mRadialGrid[z][i] * mSphericalHarmonicsCoefficients[atomIdx][l][l + m][i] *
-            //mRadialIntegrationWeights[mAtomicNumber[atomIdx]][i];
             vector<double>& vv = v[l];
             for (m = -l; m <= l; m++)
             {
@@ -565,7 +548,6 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_RecBes
                 const vector<double>& sphCoeff = mSphericalHarmonicsCoefficients[atomIdx][l][l + m];
                 for (gridPointIdx = 0; gridPointIdx < gridSize; gridPointIdx++)
                     sphericalBesselTransform += vv[gridPointIdx] * sphCoeff[gridPointIdx];
-                //sphericalBesselTransform += mRadialIntegrationMultiplier[gridPointIdx] * mSphericalHarmonicsCoefficients[atomIdx][l][l + m][gridPointIdx];
 
 
                 if (l % 2 == 0)
@@ -585,6 +567,10 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp(
     const std::vector<bool>& includeAtom)
     const
 {
+#ifndef HAS_SPH_BESSEL
+    on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
     double h_length = sqrt(hkl * hkl);
     if (h_length == 0.0)
         return calculateCart000(ff, includeAtom);
@@ -629,7 +615,9 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp(
             for (gridPointIdx = 0; gridPointIdx < gridSize; gridPointIdx++)
             {
                 x = two_pi_h_r[gridPointIdx];
+#ifdef HAS_SPH_BESSEL
                 sb_l = sph_bessel(l, x);
+#endif
                 vv[gridPointIdx] = sb_l * r2rw[gridPointIdx];
             }
         }
@@ -672,6 +660,10 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_in_thr
     const std::vector<bool>& includeAtom)
     const
 {
+#ifndef HAS_SPH_BESSEL
+    on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
     int threadIdx = omp_get_thread_num();
 
     double h_length = sqrt(hkl * hkl);
@@ -718,7 +710,9 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_in_thr
             for (gridPointIdx = 0; gridPointIdx < gridSize; gridPointIdx++)
             {
                 x = two_pi_h_r[gridPointIdx];
+#ifdef HAS_SPH_BESSEL
                 sb_l = sph_bessel(l, x);
+#endif
                 vv[gridPointIdx] = sb_l * r2rw[gridPointIdx];
             }
         }

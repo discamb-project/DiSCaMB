@@ -20,8 +20,18 @@ if(MSVC)
 endif()
 
 
+
 option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
 option(DISCAMB_BUILD_EXAMPLES "Build the example programs" ON)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    option(USE_STD_SPH_BESSEL "use std::sph_bessel" OFF) 
+else()
+    option(USE_STD_SPH_BESSEL "use std::sph_bessel" ON) 
+endif()
+
+if(USE_STD_SPH_BESSEL)
+	set(HAS_SPH_BESSEL true)
+endif()
 
 find_package(OpenMP)
 set(CMAKE_DEBUG_POSTFIX "d")

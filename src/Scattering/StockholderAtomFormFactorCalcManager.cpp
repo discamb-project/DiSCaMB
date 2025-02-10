@@ -113,6 +113,13 @@ namespace discamb {
         const HirshfeldAtomModelSettings& settings)
 	{
         mSettings = settings;
+
+#ifndef HAS_SPH_BESSEL
+        if (mSettings.sphericalHarmonicsExpansionLevel >= 0)
+            on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
+
         mUseSpehricalDensitySubstraction = false;
 		mCrystal = crystal;
 		mReciprocalSpaceUnitCell.set(mCrystal.unitCell);
@@ -447,6 +454,12 @@ namespace discamb {
         std::vector < std::vector<std::complex<double> > >& formFactors,
         const std::vector<bool>& includeAtom) const
     {
+#ifndef HAS_SPH_BESSEL
+        if (mSettings.sphericalHarmonicsExpansionLevel >= 0)
+            on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
+#endif
+
+        
         cout << "calculateFracWithSphericalHarmonics\n";
         //constexpr int maxL = 7;
         int maxL = mSettings.sphericalHarmonicsExpansionLevel;
@@ -608,8 +621,10 @@ namespace discamb {
                             for (int radGridIdx = 0; radGridIdx < nRad; radGridIdx++)
                             {
                                 double twoPiSr = twoPiS * radialGrid[z][radGridIdx];
+#ifdef HAS_SPH_BESSEL
                                 fourierBesselTransform += sph_bessel(l, twoPiSr) * radialGrid[z][radGridIdx] * radialGrid[z][radGridIdx] *
                                     radialFunctions[atomIdx][l][l_plus_m][radGridIdx] * radialWeights[z][radGridIdx];
+#endif
                             }
                             f += 4.0 * M_PI * fourierBesselTransform * i_power_l[l] * realSph_of_hkl[l][l_plus_m];
                         }
@@ -642,8 +657,10 @@ namespace discamb {
                         for (int radGridIdx = 0; radGridIdx < nRad; radGridIdx++)
                         {
                             double twoPiSr = twoPiS * radialGrid[z][radGridIdx];
+#ifdef HAS_SPH_BESSEL
                             fourierBesselTransform += sph_bessel(l, twoPiSr) * radialGrid[z][radGridIdx] * radialGrid[z][radGridIdx] *
                                 radialFunctions[atomIdx][l][l_plus_m][radGridIdx] * radialWeights[z][radGridIdx];
+#endif
                         }
                         
                         out << setw(14) << setprecision(6) << fourierBesselTransform;
