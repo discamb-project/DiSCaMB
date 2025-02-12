@@ -23,7 +23,7 @@ endif()
 
 option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
 option(DISCAMB_BUILD_EXAMPLES "Build the example programs" ON)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     option(USE_STD_SPH_BESSEL "use std::sph_bessel" OFF) 
 else()
     option(USE_STD_SPH_BESSEL "use std::sph_bessel" ON) 
