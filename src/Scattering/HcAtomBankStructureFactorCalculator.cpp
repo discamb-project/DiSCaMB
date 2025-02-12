@@ -117,13 +117,6 @@ namespace discamb {
         vector<AtomTypeHC_Parameters> hcParameters;
         BankSettings bankSettings;
 
-        clog << "Atomic form factors for ";
-        if (electronScattering)
-            clog << "electron";
-        else
-            clog << "X-ray";
-        clog << " scattering calculated with\n"
-             << "The Hansen - Coppens model parameterized with MATTS databank.\n\n";
 
 		if(bankPath.empty())
 		{
