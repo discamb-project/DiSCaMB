@@ -270,11 +270,14 @@ namespace discamb {
         //    multipoleModelPalameters, true, nonMultipolarAtoms);
 
         vector<shared_ptr<LocalCoordinateSystemInCrystal> > lcaCalculators;
-        for (auto coordinateSystem : lcs)
+        for (int lcsIdx = 0; lcsIdx < lcs.size(); lcsIdx++)
             lcaCalculators.push_back(
                 shared_ptr<LocalCoordinateSystemInCrystal>(
-                    new LocalCoordinateSystemCalculator(coordinateSystem, crystal)));
-
+                    types[lcsIdx] > 0 ?
+                    new LocalCoordinateSystemCalculator(lcs[lcsIdx], crystal) :
+                    new LocalCoordinateSystemCalculator()
+                )
+            );
         if (!parametersInfoFile.empty())
             printAssignedMultipolarParameters(
                 parametersInfoFile,
