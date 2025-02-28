@@ -44,7 +44,9 @@ namespace discamb {
             const std::string& multipolarCif = std::string(),
             int nThreads = 1,
             double unitCellCharge = 0,
-            bool scaleToMatchCharge = true);
+            bool scaleToMatchCharge = true,
+            const std::string& iamTable = std::string(),
+            bool iamElectronScattering = false);
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
@@ -59,7 +61,9 @@ namespace discamb {
             const std::string& multipolarCif = std::string(),
             int nThreads = 1,
             double unitCellCharge = 0,
-            bool scaleToMatchCharge = true);
+            bool scaleToMatchCharge = true,
+            const std::string& iamTable = std::string(),
+            bool iamElectronScattering = false);
         
 
         virtual ~HcAtomBankStructureFactorCalculator();

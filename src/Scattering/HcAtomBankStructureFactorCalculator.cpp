@@ -61,9 +61,11 @@ namespace discamb {
         const std::string& multipolarCif,
         int nThreads,
         double unitCellCharge,
-        bool scaleToMatchCharge)
+        bool scaleToMatchCharge,
+        const string& iamTable,
+        bool iamElectronScattering)
     {
-        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge);
+        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering);
 
     }
 
@@ -106,10 +108,17 @@ namespace discamb {
         if (data.find("scale") != data.end())
             scaleHcParameters = data.find("scale")->get<bool>();
 
-
         int nCores=1;
         if (data.find("n cores") != data.end())
             nCores = data.find("n cores")->get<int>();
+
+        string iamTable;
+        if (data.find("table") != data.end())
+            iamTable = data.find("table")->get<string>();
+        
+        bool iamElectronScattering = false;
+        if (data.find("iam electron scattering") != data.end())
+            iamElectronScattering = data.find("iam electron scattering")->get<bool>();
 
 
         MATTS_BankReader bankReader;
@@ -149,7 +158,7 @@ namespace discamb {
 		else
 			bankReader.read(bankPath, types, hcParameters, bankSettings, true);
         set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile,
-            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters);
+            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering);
     }
 
 
@@ -174,7 +183,9 @@ namespace discamb {
         const std::string& multipolarCif,
         int nThreads,
         double unitCellCharge,
-        bool scaleToMatchCharge)
+        bool scaleToMatchCharge,
+        const string& iamTable,
+        bool iamElectronScattering)
     {
         mModelInfo.clear();
 
@@ -270,11 +281,14 @@ namespace discamb {
         //    multipoleModelPalameters, true, nonMultipolarAtoms);
 
         vector<shared_ptr<LocalCoordinateSystemInCrystal> > lcaCalculators;
-        for (auto coordinateSystem : lcs)
+        for (int lcsIdx = 0; lcsIdx < lcs.size(); lcsIdx++)
             lcaCalculators.push_back(
                 shared_ptr<LocalCoordinateSystemInCrystal>(
-                    new LocalCoordinateSystemCalculator(coordinateSystem, crystal)));
-
+                    types[lcsIdx] > 0 ?
+                    new LocalCoordinateSystemCalculator(lcs[lcsIdx], crystal) :
+                    new LocalCoordinateSystemCalculator()
+                )
+            );
         if (!parametersInfoFile.empty())
             printAssignedMultipolarParameters(
                 parametersInfoFile,
@@ -288,7 +302,7 @@ namespace discamb {
         mHcCalculator = shared_ptr<SfCalculator>(
                             new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false));
         mIamCalculator = shared_ptr<SfCalculator>(
-            new AnyIamCalculator(crystal, electronScattering));
+            new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };
         vector<vector<int> > calculatorAtoms(2);
         for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
@@ -313,7 +327,7 @@ namespace discamb {
             mHcCalculators.push_back(shared_ptr<SfCalculator>(
                 new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false)));
             mIamCalculators.push_back(shared_ptr<SfCalculator>(
-                new AnyIamCalculator(crystal, electronScattering)));
+                new AnyIamCalculator(crystal, iamElectronScattering, iamTable)));
 
             vector< std::shared_ptr<SfCalculator> > calculators2{ mHcCalculators.back(), mIamCalculators.back() };
             mCalculators.push_back(shared_ptr< CombinedStructureFactorCalculator>(new CombinedStructureFactorCalculator(calculators2, calculatorAtoms)));
