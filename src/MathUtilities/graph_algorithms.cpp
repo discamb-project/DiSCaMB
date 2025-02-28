@@ -1,5 +1,7 @@
 #include "discamb/MathUtilities/graph_algorithms.h"
 
+#include <set>
+
 using namespace std;
 
 namespace discamb {
@@ -184,6 +186,31 @@ namespace discamb {
 
         }
 
+        void split(
+            const vector<vector<int> >& connectivity,
+            vector<vector<int> >& subGraphs)
+        {
+            set<int> notProcessedAtoms;
+            vector<vector<int> > neighbors;
+            subGraphs.clear();
+            int atomIdx, nAtoms = connectivity.size();
+            for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                notProcessedAtoms.insert(atomIdx);
+
+
+            while (!notProcessedAtoms.empty())
+            {
+                breadth_first_search(connectivity, *notProcessedAtoms.begin(), neighbors);
+                subGraphs.resize(subGraphs.size() + 1);
+                for (auto& shell : neighbors)
+                {
+                    subGraphs.back().insert(subGraphs.back().end(), shell.begin(), shell.end());
+                    for (auto& atom : shell)
+                        notProcessedAtoms.erase(atom);
+                }
+            }
+
+        }
 
     } // namespace graph_algorithms
 

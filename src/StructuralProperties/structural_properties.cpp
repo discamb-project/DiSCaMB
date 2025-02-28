@@ -2002,25 +2002,26 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         //MolecularDisorder disorder;
         
         connectivityAlgorithm.calculateConnectivity(positionsInAngstroms, atomicNumbers, connectivity);
-        set<int> notProcessedAtoms;
-        vector<vector<int> > neighbors;
-        molecules.clear();
-        int atomIdx, nAtoms = atomicNumbers.size();
-        for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-            notProcessedAtoms.insert(atomIdx);
+        graph_algorithms::split(connectivity, molecules);
+        //set<int> notProcessedAtoms;
+        //vector<vector<int> > neighbors;
+        //molecules.clear();
+        //int atomIdx, nAtoms = atomicNumbers.size();
+        //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        //    notProcessedAtoms.insert(atomIdx);
 
 
-        while (!notProcessedAtoms.empty())
-        {
-            graph_algorithms::breadth_first_search(connectivity, *notProcessedAtoms.begin(), neighbors);
-            molecules.resize(molecules.size() + 1);
-            for (auto &shell : neighbors)
-            {
-                molecules.back().insert(molecules.back().end(), shell.begin(), shell.end());
-                for (auto &atom : shell)
-                    notProcessedAtoms.erase(atom);
-            }
-        }
+        //while (!notProcessedAtoms.empty())
+        //{
+        //    graph_algorithms::breadth_first_search(connectivity, *notProcessedAtoms.begin(), neighbors);
+        //    molecules.resize(molecules.size() + 1);
+        //    for (auto &shell : neighbors)
+        //    {
+        //        molecules.back().insert(molecules.back().end(), shell.begin(), shell.end());
+        //        for (auto &atom : shell)
+        //            notProcessedAtoms.erase(atom);
+        //    }
+        //}
     }
 
 

@@ -12,6 +12,7 @@
 #include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
 #include "discamb/Scattering/ConstFormFactorCalculationsManager.h"
+#include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/Scattering/NGaussianFormFactor.h"
@@ -457,9 +458,28 @@ void check_args(
     exit(0);
 }
 
+void testTypeAssignemntLog(const string& structureFile, const string &bnk)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    nlohmann::json data;
+    data["bank path"] = bnk;
+    HcAtomBankStructureFactorCalculator calculator(crystal, data);
+    vector<Vector3i> hkl{ Vector3i(1,0,0),Vector3i(1,1,0) };
+    vector<complex<double> > f;
+    vector<bool> countAtomContribution(crystal.atoms.size(), true);
+    calculator.calculateStructureFactors(crystal.atoms, hkl, f, countAtomContribution);
+    for (int i = 0; i < hkl.size(); i++)
+        cout << hkl[i] << " " << f[i] << "\n";
+}
+
 int main(int argc, char* argv[])
 {
     try { 
+        check_args(argc, argv, 2, { "structure file", "bank file path" });
+        testTypeAssignemntLog(argv[1], argv[2]);
+        return 0;
+
         check_args(argc, argv, 2, { "structure file", "bank file path"});
         Crystal crystal;
         structure_io::read_structure(argv[1], crystal);
