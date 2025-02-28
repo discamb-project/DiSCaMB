@@ -112,8 +112,9 @@ namespace discamb {
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 if (typeID[atomIdx] < 0)
                     out << setw(maxAtomLabelWidth + 3) << crystal.atoms[atomIdx].label << "\n";
-                else
-                    if (isSphericalType(mTypeLabels[typeID[atomIdx]]))
+            out << "Atoms with spherical atom type :\n";
+            for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                if (typeID[atomIdx] >= 0 && isSphericalType(mTypeLabels[typeID[atomIdx]]))
                         out << setw(maxAtomLabelWidth + 3) << crystal.atoms[atomIdx].label << "\n";
         }
         if (nAssigned > 0)
