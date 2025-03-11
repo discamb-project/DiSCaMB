@@ -108,11 +108,11 @@ namespace discamb {
         out << "Atom type assigned to " << nAssigned << " of " << nAtoms << ".\n";
         if (nAssigned != nAtoms)
         {
-            out << "Atoms with unassigned atom types :\n";
+            out << "Atoms with unassigned atom types, represented with standard IAM :\n";
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 if (typeID[atomIdx] < 0)
                     out << setw(maxAtomLabelWidth + 3) << crystal.atoms[atomIdx].label << "\n";
-            out << "Atoms with spherical atom type :\n";
+            out << "Atoms with unassigned atom types, represented with multipole model based IAM :\n";
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 if (typeID[atomIdx] >= 0 && isSphericalType(mTypeLabels[typeID[atomIdx]]))
                         out << setw(maxAtomLabelWidth + 3) << crystal.atoms[atomIdx].label << "\n";
