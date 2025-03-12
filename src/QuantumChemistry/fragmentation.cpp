@@ -221,7 +221,7 @@ namespace discamb{
         this->charge = data.value("charge", 0);
         this->spin_multiplicity = data.value("spin multiplicity", 1);
 
-        if (data.find("atoms") != data.end())
+        if (data.find("atoms") == data.end())
             on_error::throwException(errorMessage, __FILE__, __LINE__);
 
         FragmentPartConstructionData fragmentPartConstructionData;
@@ -229,7 +229,7 @@ namespace discamb{
         if (data["atoms"].is_string())  //list of atoms
         {
             vector<string> words;
-            string_utilities::split(data["atom"].get<string>(), words);
+            string_utilities::split(data["atoms"].get<string>(), words);
             crystal_structure_utilities::splitIntoAtomAndSymmOp(words, fragmentPartConstructionData.include, true);
             this->fragmentPartConstructionData.push_back(fragmentPartConstructionData);
         }

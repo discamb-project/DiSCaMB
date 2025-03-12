@@ -33,6 +33,9 @@ if(USE_STD_SPH_BESSEL)
 	set(HAS_SPH_BESSEL true)
 endif()
 
+message("My message")
+message("CMAKE_BUILD_TYPE " ${CMAKE_BUILD_TYPE})
+
 find_package(OpenMP)
 set(CMAKE_DEBUG_POSTFIX "d")
 set(CMAKE_MINSIZEREL_POSTFIX "s")
