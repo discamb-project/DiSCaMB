@@ -559,9 +559,51 @@ void test_connectivity(const string& structFile)
     }
 }
 
+void tsc_differences(
+    const string& tsc1,
+    const string& tsc2)
+{
+    vector<string> labels1, labels2;
+    vector<Vector3i> hkl;
+    vector<vector<complex<double> > > ff1, ff2;
+    tsc_io::read_tsc(tsc1, labels1, hkl, ff1);
+    int nLabels = labels1.size();
+    tsc_io::read_tsc(tsc2, labels2, hkl, ff2);
+
+    if (nLabels != labels2.size())
+        cout << "file differ by number of scatterers " << "\n";
+    if(labels1!=labels2)
+        cout << "file differ by scatterer names " << "\n";
+
+    int nHkl = ff1.size();
+    if(nHkl!=ff2.size())
+        cout << "file differ by number of hkl " << "\n";
+    cout << "number of atoms " << nLabels << "\n";
+    cout << "number of hkl " << nHkl << "\n";
+    for (int atomIdx = 0; atomIdx < nLabels; atomIdx++)
+    {
+        //cout << atomIdx << " " << ff1[nHkl - 1][atomIdx] << " " << ff2[nHkl - 1][atomIdx] << "\n";
+        bool different_atomic_ff = false;
+        for (int hklIdx = 0; hklIdx < nHkl; hklIdx++)
+            if (ff1[hklIdx][atomIdx] != ff2[hklIdx][atomIdx])
+            {
+                if (!different_atomic_ff)
+                {
+                    cout << "difference for atom " << labels1[atomIdx] << "\n";
+                    different_atomic_ff = true;
+                }
+                cout << "   " << hkl[hklIdx] << " " << ff1[hklIdx][atomIdx] << " " << ff2[hklIdx][atomIdx] << endl;
+            }
+    }
+
+}
+
 int main(int argc, char* argv[])
 {
     try { 
+        tsc_differences(argv[1], argv[2]);
+        return 0;
+        
         string structFile = "";
         if (argc == 2)
             structFile = argv[1];

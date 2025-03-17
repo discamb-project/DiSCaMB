@@ -284,7 +284,7 @@ namespace discamb {
         for (int lcsIdx = 0; lcsIdx < lcs.size(); lcsIdx++)
             lcaCalculators.push_back(
                 shared_ptr<LocalCoordinateSystemInCrystal>(
-                    types[lcsIdx] > 0 ?
+                    types[lcsIdx] >= 0 ?
                     new LocalCoordinateSystemCalculator(lcs[lcsIdx], crystal) :
                     new LocalCoordinateSystemCalculator()
                 )
