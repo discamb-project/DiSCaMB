@@ -792,7 +792,7 @@ namespace
     {"C(ar)-H",1.083},         // Allen 2010
     {"Z2-Csp3-H2",1.091},      // Allen 2010
     {"Z3-Csp3-H",1.098},       // Allen 2010
-    {"H-O-H",0.959},           // Woiñska et al. (2016, Sci. Adv. 2, e1600192) 
+    {"H-O-H",0.959},           // Woinska et al. (2016, Sci. Adv. 2, e1600192) 
     {"Csp3-O-H",0.97},         // Allen 2010
     {"C(ar)-O-H",0.992},       // Allen 2010
     {"O=Csp2-O-H",1.018},      // Allen 2010
@@ -932,6 +932,46 @@ namespace
 			}
 		}
 	}
+
+    /*
+    calculates distance between plane span by vectors
+    planeVec1, planeVec2 i.e. a * planeVec1 + b * planeVec2
+    and plane obtained by shifting the above one by vector 
+    shiftToPlane2, i.e. 
+    a * planeVec1 + b * planeVec2 + shiftToPlane2
+    intended for calculation of distantance between crystallographic planes
+    */
+
+    double interplaneDistance(
+        const Vector3d& planeVec1,
+        const Vector3d& planeVec2,
+        const Vector3d& shiftToPlane2)
+    {
+        Vector3d perpendicular_vec = geometry3d::normalizeReturn(cross_product(planeVec1, planeVec2));
+        return fabs(shiftToPlane2 * perpendicular_vec);
+    }
+
+    void findConnectivityBoxParameters(
+        const UnitCell &unitCell,
+        double min_distance,
+        int &na,
+        int &nb,
+        int &nc)
+    {
+        Vector3d a, b, c;
+
+        unitCell.fractionalToCartesian(Vector3d(1, 0, 0), a);
+        unitCell.fractionalToCartesian(Vector3d(0, 1, 0), b);
+        unitCell.fractionalToCartesian(Vector3d(0, 0, 1), c);
+
+        double ab_plane_distance = interplaneDistance(a, b, c);
+        double ac_plane_distance = interplaneDistance(a, c, b);
+        double bc_plane_distance = interplaneDistance(b, c, a);
+        na = max(1, int(bc_plane_distance / min_distance));
+        nb = max(1, int(ac_plane_distance / min_distance));
+        nc = max(1, int(ab_plane_distance / min_distance));
+
+    }
 
 }
 
@@ -1434,12 +1474,28 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
 
     }
 
-
     void calcUnitCellConnectivity(
+        const UnitCellContent& uc,
+        std::vector<std::vector<UnitCellContent::AtomID> >& connectivity,
+        double threshold,
+        const std::string& method)
+    {
+        vector<string> methods{ "boxes", "simple" };
+        if (find(methods.begin(), methods.end(), method) == methods.end())
+            on_error::throwException("unknown method in structural_properties::calcUnitCellConnectivity: '" + method + "'",
+                __FILE__, __LINE__);
+        if (method == "boxes")
+            calcUnitCellConnectivity_Boxes(uc, connectivity, threshold);
+        if (method == "simple")
+            calcUnitCellConnectivity_Simple(uc, connectivity, threshold);
+    }
+
+    void calcUnitCellConnectivity_Simple(
         const UnitCellContent &uc,
         std::vector<std::vector<UnitCellContent::AtomID> > &connectivity,
-        double treshold)
+        double threshold)
     {
+
         int atomIndex, nAtomsInUnitCell, i;
         Vector3d aCartesian, bCartesian, cCartesian, latticeVectorCartesian, fractional, position, diff;
         vector<Vector3d> cartesianCoordinates;
@@ -1448,7 +1504,7 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         int a, b, c;
         CovalentRadiousBondDetector bondDetector;
         double distance;
-        bondDetector.setThreshold(treshold);
+        bondDetector.setThreshold(threshold);
         connectivity.clear();
 
         nAtomsInUnitCell = uc.nAtoms();
@@ -1508,6 +1564,158 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         }
 
     }
+
+    void calcUnitCellConnectivity_Boxes(
+        const UnitCellContent& uc,
+        std::vector<std::vector<UnitCellContent::AtomID> >& connectivity,
+        double treshold)
+    {
+
+        int nAtomsInUnitCell;
+        vector<Vector3d> cartesianCoordinates;
+        vector<int> atomicNumbers;
+        const UnitCell& unitCell = uc.getCrystal().unitCell;
+        CovalentRadiousBondDetector bondDetector;
+        double distance;
+        bondDetector.setThreshold(treshold);
+        connectivity.clear();
+        nAtomsInUnitCell = uc.nAtoms();
+        vector<int> z_asymm_unit;
+
+        crystal_structure_utilities::atomicNumbers(uc.getCrystal(), z_asymm_unit);
+        connectivity.resize(nAtomsInUnitCell);        
+        
+        int na, nb, nc;
+        findConnectivityBoxParameters(unitCell, 5.0, na, nb, nc);
+        double a_fraction = 1.0 / na;
+        double b_fraction = 1.0 / nb;
+        double c_fraction = 1.0 / nc;
+        vector<vector<vector<vector<int> > > > boxAtoms(na+2,vector< vector<vector<int> > >(nb+2,vector< vector<int> >(nc+2)));
+        int idx = 0;
+        vector<UnitCellContent::AtomID> atoms;
+        vector<Vector3i> neighboursHalfSet;
+        
+        for (int a = -1; a < 2; a++)
+            for (int b = -1; b < 2; b++)
+            {
+                neighboursHalfSet.push_back(Vector3i(a, b, -1));
+                if( a<=b && a<1 && !(a==0&&b==0))
+                    neighboursHalfSet.push_back(Vector3i(a, b, 0));
+            }
+        
+        for (int atomIndex = 0; atomIndex < nAtomsInUnitCell; atomIndex++)
+        {
+            int atomicNumber = z_asymm_unit[uc.indexOfSymmetryEquivalentAtomInCrystal(atomIndex)];
+            Vector3d cartesian, fractional = uc.getAtom(atomIndex).coordinates;
+            unitCell.fractionalToCartesian(fractional, cartesian);
+
+            atomicNumbers.push_back(atomicNumber);
+            cartesianCoordinates.push_back(cartesian);
+            atoms.push_back(UnitCellContent::AtomID(atomIndex, Vector3i(0, 0, 0)));
+
+            int idx_a = int(fractional[0] / a_fraction);
+            int idx_b = int(fractional[1] / b_fraction);
+            int idx_c = int(fractional[2] / c_fraction);
+            
+            boxAtoms[idx_a+1][idx_b+1][idx_c+1].push_back(idx++);
+
+            // finds the atoms in the vicinity of 000 unit cell
+            for(int i = -1; i < 2; i++)
+                for (int j = -1; j < 2; j++)
+                    for (int k = -1; k < 2; k++)
+                        if(!(i==0 && j==0 && k==0))
+                        {
+                            // p,q,r - box position, box at origin has position 0,0,0
+                            int p = idx_a + i * na;
+                            int q = idx_b + j * nb;
+                            int r = idx_c + k * nc;
+                            if(p >= -1 && p <= na)
+                                if (q >= -1 && q <= nb)
+                                    if (r >= -1 && r <= nc)
+                                    {
+                                        Vector3d f = fractional + Vector3d(i, j, k);
+                                        unitCell.fractionalToCartesian(f, cartesian);
+                                        atomicNumbers.push_back(atomicNumber);
+                                        cartesianCoordinates.push_back(cartesian);
+                                        atoms.push_back(UnitCellContent::AtomID(atomIndex, Vector3i(i, j, k)));
+                                        boxAtoms[p+1][q+1][r+1].push_back(idx++);
+                                    }
+                        }
+        }
+
+        
+
+        for(int i = 0; i < na; i++)
+            for (int j = 0; j < nb; j++)
+                for (int k = 0; k < nc; k++)
+                {
+                    auto& atoms1 = boxAtoms[i+1][j+1][k+1];
+                    int nAtoms1 = atoms1.size();
+                    if (nAtoms1 == 0)
+                        continue;
+
+                    // inside box
+                    
+                    for(int p=0;p<nAtoms1;p++)
+                        for (int q = p + 1; q < nAtoms1; q++)
+                        {
+                            int atom1 = atoms1[p];
+                            int atom2 = atoms1[q];
+                            Vector3d diff = cartesianCoordinates[atom1] - cartesianCoordinates[atom2];
+                            distance = sqrt(diff * diff);
+                            if (bondDetector.areBonded(atomicNumbers[atom1], atomicNumbers[atom2], distance))
+                            {
+                                connectivity[atoms[atom1].atomIndex].push_back(atoms[atom2]);
+                                connectivity[atoms[atom2].atomIndex].push_back(atoms[atom1]);
+                            }
+
+                        }
+
+                    // interbox
+                    for(auto &neighbour: neighboursHalfSet)
+                    {
+                        auto& atoms2 = boxAtoms[i + 1 + neighbour[0]][j + 1 + neighbour[1]][k + 1+ neighbour[2]];
+                        if (atoms2.empty())
+                            continue;
+                        for (auto& atom1 : atoms1)
+                            for (auto& atom2 : atoms2)
+                            {
+                                Vector3d diff = cartesianCoordinates[atom1] - cartesianCoordinates[atom2];
+                                distance = sqrt(diff * diff);
+                                if (bondDetector.areBonded(atomicNumbers[atom1], atomicNumbers[atom2], distance))
+                                {
+                                    connectivity[atoms[atom1].atomIndex].push_back(atoms[atom2]);
+                                    connectivity[atoms[atom2].atomIndex].push_back(UnitCellContent::AtomID(atoms[atom1].atomIndex, -atoms[atom2].unitCellPosition));
+                                }
+                            }
+                    }
+
+                    //for(int p=0;p<2;p++)
+                    //    for (int q = 0; q < 2; q++)
+                    //        for (int r = 0; r < 2; r++)
+                    //            if (!(p == 0 && q == 0 && r == 0))
+                    //            {
+                    //                auto& atoms2 = boxAtoms[i+p][j+q][k+r];
+                    //                if (atoms2.empty())
+                    //                    continue;
+                    //                for(auto &atom1: atoms1)
+                    //                    for (auto& atom2 : atoms2)
+                    //                    {
+                    //                        Vector3d diff = cartesianCoordinates[atom1] - cartesianCoordinates[atom2];
+                    //                        distance = sqrt(diff * diff);
+                    //                        if (bondDetector.areBonded(atomicNumbers[atom1], atomicNumbers[atom2], distance))
+                    //                        {
+                    //                            connectivity[atoms[atom1].atomIndex].push_back(atoms[atom2]);
+                    //                            connectivity[atoms[atom2].atomIndex].push_back(UnitCellContent::AtomID(atoms[atom1].atomIndex, -atoms[atom2].unitCellPosition));
+                    //                        }
+                    //                    }
+                    //            }
+                }
+
+        
+
+    }
+
 
     void calcUnitCellConnectivity2(
         const UnitCellContent &uc,
@@ -2136,7 +2344,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
     {
         std::vector<std::vector<UnitCellContent::AtomID> > unitCellConnectivity;
         calcUnitCellConnectivity(unitCellContent, unitCellConnectivity, threshold);
-
         //ofstream out("uc_connect");
         //for (auto &atomConn : unitCellConnectivity)
         //{

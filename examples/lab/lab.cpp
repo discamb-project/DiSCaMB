@@ -2,6 +2,7 @@
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/file_system_utilities.h"
 #include "discamb/BasicUtilities/parse_cmd.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/IO/discamb_io.h"
@@ -18,6 +19,7 @@
 #include "discamb/Scattering/NGaussianFormFactor.h"
 #include "discamb/Scattering/taam_utilities.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
+#include "discamb/StructuralProperties/structural_properties.h"
 #include <fstream>
 
 using namespace std;
@@ -473,9 +475,102 @@ void testTypeAssignemntLog(const string& structureFile, const string &bnk)
         cout << hkl[i] << " " << f[i] << "\n";
 }
 
+
+void test_int_floor()
+{
+    for (int i = 0; i < 30; i++)
+    {
+        double d = i * 1.01;
+        int j = floor(d);
+        cout << j << "\n";
+    }
+}
+
+void test_connectivity(const string& structFile)
+{
+    vector<string> structFiles;
+    if (!structFile.empty())
+        structFiles.push_back(structFile);
+    else
+        file_system_utilities::find_files("res", structFiles);
+    
+    for (auto& fileName : structFiles)
+    {
+        Crystal crystal;
+        structure_io::read_structure(fileName, crystal);
+        UnitCellContent uc(crystal);
+        vector<vector<UnitCellContent::AtomID> > connectivity, connectivity3;
+            
+        structural_properties::calcUnitCellConnectivity(uc, connectivity, 0.4, "simple");
+        structural_properties::calcUnitCellConnectivity(uc, connectivity3, 0.4, "boxes");
+        for (auto& entry : connectivity)
+            sort(entry.begin(), entry.end());
+        for (auto& entry : connectivity3)
+            sort(entry.begin(), entry.end());
+        if (connectivity != connectivity3)
+        {
+            cout << fileName << " connectivity differ\n";
+            for(int i=0;i< connectivity.size(); i++)
+                if (connectivity[i] != connectivity3[i])
+                {
+                    string label, symmOp;
+                    uc.interpreteAtomID(UnitCellContent::AtomID(i), label, symmOp);
+                    cout << "difference for " << i << " " << label << " " << symmOp << "\n";
+                    if (connectivity[i].size() != connectivity3[i].size())
+                    {
+                        cout << "  different size\n";
+                        cout << "    connectivity:\n";
+                        for (int j = 0; j < connectivity[i].size(); j++)
+                        {
+                            uc.interpreteAtomID(connectivity[i][j], label, symmOp);
+                            cout << "      " << label << " " << symmOp 
+                                 << " ID " << connectivity[i][j].atomIndex << " " << connectivity[i][j].unitCellPosition << "\n";
+                        }
+                        cout << "    connectivity3:\n";
+                        for (int j = 0; j < connectivity3[i].size(); j++)
+                        {
+                            uc.interpreteAtomID(connectivity3[i][j], label, symmOp);
+                            cout << "      " << label << " " << symmOp 
+                                 << " ID " << connectivity3[i][j].atomIndex << " " << connectivity3[i][j].unitCellPosition << "\n";
+                        }
+
+                    }
+                    else
+                    {
+                        cout << "  connectivity:\n";
+                        for (int j = 0; j < connectivity[i].size(); j++)
+                        {
+                            uc.interpreteAtomID(connectivity[i][j], label, symmOp);
+                            cout << "    " << label << " " << symmOp << "\n"; 
+                        }
+                        cout << "  connectivity3:\n";
+                        for (int j = 0; j < connectivity3[i].size(); j++)
+                        {
+                            uc.interpreteAtomID(connectivity3[i][j], label, symmOp);
+                            cout << "    " << label << " " << symmOp << "\n";
+                        }
+
+                    }
+                }
+            break;
+        }
+        else
+            cout << fileName << " connectivity match\n";
+    }
+}
+
 int main(int argc, char* argv[])
 {
     try { 
+        string structFile = "";
+        if (argc == 2)
+            structFile = argv[1];
+        test_connectivity(structFile);
+        return 0;
+
+        test_int_floor();
+        return 0;
+
         check_args(argc, argv, 2, { "structure file", "bank file path" });
         testTypeAssignemntLog(argv[1], argv[2]);
         return 0;

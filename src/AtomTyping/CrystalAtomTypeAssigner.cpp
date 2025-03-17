@@ -1,6 +1,7 @@
 
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
+#include "discamb/BasicUtilities/Timer.h"
 #include "discamb/CrystalStructure/UnitCellContent.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
@@ -166,11 +167,15 @@ namespace discamb {
         UnitCellContent unitCellContent;
         vector<UnitCellContent::AtomID> asymmetricUnit, graph;
         unitCellContent.set(crystal);
+
+
         SpaceGroupOperation spaceGroupOperation;
         int atomIdx, nAtoms = crystal.atoms.size();
         Vector3<CrystallographicRational> translation;
         Matrix3i rotation;
         Vector3i latticeTranslation;
+
+
 
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
@@ -185,8 +190,12 @@ namespace discamb {
             asymmetricUnit.push_back(UnitCellContent::AtomID(atomIdx, latticeTranslation));
         }
 
+
+
         //structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, 8, mDescriptorsSettings.covalentBondThreshold);
         structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, mTotalRange, mDescriptorsSettings.covalentBondThreshold);
+
+
 
         // graph as list of atoms and generating symmetry operations
         // atom order is preserved
@@ -216,6 +225,8 @@ namespace discamb {
             atomicNumbers.push_back(atomicNumbersASU[atomIndexInAsymmetricUnit]);
         }
 
+
+
         vector<LocalCoordinateSystem<int> > lcsMolecule;
         StructureWithDescriptors structureWithDescriptors;
         //vector<int> typeId;
@@ -223,10 +234,8 @@ namespace discamb {
 
         for (int i = 0; i < crystal.atoms.size(); i++)
             atomToAssign[i] = i;
-
         structureWithDescriptors.set(atomicNumbers, positions);
         mAssigner.assign(structureWithDescriptors, atomToAssign, typeID, lcsMolecule);
-
         // convert lcs molecule to lcs crystal
         int lcsIdx, nLcs = lcsMolecule.size();
         lcs.clear();

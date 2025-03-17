@@ -43,7 +43,7 @@ namespace discamb {
         Algorith for finding the plane is described in A.G.URZHUMTSEV 'How to Calculate Planarity Restraints' Acta Cryst. (1991). A47,723-727
         */
         double planarity_esd(const std::vector<Vector3d>& positions);
-
+        
         void calculateConnectivity(
             const std::vector<Vector3d>& positions,
             const std::vector<int>& atomicNumbers,
@@ -95,11 +95,21 @@ namespace discamb {
             double threshold,
             std::vector<int> &shellSizes);
 
+        void calcUnitCellConnectivity_Boxes(
+            const UnitCellContent& uc,
+            std::vector<std::vector<UnitCellContent::AtomID> >& connectivity,
+            double treshold);
+
+        void calcUnitCellConnectivity_Simple(
+            const UnitCellContent& uc,
+            std::vector<std::vector<UnitCellContent::AtomID> >& connectivity,
+            double treshold);
 
         void calcUnitCellConnectivity(
             const UnitCellContent &uc, 
             std::vector<std::vector<UnitCellContent::AtomID> > &connectivity,
-            double treshold);
+            double treshold,
+            const std::string &method = "boxes");
         
         void graphToNthNeighbour(const UnitCellContent &unitCellContent, const std::vector<UnitCellContent::AtomID> &startingSet,
             std::vector<UnitCellContent::AtomID> &graph, int n, double threshold);

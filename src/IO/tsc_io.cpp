@@ -20,7 +20,7 @@ namespace discamb {
                 if (n > nChar)
                     nChar = n;
             }
-            cout << "nChar " << nChar << endl;
+            
             return nChar;
         }
 
@@ -49,7 +49,7 @@ namespace discamb {
                     if (n > nChar)
                         nChar = n;
                 }
-            cout << "nChar " << nChar << endl;
+            
             return nChar;
         }
 
