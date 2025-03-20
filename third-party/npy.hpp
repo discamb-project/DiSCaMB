@@ -30,6 +30,7 @@
 #include <sstream>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
