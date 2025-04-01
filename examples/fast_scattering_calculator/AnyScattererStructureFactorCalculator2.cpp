@@ -240,7 +240,7 @@ namespace discamb{
 			const std::vector<bool>& includeAtom)
 			const
 		{
-            mSfCalculator->calculateFrac(hkl, formFactors, includeAtom);
+            mSfCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
 		}
 
         void AnyScattererStructureFactorCalculator2::calculateFormFactors(
@@ -249,7 +249,7 @@ namespace discamb{
             const std::vector<bool>& includeAtom)
             const
         {
-            mManager->calculateFrac(hkl, formFactors, includeAtom);
+            mSfCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
         }
 
 //        void AnyScattererStructureFactorCalculator2::calculateFormFactorsFrac(
@@ -331,7 +331,7 @@ namespace discamb{
 					/* out: */ rotated_h, translation_factor, adpMultipliers);
 
 				for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-					mManager->calculateCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
+                    mSfCalculator->calculateFormFactorsCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
 
 
 				realFContrib = 0;
@@ -459,7 +459,7 @@ namespace discamb{
                     /* out: */ rotated_h, translation_factor, adpMultipliers);
 
                 for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-                    mManager->calculateCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
+                    mSfCalculator->calculateFormFactorsCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
 
 
                 realFContrib = 0;
@@ -655,7 +655,7 @@ namespace discamb{
                                        /* out: */ rotated_h, translation_factor, adpMultipliers);
 
 				for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-					mManager->calculateCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
+					mSfCalculator->calculateFormFactorsCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
 
                 realFContrib = 0;
                 imagFContrib = 0;
@@ -956,7 +956,7 @@ namespace discamb{
 
 			for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
 			{
-				mManager->calculateCart(rotated_h[symOpIdx], mAtomsFormFactor, countAtomContribution);
+				mSfCalculator->calculateFormFactorsCart(rotated_h[symOpIdx], mAtomsFormFactor, countAtomContribution);
 				
 				for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
 					mAtomsFormFactors[atomIdx][symOpIdx] = mAtomsFormFactor[atomIdx];

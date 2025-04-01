@@ -5,6 +5,7 @@
 #include "discamb/BasicUtilities/file_system_utilities.h"
 #include "discamb/BasicUtilities/parse_cmd.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
+#include "discamb/IO/cif_io.h"
 #include "discamb/IO/discamb_io.h"
 #include "discamb/IO/fragmentation_io.h"
 #include "discamb/IO/hkl_io.h"
@@ -18,6 +19,7 @@
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/Scattering/NGaussianFormFactor.h"
+#include "discamb/Scattering/statistics.h"
 #include "discamb/Scattering/taam_utilities.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
@@ -117,7 +119,7 @@ void test_taam_disorder(int argc, char *argv[])
     out.close();
 }
 
-double agreementFactor(
+double agreementFactorAbs(
     const vector<complex<double> >& data1,
     const vector<complex<double> >& data2)
 {
@@ -146,6 +148,48 @@ double agreementFactor(
     return 200 * num / den;
 
 }
+
+/*
+
+    f_calc_a = flex.abs(f_calc_a)
+    f_calc_b = flex.abs(f_calc_b)
+    scale = flex.sum(f_calc_a * f_calc_b) / flex.sum(f_calc_b * f_calc_b)
+    num = flex.sum(flex.abs(f_calc_a - scale * f_calc_b))
+    den = flex.sum(flex.abs(f_calc_a + scale * f_calc_b))
+    diff = flex.abs(f_calc_a - f_calc_b)
+*/
+
+double agreementFactor(
+    const vector<complex<double> >& data1,
+    const vector<complex<double> >& data2)
+{
+    double abs_sf1, abs_sf2;
+
+    double s12 = 0, s22 = 0;
+    int n = data1.size();
+
+    for (int i = 0; i < n; i++)
+    {
+        abs_sf1 = abs(data1[i]);
+        abs_sf2 = abs(data2[i]);
+        s12 += abs_sf1 * abs_sf2;
+        s22 += abs_sf2 * abs_sf2;
+    }
+
+    double scale = s12 / s22;
+    double num = 0, den = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        num += abs(data1[i] - scale * data2[i]);
+        den += abs(data2[i] + scale * data2[i]);
+    }
+
+    return 200 * num / den;
+
+}
+
+
 
 //######
 
@@ -642,9 +686,175 @@ void calc_sf(
     cout << "sf calculated in " << timer.stop() << " ms\n";
 }
 
+void read_cctb_sf(
+    vector<Vector3i>& hkl,
+    vector<complex<double> >& sf)
+{
+    ifstream in("cctbx_sf");
+    string line;
+    vector<string> words;
+    while (getline(in, line))
+    {
+        string_utilities::split(line, words);
+        if (words.size() == 5)
+        {
+            Vector3i h;
+            complex<double> s;
+            h[0] = stoi(words[0]);
+            h[1] = stoi(words[1]);
+            h[2] = stoi(words[2]);
+            s.real(stod(words[3]));
+            s.imag(stod(words[4]));
+            hkl.push_back(h);
+            sf.push_back(s);
+        }
+    }
+    in.close();
+}
+
+void read_hkl_and_structure_factors(
+    const string & inputFile,
+    vector<Vector3i>& hkl,
+    vector<complex<double> >& sf)
+{
+    cout << "input File " << inputFile << endl;
+    if (inputFile == string("cctbx_sf"))
+        read_cctb_sf(hkl, sf);
+    else
+    {
+        filesystem::path p(inputFile);
+        string extension = p.extension().string();
+        cout << "extension " << extension << "\n";
+        if(extension ==(".res") || extension == (".ins") || extension == (".cif"))
+        {
+            Crystal crystal;
+            structure_io::read_structure(inputFile, crystal);
+
+            nlohmann::json json_data;
+            ifstream jsonFileStream("aspher.json");
+            if (jsonFileStream.good())
+                jsonFileStream >> json_data;
+            jsonFileStream.close();
+            auto sf_calculator = SfCalculator::create(crystal, json_data);
+
+            vector<bool> countAtom(crystal.atoms.size(), true);
+            sf_calculator->calculateStructureFactors(crystal.atoms, hkl, sf, countAtom);
+        }
+        else
+        {
+            SpaceGroup sg;
+            UnitCell uc;
+            vector<double> refln_F_meas, refln_F_sigma, refln_A_calc, refln_B_calc;
+            cif_io::readFcf(inputFile, sg, uc, hkl, refln_F_meas, refln_F_sigma, refln_A_calc, refln_B_calc);
+            for (int i = 0; i < hkl.size(); i++)
+                sf.push_back(complex<double>(refln_A_calc[i], refln_B_calc[i]));
+            
+        }
+    }
+
+}
+
+void adjust_sf(
+    vector<complex<double> >& sf1,
+    vector<complex<double> >& sf2,
+    vector<Vector3i>& hkl1,
+    vector<Vector3i>& hkl2)
+{
+    vector<int> idx1, idx2;
+
+    vector<Vector3i> hkl;
+    for (int i = 0; i < hkl1.size(); i++)
+    {
+        auto it = find(hkl2.begin(), hkl2.end(), hkl1[i]);
+        if (it != hkl2.end())
+        {
+            idx1.push_back(i);
+            idx2.push_back(distance(hkl2.begin(), it));
+        }
+    }
+
+    vector<complex<double> > _sf01(idx1.size()), _sf02(idx2.size());
+    
+    for (int i = 0; i < idx1.size(); i++)
+    {
+        _sf01[i] = sf1[idx1[i]];
+        _sf02[i] = sf2[idx2[i]];
+        hkl.push_back(hkl1[idx1[i]]);
+    }
+    sf1 = _sf01;
+    sf2 = _sf02;
+    hkl1 = hkl; 
+    hkl2 = hkl;
+}
+
+void compare_sf(
+    const std::string &input_file_1,
+    const std::string &input_file_2)
+{
+    vector<Vector3i> hkl, hkl0;
+
+    vector<complex<double> > sf_model_1, sf_model_2;
+    string extension1 = filesystem::path(input_file_1).extension().string();
+
+    if (extension1 == ".tsc")
+    {
+        vector<string> labels;
+        vector<vector<complex<double> > > atomic_form_factors;
+        tsc_io::read_tsc(input_file_1, labels, hkl, atomic_form_factors);
+        Crystal crystal;
+        structure_io::read_structure(input_file_2, crystal);
+
+        nlohmann::json json_data;
+        json_data["model"] = "tsc";
+        json_data["tsc file"] = input_file_1;
+        auto sf_calculator = SfCalculator::create(crystal, json_data);
+
+        vector<bool> countAtom(crystal.atoms.size(), true);
+        sf_calculator->calculateStructureFactors(crystal.atoms, hkl, sf_model_1, countAtom);
+    }
+    else
+        read_hkl_and_structure_factors(input_file_1, hkl, sf_model_1);
+    
+    hkl0 = hkl;
+    read_hkl_and_structure_factors(input_file_2, hkl, sf_model_2);
+    if (!hkl0.empty())
+        if (hkl0 != hkl)
+        {
+            //   on_error::throwException("hkl differ", __FILE__, __LINE__);
+            cout << "hkl differ\n";
+            adjust_sf(sf_model_1, sf_model_2, hkl0, hkl);
+        }
+
+    cout<< "agreementFactor  = " << agreementFactor(sf_model_1, sf_model_2) << endl;
+    ofstream out("sf_diff.txt");
+    vector<pair<double, int> > diff;
+    for (int i = 0; i < hkl.size(); i++)
+        diff.push_back(make_pair(abs(sf_model_1[i] - sf_model_2[i]), i));
+    sort(diff.begin(), diff.end());
+    for (int p = 0; p < hkl.size(); p++)
+    {
+        int idx = diff[p].second;
+        out << hkl[idx] << " " << sf_model_1[idx] << " " << sf_model_2[idx] << "\n";
+    }
+    out.close();
+}
+
 int main(int argc, char* argv[])
 {
     try { 
+        if (argc != 3)
+        {
+            cout << "expected 3 arguments:\n"
+                " (1) structure file or fcf or cctbx_sf\n"
+                " (2) fcf or cctbx_sf file\n"
+                " or\n"
+                " (1) tsc file\n"
+                " (2) structure file\n";
+            exit(0);
+        }
+        compare_sf(argv[1], argv[2]);
+        return 0;
+
         calc_sf(argv[1], argv[2]);
         return 0;
 

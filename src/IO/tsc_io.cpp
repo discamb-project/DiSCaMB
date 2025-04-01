@@ -224,8 +224,8 @@ DATA:
             out << "AD: FALSE\nSYMM: expanded\nSCATTERERS:";
             for (auto const& label : atomLabels)
                 out << " " << label;
-            out << "\nDATA:\n";
-            out << additionalText;
+            out << "\n" << additionalText;
+            out << "DATA:\n";
             vector<complex<double> > formFactors;
             int hklIdx, nHkl, atomIdx, nAtoms = atomLabels.size();
             vector<bool> includeAtom(nAtoms, true);
