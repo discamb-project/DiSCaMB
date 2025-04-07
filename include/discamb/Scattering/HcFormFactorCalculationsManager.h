@@ -26,13 +26,15 @@ namespace discamb {
         std::vector<Matrix3d> mLcsMatrices;
         Crystal mCrystal, mAuxCrystal;
         ReciprocalLatticeUnitCell mReciprocalLatticeUnitCell;
+        bool mFrozenLcs;
 		
     public:
 		HcFormFactorCalculationsManager(
 			const Crystal &crystal,
 			const HC_ModelParameters &params,
 			//const std::vector<XdLocalCoordinateSystem> &lcs);
-			const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs);
+			const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs,
+            bool frozen_lcs=false);
         
         virtual ~HcFormFactorCalculationsManager();
         //virtual void setStructure(const Crystal &crystal);

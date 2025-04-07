@@ -87,7 +87,7 @@ namespace discamb {
 
 */
 void readHklIndices(
-    const char *fileName,
+    const std::string& fileName,
     vector<Vector3i> &hklIndices,
     int hIndexColumn)
 {

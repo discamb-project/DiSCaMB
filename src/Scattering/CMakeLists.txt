@@ -3,6 +3,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyHcCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyIamCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyScattererStructureFactorCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AtomicDensityTransform.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AtomicFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AtomRepresentativeInfo.h"
@@ -19,6 +20,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HcFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HirshfeldAtomModelSettings.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/IamFormFactorCalculationsManager.h" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/IamSfCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/multipole_scattering.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactor.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactorsTable.h"
@@ -42,7 +44,8 @@ SET(TARGET_H
 SET(TARGET_SRC
     AnyHcCalculator.cpp
     AnyIamCalculator.cpp
-    AnyScattererStructureFactorCalculator.cpp 
+    AnyScattererStructureFactorCalculator.cpp
+    AnyScattererStructureFactorCalculator2.cpp    
     AtomicDensityTransform.cpp
     AtomicFormFactorCalculationsManager.cpp
     BankHcFunctions.cpp
@@ -57,6 +60,7 @@ SET(TARGET_SRC
     HcFormFactorCalculationsManager.cpp
     HirshfeldAtomModelSettings.cpp
     IamFormFactorCalculationsManager.cpp
+    IamSfCalculator.cpp
     multipole_scattering.cpp 
     NGaussianFormFactorsTable.cpp 
     NGaussianFormFactor.cpp 

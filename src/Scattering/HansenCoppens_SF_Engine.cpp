@@ -480,10 +480,10 @@ void HansenCoppens_SF_Engine::calculateFormFactors(
 		atomWfnIdx = atom_to_wfn_map[atomIdx];
 		atomTypeIdx = atom_to_type_map[atomIdx];
 
-		if (hkl000)
-			atom_f_def_val = 0;
-		else
-			atom_f_def_val = calculateDeformationValence(type_parameters[atomTypeIdx].p_lm,
+        if (hkl000)
+            atom_f_def_val = 0;
+        else
+            atom_f_def_val = calculateDeformationValence(type_parameters[atomTypeIdx].p_lm,
 				g_functions_and_slater_norm[atomTypeIdx],
 				local_coordinate_systems[atomIdx],
 				normalized_h,

@@ -98,17 +98,33 @@ const
 {
     double result=0;
     int  n = mA.size();
+    double x2 = x * x;
     for(int i=0; i < n; i++)
-        result += mA[i] * exp( -mB[i] * x * x );
+        result += mA[i] * exp( -mB[i] * x2 );
 
     return result + mC;
 }
 
+//double NGaussianFormFactor::calculate_h(
+//double h_length) 
+//const
+//{
+//    return calculate_sinth( h_length / 2.0 );
+//}
+
 double NGaussianFormFactor::calculate_h(
-double h_length) 
-const
+    double h_length)
+    const
 {
-    return calculate_sinth( h_length / 2.0 );
+    double result = 0;
+    int  n = mA.size();
+    double x2 = h_length * h_length / 4;
+    for (int i = 0; i < n; i++)
+        result += mA[i] * exp(-mB[i] * x2);
+
+    return result + mC;
+
 }
+
 
 } // namespace discamb

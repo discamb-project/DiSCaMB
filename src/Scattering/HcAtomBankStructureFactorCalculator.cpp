@@ -63,9 +63,10 @@ namespace discamb {
         double unitCellCharge,
         bool scaleToMatchCharge,
         const string& iamTable,
-        bool iamElectronScattering)
+        bool iamElectronScattering,
+        bool frozen_lcs)
     {
-        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering);
+        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs);
 
     }
 
@@ -119,7 +120,7 @@ namespace discamb {
         bool iamElectronScattering = false;
         if (data.find("iam electron scattering") != data.end())
             iamElectronScattering = data.find("iam electron scattering")->get<bool>();
-
+        bool frozen_lcs = data.value("frozen lcs", false);
 
         MATTS_BankReader bankReader;
         vector<AtomType> types;
@@ -158,7 +159,7 @@ namespace discamb {
 		else
 			bankReader.read(bankPath, types, hcParameters, bankSettings, true);
         set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile,
-            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering);
+            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs);
     }
 
 
@@ -185,7 +186,8 @@ namespace discamb {
         double unitCellCharge,
         bool scaleToMatchCharge,
         const string& iamTable,
-        bool iamElectronScattering)
+        bool iamElectronScattering,
+        bool frozen_lcs)
     {
         mModelInfo.clear();
 
@@ -300,7 +302,7 @@ namespace discamb {
                 types);
 
         mHcCalculator = shared_ptr<SfCalculator>(
-                            new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false));
+                            new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, 1, frozen_lcs));
         mIamCalculator = shared_ptr<SfCalculator>(
             new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };
@@ -325,7 +327,7 @@ namespace discamb {
         {
 
             mHcCalculators.push_back(shared_ptr<SfCalculator>(
-                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false)));
+                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, 1, frozen_lcs)));
             mIamCalculators.push_back(shared_ptr<SfCalculator>(
                 new AnyIamCalculator(crystal, iamElectronScattering, iamTable)));
 

@@ -26,6 +26,7 @@ namespace discamb {
 		bool mUseImplementationForLargeMolecules;
 		std::vector<std::shared_ptr<LocalCoordinateSystemInCrystal> > mLcs;
 		std::vector<Matrix3d> mLcsMatrices;
+        
 		//
         void set(const Crystal &crystal,
             const HC_ModelParameters &parameters,
@@ -33,7 +34,8 @@ namespace discamb {
             bool electronScattering,
             bool integerChargeSpherical,
 			bool implementationForLargeMolecules,
-			int nThreads);
+			int nThreads,
+            bool frozenLcs);
     public:
         AnyHcCalculator(const Crystal &crystal,
             const HC_ModelParameters &parameters,
@@ -41,7 +43,8 @@ namespace discamb {
             bool electronScattering = false,
             bool neutralSpherical = false,
 			bool implementationForLargeMolecules = false,
-			int nThreads = 1);
+			int nThreads = 1,
+            bool frozenLcs = false);
         AnyHcCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual ~AnyHcCalculator();
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;

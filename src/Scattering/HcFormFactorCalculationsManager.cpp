@@ -29,11 +29,13 @@ namespace discamb {
     HcFormFactorCalculationsManager::HcFormFactorCalculationsManager(
         const Crystal &crystal,
         const HC_ModelParameters &params,
-		const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs//,
+		const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs,
+        bool frozen_lcs
 		//bool newImplementation
         //const std::vector<XdLocalCoordinateSystem> &lcs
 	): mLcs(lcs)
     {
+        mFrozenLcs = frozen_lcs;
 		//mNewImplementation = newImplementation;
         int i, nAtoms = crystal.atoms.size();
         mLcsMatrices.resize(nAtoms);
@@ -75,9 +77,9 @@ namespace discamb {
         int i, nAtoms = atoms.size();
 
         mAuxCrystal.atoms = atoms;
-
-        for (i = 0; i < nAtoms; i++)
-            mLcs[i]->calculate(mLcsMatrices[i], mAuxCrystal);
+        if(!mFrozenLcs)
+            for (i = 0; i < nAtoms; i++)
+                mLcs[i]->calculate(mLcsMatrices[i], mAuxCrystal);
     }
 
     std::complex<double> HcFormFactorCalculationsManager::calculateFrac(

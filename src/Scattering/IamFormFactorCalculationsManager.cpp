@@ -66,6 +66,7 @@ namespace discamb {
             mAtomToFormFactorMap[atomIdx] = atomTypeToIndexMap[type];
 
         }
+        mFormFactorValues.resize(mFormFactors.size());
     }
 
     IamFormFactorCalculationsManager::IamFormFactorCalculationsManager(
@@ -109,7 +110,7 @@ namespace discamb {
             mAtomToFormFactorMap[atomIdx] = atomTypeToIndexMap[type];
 
         }
-
+        mFormFactorValues.resize(mFormFactors.size());
     }
 
     void IamFormFactorCalculationsManager::update(
@@ -131,6 +132,37 @@ namespace discamb {
         return mFormFactors[mAtomToFormFactorMap[atomIdx]].calculate_h(sqrt(hkl*hkl));
     }
     
+
+    void IamFormFactorCalculationsManager::calculateFrac(
+        const Vector3i& hkl,
+        std::vector<std::complex<double> >& formFactors,
+        const std::vector<bool>& includeAtom) 
+        const
+    {
+        Vector3d hklCart;
+        mReciprocalSpaceUnitCell.fractionalToCartesian(hkl, hklCart);
+        calculateCart(hklCart, formFactors, includeAtom);
+    }
+
+    void IamFormFactorCalculationsManager::calculateCart(
+        const Vector3d& hkl,
+        std::vector<std::complex<double> >& formFactors,
+        const std::vector<bool>& includeAtom)
+        const
+    {
+        int nTypes = mFormFactors.size();
+        int nAtoms = mAtomToFormFactorMap.size();
+        formFactors.resize(nAtoms);
+        double h = sqrt(hkl * hkl);
+        for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+            mFormFactorValues[typeIdx] = mFormFactors[typeIdx].calculate_h(h);
+
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            if (includeAtom[atomIdx])
+                formFactors[atomIdx] = mFormFactorValues[mAtomToFormFactorMap[atomIdx]];//calculateCart(atomIdx, q);
+    }
+
+
     void IamFormFactorCalculationsManager::calculateFrac(
         const std::vector<Vector3d>& hkl,
         std::vector < std::vector<std::complex<double> > >& formFactors,
@@ -140,14 +172,21 @@ namespace discamb {
         nHkl = hkl.size();
         nAtoms = mAtomToFormFactorMap.size();
         formFactors.resize(nHkl);
+        int nTypes = mFormFactors.size();
         for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
         {
+
             formFactors[hklIdx].resize(nAtoms);
-            Vector3d q;
-            mReciprocalSpaceUnitCell.fractionalToCartesian(hkl[hklIdx], q);
-            for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-                if(includeAtom[atomIdx])
-                    formFactors[hklIdx][atomIdx] = calculateCart(atomIdx, q);
+            calculateFrac(hkl[hklIdx], formFactors[hklIdx], includeAtom);
+            //Vector3d q;
+            //mReciprocalSpaceUnitCell.fractionalToCartesian(hkl[hklIdx], q);
+            //double h = sqrt(q*q);
+            //for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+            //    mFormFactorValues[typeIdx] = mFormFactors[typeIdx].calculate_h(h);
+
+            //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            //    if (includeAtom[atomIdx])
+            //        formFactors[hklIdx][atomIdx] = mFormFactorValues[mAtomToFormFactorMap[atomIdx]];//calculateCart(atomIdx, q);
                 
         }
     }

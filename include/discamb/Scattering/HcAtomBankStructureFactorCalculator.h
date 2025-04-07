@@ -46,7 +46,8 @@ namespace discamb {
             double unitCellCharge = 0,
             bool scaleToMatchCharge = true,
             const std::string& iamTable = std::string(),
-            bool iamElectronScattering = false);
+            bool iamElectronScattering = false,
+            bool frozen_lcs = false);
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
@@ -63,7 +64,8 @@ namespace discamb {
             double unitCellCharge = 0,
             bool scaleToMatchCharge = true,
             const std::string& iamTable = std::string(),
-            bool iamElectronScattering = false);
+            bool iamElectronScattering = false,
+            bool frozen_lcs = false);
         
 
         virtual ~HcAtomBankStructureFactorCalculator();

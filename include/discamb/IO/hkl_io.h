@@ -20,7 +20,7 @@ namespace hkl_io
 
 /** Read hkl indices from text file  - for each line in the file it takes 3 subsequent numbers as h, k, l 
 starting from column \p hIndexColumn if there is enough columns in given line. */
-void readHklIndices(const char *fileName, std::vector<Vector3i> &hklIndices, int hIndexColumn = 1);
+void readHklIndices(const std::string &fileName, std::vector<Vector3i> &hklIndices, int hIndexColumn = 1);
 
 /** Read hkl indices from text file in DiSCaMB 'compact' format.*/
 
