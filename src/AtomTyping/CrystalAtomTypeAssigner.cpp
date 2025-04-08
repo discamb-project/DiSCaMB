@@ -150,11 +150,15 @@ namespace discamb {
         }
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
-            out << crystal.atoms[atomIdx].label << delim << mTypeLabels[typeID[atomIdx]] << delim;
-            if (
-                (typeID[atomIdx] >= 0) & 
-                (!isSphericalType(mTypeLabels[typeID[atomIdx]]))
-            ){
+            out << labels[atomIdx] << delim;
+            if (typeID[atomIdx] < 0)
+            {
+                out << delim << "\n";
+                continue;
+            }
+            out << mTypeLabels[typeID[atomIdx]] << delim;
+            if (!isSphericalType(mTypeLabels[typeID[atomIdx]]))
+            {
                 out << ubdbLcsAsString(lcs[atomIdx], labels);
             }
             out << "\n";
