@@ -881,6 +881,34 @@ void makeWholeHklSet(
     hkl.assign(uniqueHkl.begin(), uniqueHkl.end());
 }
 
+void form_factors_calculation_time(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<complex<double> > formFactors;
+    map<Vector3i, vector<complex<double> > > formFactorsMap;
+    vector<Vector3i> hkl, hkl0;
+    WallClockTimer timer;
+
+    hkl_io::readHklIndices(hklFile, hkl0);
+    makeWholeHklSet(hkl0, crystal.spaceGroup, hkl);
+    nlohmann::json json_data;
+    ifstream jsonFileStream("aspher.json");
+    if (jsonFileStream.good())
+        jsonFileStream >> json_data;
+    jsonFileStream.close();
+    auto sf_calculator = SfCalculator::create(crystal, json_data);
+    vector<bool> countAtom(crystal.atoms.size(), true);
+    timer.start();
+    for(int i=0;i<hkl.size();i++)
+        sf_calculator->calculateFormFactors(hkl[i], formFactors, countAtom);
+    cout << "form factors calculated in " << timer.stop() << " ms\n";
+
+}
+
+
 void sf_calculator_new_implementation(
     const string &structureFile,
     const string &tscOrHklFile)
@@ -1388,11 +1416,20 @@ void derivatives(
 int main(int argc, char* argv[])
 {
     try {
-        derivatives(argv[1], argv[2]);
+
+        iam_sf_calculator_new_implementation(argv[1], argv[2]);
         return 0;
+
 
         sf_calculator_new_implementation(argv[1], argv[2]);
         return 0;
+        
+        form_factors_calculation_time(argv[1], argv[2]);
+        return 0;
+
+        derivatives(argv[1], argv[2]);
+        return 0;
+
 
         check_line(argc, argv);
         return 0;

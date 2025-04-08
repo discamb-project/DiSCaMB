@@ -107,6 +107,11 @@ namespace discamb{
         // set atomic positions
         int nAtoms = atoms.size();
 
+        // reset occupancies
+        for (int i = 0; i < nAtoms; i++)
+            mCrystal.atoms[i].occupancy = atoms[i].occupancy;
+
+
         for (int i = 0; i < nAtoms; i++)
         {
             mConverter.convertXyz(atoms[i].coordinates, mR_at[i], mXyzConvention, spc::XyzCoordinateSystem::cartesian);
