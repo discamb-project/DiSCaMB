@@ -67,7 +67,7 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs)
     {
-        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs);
+        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs);
 
     }
 
