@@ -57,6 +57,7 @@ namespace discamb {
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &assignemntInfoFile,
+        const std::string &assignmentCsvFile,
         const std::string& parametersInfoFile,
         const std::string& multipolarCif,
         int nThreads,
@@ -92,6 +93,8 @@ namespace discamb {
         string assignmentInfoFile;
         if (data.find("assignment info") != data.end())
             assignmentInfoFile = data.find("assignment info")->get<string>();
+
+        string assignmentCsvFile = data.value("assignment csv", string());
 
         string parametersInfoFile;
         if (data.find("parameters info") != data.end())
@@ -158,7 +161,7 @@ namespace discamb {
 		}
 		else
 			bankReader.read(bankPath, types, hcParameters, bankSettings, true);
-        set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile,
+        set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs);
     }
 
@@ -180,6 +183,7 @@ namespace discamb {
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &assignemntInfoFile,
+        const std::string &assignmentCsvFile,
         const std::string& parametersInfoFile,
         const std::string& multipolarCif,
         int nThreads,
@@ -250,18 +254,16 @@ namespace discamb {
             else
             {
                 ofstream out(assignemntInfoFile);
-                if (string(assignemntInfoFile, assignemntInfoFile.size() - 4, 4) == string(".csv"))
-                {
-                    assigner.printAssignmentCSV(out, crystal, types, lcs);
-                }
-                else 
-                {
-                    assigner.printAssignment(out, crystal, types, lcs);
-                }
+                assigner.printAssignment(out, crystal, types, lcs);
                 out.close();
             }
         }
-
+        if (!assignmentCsvFile.empty())
+        {
+            ofstream out(assignmentCsvFile);
+            assigner.printAssignmentCSV(out, crystal, types, lcs);
+            out.close();
+        }
         HC_ModelParameters multipoleModelPalameters;
 
 
