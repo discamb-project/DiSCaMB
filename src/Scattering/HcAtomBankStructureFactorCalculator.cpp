@@ -250,7 +250,14 @@ namespace discamb {
             else
             {
                 ofstream out(assignemntInfoFile);
-                assigner.printAssignment(out, crystal, types, lcs);
+                if (string(assignemntInfoFile, assignemntInfoFile.size() - 4, 4) == string(".csv"))
+                {
+                    assigner.printAssignmentCSV(out, crystal, types, lcs);
+                }
+                else 
+                {
+                    assigner.printAssignment(out, crystal, types, lcs);
+                }
                 out.close();
             }
         }
