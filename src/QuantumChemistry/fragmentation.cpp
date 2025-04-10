@@ -335,6 +335,7 @@ namespace fragmentation{
         for (auto& fragmentData : fragmentConstructionData)
         {
             fragmentAtoms.clear();
+            cappingHydrogens.clear();
             atomList.clear();
             QmFragmentInCrystal subsystem;
             subsystem.charge = fragmentData.charge;
