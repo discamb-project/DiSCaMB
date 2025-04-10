@@ -1369,6 +1369,14 @@ namespace discamb {
         crystal_structure_utilities::convertToXyzAndElementList(mCrystal, subsystem.atoms.atomList, elements, data.qmSystem.positions);
         for (auto& element : elements)
             data.qmSystem.atomicNumbers.push_back(element.atomicNumber());
+        
+        for (auto const& cappingH : mSettings.crystalFragments[subsystemIdx].atoms.cappingHydrogens)
+        {
+            data.qmSystem.positions.push_back(fragmentation::capping_h_position(mCrystal, cappingH));
+            data.qmSystem.atomicNumbers.push_back(1);
+        }
+        
+
         data.qmSystem.charge = subsystem.charge;
         data.qmSystem.spin_multilicity = subsystem.spin_multiplicity;
     }
