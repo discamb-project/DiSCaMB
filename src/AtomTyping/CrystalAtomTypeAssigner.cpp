@@ -134,6 +134,37 @@ namespace discamb {
         out << "\n";
     }
 
+    void CrystalAtomTypeAssigner::printAssignmentCSV(
+        std::ostream &out,
+        const Crystal &crystal,
+        const std::vector<int> &typeID,
+        const std::vector< LocalCoordinateSystem<AtomInCrystalID> > &lcs)
+        const
+    {
+        int atomIdx, nAtoms = crystal.atoms.size();
+        char delim = ';'; // Assume no labels has this delimeter. Comma is used for e.g. lcs average position
+        vector<string> labels;
+        for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            labels.push_back(crystal.atoms[atomIdx].label);
+        }
+        for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            out << labels[atomIdx] << delim;
+            if (typeID[atomIdx] < 0)
+            {
+                out << delim << "\n";
+                continue;
+            }
+            out << mTypeLabels[typeID[atomIdx]] << delim;
+            if (!isSphericalType(mTypeLabels[typeID[atomIdx]]))
+            {
+                out << ubdbLcsAsString(lcs[atomIdx], labels);
+            }
+            out << "\n";
+        }
+    }
+
     void CrystalAtomTypeAssigner::setRanges()
     {
         mTotalRange = atom_typing_utilities::atomTypesRange(mAtomTypes, mDescriptorsSettings.maxPlanarRing, mLabeledNeighbourRange, mPlanarRingsRange, mRings34range);
