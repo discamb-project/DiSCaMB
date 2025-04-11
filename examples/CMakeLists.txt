@@ -6,5 +6,5 @@ ADD_SUBDIRECTORY(compare_tsc)
 ADD_SUBDIRECTORY(fast_scattering_calculator)
 ADD_SUBDIRECTORY(lab)
 ADD_SUBDIRECTORY(discamb_ff)
-ADD_SUBDIRECTORY(test)
+#ADD_SUBDIRECTORY(test)
 
