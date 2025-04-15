@@ -8,11 +8,17 @@ namespace discamb {
 
 	ConstFormFactorCalculationsManager::ConstFormFactorCalculationsManager(
 		const UnitCell& uc,
-		std::map<Vector3i, std::vector<std::complex<double> > >& formFactors) 
+		const std::map<Vector3i, std::vector<std::complex<double> > > & formFactors) 
 	{
 		mFormFactors = formFactors;
 		mReciprocalLatticeUnitCell.set(uc);
 	}
+
+    void ConstFormFactorCalculationsManager::resetFormFactors(
+        const std::map<Vector3i, std::vector<std::complex<double> > >& formFactors)
+    {
+        mFormFactors = formFactors;
+    }
 
 	ConstFormFactorCalculationsManager::~ConstFormFactorCalculationsManager()
 	{

@@ -19,8 +19,9 @@ namespace discamb {
 		ReciprocalLatticeUnitCell mReciprocalLatticeUnitCell;
     
 	public:
-			ConstFormFactorCalculationsManager(const UnitCell &uc, std::map<Vector3i, std::vector<std::complex<double> > > &formFactors);
+			ConstFormFactorCalculationsManager(const UnitCell &uc, const std::map<Vector3i, std::vector<std::complex<double> > > &formFactors);
             virtual ~ConstFormFactorCalculationsManager();
+            void resetFormFactors(const std::map<Vector3i, std::vector<std::complex<double> > >& formFactors);
             virtual void update(const std::vector<AtomInCrystal> &atoms);
             virtual std::complex<double> calculateFrac(int atomIdx, const Vector3i &hkl) const;
             virtual std::complex<double> calculateCart(int atomIdx, const Vector3d &hkl) const;

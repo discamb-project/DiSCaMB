@@ -12,6 +12,7 @@
 #include "discamb/IO/structure_io.h"
 #include "discamb/IO/MATTS_BankReader.h"
 #include "discamb/IO/tsc_io.h"
+#include "discamb/IO/xyz_io.h"
 #include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
@@ -1412,10 +1413,29 @@ void derivatives(
     out.close();
 }
 
+void printFractional(
+    const string &structureFile, 
+    const string& xyzFile)
+{
+    Crystal crystal;
+    MoleculeData molData;
+    structure_io::read_structure(structureFile, crystal);
+    xyz_io::readXyz(xyzFile, molData);
+    for (int i = 0; i < molData.atomPositions.size(); i++)
+    {
+        Vector3d r_frac;
+        crystal.unitCell.cartesianToFractional(molData.atomPositions[i], r_frac);
+        cout << left << setw(8) << periodic_table::symbol(molData.atomicNumbers[i]) << r_frac << endl;
+    }
+
+}
 
 int main(int argc, char* argv[])
 {
     try {
+
+        printFractional(argv[1], argv[2]);
+        return 0;
 
         iam_sf_calculator_new_implementation(argv[1], argv[2]);
         return 0;
