@@ -933,7 +933,7 @@ void HansenCoppens_SF_Engine::calculateSF_SerialAcentric(
                 if (hkl000)
                     atom_f_def_val = 0;
                 else
-                    atom_f_def_val = calculateDeformationValence(typeParams[atomTypeIdx].p_lm,
+                    atom_f_def_val =  calculateDeformationValence(typeParams[atomTypeIdx].p_lm,
                                                                  g_functions_and_slater_norm[atomTypeIdx],
                                                                  local_coordinate_systems[atomIdx],
                                                                  rotated_normalized_h[symOpIdx],

@@ -65,16 +65,29 @@ namespace discamb {
         bool scaleToMatchCharge,
         const string& iamTable,
         bool iamElectronScattering,
-        bool frozen_lcs)
+        bool frozen_lcs,
+        const std::string& algorithm)
     {
-        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs);
+        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm);
 
     }
 
-
     HcAtomBankStructureFactorCalculator::HcAtomBankStructureFactorCalculator(
-        const Crystal &crystal, 
-        const nlohmann::json &data)
+        const Crystal& crystal,
+        const nlohmann::json& data,
+        const std::string& bankString/*,
+        std::string& assignemntInfo,
+        bool generateAssignementInfo*/)
+    {
+        set(crystal, data, bankString);
+    }
+
+    void HcAtomBankStructureFactorCalculator::set(
+        const Crystal& crystal,
+        const nlohmann::json& data,
+        const std::string& bankString/*,
+        bool generateAssignementInfo*/)
     {
         bool electronScattering = false;
         bool writeToDiscamb2tscLog = false;
@@ -112,18 +125,19 @@ namespace discamb {
         if (data.find("scale") != data.end())
             scaleHcParameters = data.find("scale")->get<bool>();
 
-        int nCores=1;
+        int nCores = 1;
         if (data.find("n cores") != data.end())
             nCores = data.find("n cores")->get<int>();
 
         string iamTable;
         if (data.find("table") != data.end())
             iamTable = data.find("table")->get<string>();
-        
+
         bool iamElectronScattering = false;
         if (data.find("iam electron scattering") != data.end())
             iamElectronScattering = data.find("iam electron scattering")->get<bool>();
         bool frozen_lcs = data.value("frozen lcs", false);
+        string algorithm = data.value("algorithm", "standard");
 
         MATTS_BankReader bankReader;
         vector<AtomType> types;
@@ -131,38 +145,139 @@ namespace discamb {
         BankSettings bankSettings;
 
 
-		if(bankPath.empty())
-		{
-            // look for *.bnk file
-            
-            std::set<string> bnkFiles;
-            string extension;
-            for (auto it : filesystem::directory_iterator(filesystem::current_path()))
-                if (filesystem::is_regular_file(it.status()))
-                {
-                    string_utilities::toLower(it.path().extension().string(), extension);
-                    if (extension == string(".bnk"))
-                        bnkFiles.insert(it.path().filename().string());
-                }
 
-            if (bnkFiles.empty())
+        if (bankPath.empty())
+        {
+            if (!bankString.empty())
             {
-                on_error::throwException("no bank file specified or found in working directory", __FILE__, __LINE__);
-                //string bankString;
-                //stringstream bankStream;
-                //default_ubdb_bank_string(bankString);
-                //bankStream << bankString;
-                //bankReader.read(bankStream, types, hcParameters, bankSettings, true);
+                stringstream bankStream;
+                bankStream << bankString;
+                bankReader.read(bankStream, types, hcParameters, bankSettings, true);
             }
             else
             {
-                bankReader.read(*bnkFiles.begin(), types, hcParameters, bankSettings, true);
+                // look for *.bnk file
+
+                std::set<string> bnkFiles;
+                string extension;
+                for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+                    if (filesystem::is_regular_file(it.status()))
+                    {
+                        string_utilities::toLower(it.path().extension().string(), extension);
+                        if (extension == string(".bnk"))
+                            bnkFiles.insert(it.path().filename().string());
+                    }
+
+                if (bnkFiles.empty())
+                    on_error::throwException("no bank file specified or found in working directory", __FILE__, __LINE__);
+                else
+                    bankReader.read(*bnkFiles.begin(), types, hcParameters, bankSettings, true);
+
             }
-		}
-		else
-			bankReader.read(bankPath, types, hcParameters, bankSettings, true);
-        set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs);
+        }
+        else
+            bankReader.read(bankPath, types, hcParameters, bankSettings, true);
+
+        set(crystal, types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
+            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs, algorithm);
+
+    }
+
+
+    HcAtomBankStructureFactorCalculator::HcAtomBankStructureFactorCalculator(
+        const Crystal &crystal, 
+        const nlohmann::json &data)
+    {
+        set(crystal, data, string());
+        
+  //      bool electronScattering = false;
+  //      bool writeToDiscamb2tscLog = false;
+  //      if (data.find("electron_scattering") != data.end())
+  //          electronScattering = data.find("electron_scattering")->get<bool>();
+
+  //      if (data.find("electron scattering") != data.end())
+  //          electronScattering = data.find("electron scattering")->get<bool>();
+
+
+  //      string bankPath;
+
+  //      if (data.find("bank path") != data.end())
+  //          bankPath = data.find("bank path")->get<string>();
+
+  //      string assignmentInfoFile;
+  //      if (data.find("assignment info") != data.end())
+  //          assignmentInfoFile = data.find("assignment info")->get<string>();
+
+  //      string assignmentCsvFile = data.value("assignment csv", string());
+
+  //      string parametersInfoFile;
+  //      if (data.find("parameters info") != data.end())
+  //          parametersInfoFile = data.find("parameters info")->get<string>();
+
+  //      string multipolarCif;
+  //      if (data.find("multipole cif") != data.end())
+  //          multipolarCif = data.find("multipole cif")->get<string>();
+
+  //      double unitCellCharge = 0;
+  //      if (data.find("unit cell charge") != data.end())
+  //          unitCellCharge = data.find("unit cell charge")->get<double>();
+
+  //      bool scaleHcParameters = true;
+  //      if (data.find("scale") != data.end())
+  //          scaleHcParameters = data.find("scale")->get<bool>();
+
+  //      int nCores=1;
+  //      if (data.find("n cores") != data.end())
+  //          nCores = data.find("n cores")->get<int>();
+
+  //      string iamTable;
+  //      if (data.find("table") != data.end())
+  //          iamTable = data.find("table")->get<string>();
+  //      
+  //      bool iamElectronScattering = false;
+  //      if (data.find("iam electron scattering") != data.end())
+  //          iamElectronScattering = data.find("iam electron scattering")->get<bool>();
+  //      bool frozen_lcs = data.value("frozen lcs", false);
+  //      mAlgorithm = data.value("algorithm", "standard");
+
+  //      MATTS_BankReader bankReader;
+  //      vector<AtomType> types;
+  //      vector<AtomTypeHC_Parameters> hcParameters;
+  //      BankSettings bankSettings;
+
+
+		//if(bankPath.empty())
+		//{
+  //          // look for *.bnk file
+  //          
+  //          std::set<string> bnkFiles;
+  //          string extension;
+  //          for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+  //              if (filesystem::is_regular_file(it.status()))
+  //              {
+  //                  string_utilities::toLower(it.path().extension().string(), extension);
+  //                  if (extension == string(".bnk"))
+  //                      bnkFiles.insert(it.path().filename().string());
+  //              }
+
+  //          if (bnkFiles.empty())
+  //          {
+  //              on_error::throwException("no bank file specified or found in working directory", __FILE__, __LINE__);
+  //              //string bankString;
+  //              //stringstream bankStream;
+  //              //default_ubdb_bank_string(bankString);
+  //              //bankStream << bankString;
+  //              //bankReader.read(bankStream, types, hcParameters, bankSettings, true);
+  //          }
+  //          else
+  //          {
+  //              bankReader.read(*bnkFiles.begin(), types, hcParameters, bankSettings, true);
+  //          }
+		//}
+		//else
+		//	bankReader.read(bankPath, types, hcParameters, bankSettings, true);
+  //      set(crystal,types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
+  //          parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs);
     }
 
 
@@ -191,7 +306,9 @@ namespace discamb {
         bool scaleToMatchCharge,
         const string& iamTable,
         bool iamElectronScattering,
-        bool frozen_lcs)
+        bool frozen_lcs,
+        const std::string &algorithm//,
+        /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
 
@@ -309,9 +426,12 @@ namespace discamb {
                 bankParameters,
                 multipoleModelPalameters,
                 types);
-
-        mHcCalculator = shared_ptr<SfCalculator>(
-                            new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, 1, frozen_lcs));
+        if(mAlgorithm == "standard")
+            mHcCalculator = shared_ptr<SfCalculator>(
+                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs));
+        else
+            mHcCalculator = shared_ptr<SfCalculator>(
+                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs));
         mIamCalculator = shared_ptr<SfCalculator>(
             new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };

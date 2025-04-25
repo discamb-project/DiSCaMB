@@ -181,6 +181,7 @@ double agreementFactor(
     }
 
     double scale = s12 / s22;
+    cout << "scale = " << scale << "\n";
     double num = 0, den = 0;
 
     for (int i = 0; i < n; i++)
@@ -1430,9 +1431,467 @@ void printFractional(
 
 }
 
+void copy_compare()
+{
+    auto starting_point = filesystem::current_path();
+
+    for (auto entry : filesystem::directory_iterator(starting_point))
+        if(filesystem::is_directory(entry.path()))
+        {
+            vector<string> words;
+            string_utilities::split(entry.path().string(), words, '\\');
+            string dirName = words.back();
+            if (dirName == "compare")
+                continue;
+
+            filesystem::current_path(entry.path());
+            string res = file_system_utilities::find_newest_file("res");
+            string cif = file_system_utilities::find_newest_file("cif");
+            string npy;
+            vector<string> npyFiles;
+            file_system_utilities::find_files("npy", npyFiles);
+            for (auto npyFile : npyFiles)
+                if (npyFile.find("discamb") == string::npos)
+                    npy = npyFile;
+            filesystem::copy(res, starting_point / "compare" / (dirName + ".res"));
+            filesystem::copy(cif, starting_point / "compare" / (dirName + ".cif"));
+            filesystem::copy(npy, starting_point / "compare" / (dirName + ".npy"));
+            filesystem::current_path(starting_point);
+        }
+}
+
+double relative_l1_100_agreement_factor(
+    const vector<double> &v1,
+    const vector<double> &v2)
+{
+    double numerator, denominator;
+    int i, n = v1.size();
+    if (n != v2.size())
+        on_error::throwException("vectors size do not match when trying to calculate L1 agreement factor", __FILE__, __LINE__);
+    numerator = 0.0;
+    denominator = 0.0;
+
+    for (i = 0; i < n; i++)
+    {
+        numerator += abs(v1[i] - v2[i]);
+        denominator += abs(v1[i]) + abs(v2[i]);
+    }
+    if(denominator == 0)
+        on_error::throwException("denominator 0 when trying to calculate L1 agreement factor", __FILE__, __LINE__);
+
+    return numerator / denominator * 200;
+}
+
+void compare_derivatives(
+    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp1,
+    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp2,
+    bool &size_match,
+    double &d_xyz_agreement_factor,
+    double& d_adp_agreement_factor,
+    double& d_occ_agreement_factor,
+    double& d_fpfdp_agreement_factor)
+{
+    /*
+    Vector3<REAL> atomic_position_derivatives;
+    std::vector<REAL> adp_derivatives;
+    REAL occupancy_derivatives = 0;
+    */
+    int atomIdx, nAtoms = dT_dp1.size();
+    size_match = (nAtoms == dT_dp2.size());
+    vector<double> xyz1, xyz2, adps1, adps2, occ1, occ2;
+    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+    {
+        if (dT_dp1[atomIdx].adp_derivatives.size() != dT_dp2[atomIdx].adp_derivatives.size())
+        {
+            size_match = false;
+            return;
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            xyz1.push_back(dT_dp1[atomIdx].atomic_position_derivatives[i]);
+            xyz2.push_back(dT_dp2[atomIdx].atomic_position_derivatives[i]);
+        }
+        for (int i = 0; i < dT_dp1[atomIdx].adp_derivatives.size(); i++)
+        {
+            adps1.push_back(dT_dp1[atomIdx].adp_derivatives[i]);
+            adps2.push_back(dT_dp2[atomIdx].adp_derivatives[i]);
+        }
+        occ1.push_back(dT_dp1[atomIdx].occupancy_derivatives);
+        occ2.push_back(dT_dp2[atomIdx].occupancy_derivatives);
+    }
+    
+    d_xyz_agreement_factor=relative_l1_100_agreement_factor(xyz1, xyz2); 
+    d_adp_agreement_factor=relative_l1_100_agreement_factor(adps1, adps2);
+    d_occ_agreement_factor=relative_l1_100_agreement_factor(occ1, occ2);
+
+    //for(int )
+}
+
+void taam_parallel(
+    const string& structureFile,
+    const string& hklFile)
+{
+    
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    //for (auto& atom : crystal.atoms)
+      //  atom.adp.clear();
+    vector<vector<complex<double> > > formFactors;
+    vector<Vector3i> hkl;
+
+    hkl_io::readHklIndices(hklFile, hkl);
+
+    int nHkl = hkl.size();
+    int nAtoms = crystal.atoms.size();
+
+    nlohmann::json json_data;
+    ifstream jsonFileStream("aspher.json");
+    if (jsonFileStream.good())
+        jsonFileStream >> json_data;
+    jsonFileStream.close();
+    auto sfCalculator = SfCalculator::create(crystal, json_data);
+
+    vector<bool> countAtom(crystal.atoms.size(), true);
+    vector<complex<double> > sf_new, sf_standard, sf_plus, sf_minus;
+    vector<TargetFunctionAtomicParamDerivatives> dT_dp, dT_dp_new;
+    vector<complex<double> > dt_df(nHkl, 1.0);
+    // x y z U occ
+    SfDerivativesAtHkl derivatives_ant, derivatives_num, derivatives_num_shift_all;
+    WallClockTimer timer;
+    timer.start();
+    sfCalculator->calculateStructureFactors(crystal.atoms, hkl, sf_standard, countAtom);
+    cout << "time = " << timer.stop() << " ms\n";
+
+    json_data["algorithm"] = "macromol";
+    //for (auto& atom : crystal.atoms)
+    //{
+    //    Vector3d cart;
+    //    crystal.unitCell.fractionalToCartesian(atom.coordinates, cart);
+    //    atom.coordinates = cart;
+    //}
+
+    auto sfCalculator2 = SfCalculator::create(crystal, json_data);
+    timer.start();
+
+    sfCalculator2->calculateStructureFactors(crystal.atoms, hkl, sf_new, countAtom);
+    cout << "time = " << timer.stop() << " ms\n";
+
+    cout << "agreement factor " << agreementFactor(sf_new, sf_standard) << "\n";
+
+    // check calculateStructureFactorsAndDerivatives
+    cout<< "calculate structure factors ansd derivatives\n";
+    timer.start();
+    sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp, dt_df, countAtom);
+    cout << "time = " << timer.stop() << " ms\n";
+    timer.start();
+    sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp_new, dt_df, countAtom);
+    cout << "time = " << timer.stop() << " ms\n";
+
+    bool size_match;
+    double d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor;
+    compare_derivatives(
+        dT_dp,
+        dT_dp_new,
+        size_match,
+        d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor);
+
+    cout << "size match " << boolalpha << size_match << "\n"
+        << "agreement factors\n"
+        << "xyz : " << d_xyz_agreement_factor << "\n"
+        << "adp : " << d_adp_agreement_factor << "\n"
+        << "occ : " << d_occ_agreement_factor << "\n";
+    
+
+    //dt_df[0] = 1.0;
+    //sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf, dT_dp, dt_df, countAtom);
+    //for (int i = 0; i < dT_dp.size(); i++)
+    //    cout << i << " " << dT_dp[i].atomic_position_derivatives << "\n";
+    /*
+    ofstream out("derivatives");
+
+    for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
+    {
+        out << "\n HKL = " << hkl[hklIdx] << "\n\n";
+        calc_derivatives_numerically(crystal, sfCalculator, hkl[hklIdx], derivatives_num, countAtom);
+        calc_derivatives_numerically_shift_all(crystal, sfCalculator, hkl[hklIdx], derivatives_num_shift_all, countAtom);
+        sfCalculator->calculateStructureFactorsAndDerivatives(hkl[hklIdx], sf[hklIdx], derivatives_ant, countAtom);
+        out << "dF/dxyz\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            out << atomIdx << "\n";
+            for (int i = 0; i < 3; i++)
+                out << "    " << i << " " << fixed << setprecision(6) << derivatives_ant.atomicPostionDerivatives[atomIdx][i] << "  "
+                << fixed << setprecision(6) << derivatives_num.atomicPostionDerivatives[atomIdx][i] << "  "
+                << fixed << setprecision(6) << derivatives_num_shift_all.atomicPostionDerivatives[atomIdx][i] << "\n";
+        }
+        out << "dF/d_occ\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            out << atomIdx << " " << fixed << setprecision(6) << derivatives_ant.occupancyDerivatives[atomIdx] << "  "
+            << fixed << setprecision(6) << derivatives_num.occupancyDerivatives[atomIdx] << "\n";
+        out << "dF/d_adp\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            out << atomIdx;
+            for (int i = 0; i < derivatives_ant.adpDerivatives[atomIdx].size(); i++)
+                out << "   " << i << " " << fixed << setprecision(6) << derivatives_ant.adpDerivatives[atomIdx][i] << "  "
+                << fixed << setprecision(6) << derivatives_num.adpDerivatives[atomIdx][i] << "\n";
+        }
+    }
+
+    for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
+    {
+        out << "\n HKL = " << hkl[hklIdx] << "\n\n";
+        calc_derivatives_numerically(crystal, sfCalculator, hkl[hklIdx], derivatives_num, countAtom);
+        calc_derivatives_numerically_shift_all(crystal, sfCalculator, hkl[hklIdx], derivatives_num_shift_all, countAtom);
+        sfCalculator->calculateStructureFactorsAndDerivatives(hkl[hklIdx], sf[hklIdx], derivatives_ant, countAtom);
+        out << "dF/dxyz\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                complex<double> v1 = derivatives_ant.atomicPostionDerivatives[atomIdx][i];
+                complex<double> v2 = derivatives_ant.atomicPostionDerivatives[atomIdx][i];
+                if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
+                    if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
+                        out << atomIdx << " " << i << " real\n";
+                if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
+                    if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
+                        out << atomIdx << " " << i << " imag\n";
+
+            }
+        }
+        out << "dF/d_occ\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            complex<double> v1 = derivatives_ant.occupancyDerivatives[atomIdx];
+            complex<double> v2 = derivatives_ant.occupancyDerivatives[atomIdx];
+            if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
+                if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
+                    out << atomIdx << " " << " real\n";
+            if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
+                if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
+                    out << atomIdx << " " << " imag\n";
+        }
+        out << "dF/d_adp\n";
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            out << atomIdx;
+            for (int i = 0; i < derivatives_ant.adpDerivatives[atomIdx].size(); i++)
+            {
+                complex<double> v1 = derivatives_ant.adpDerivatives[atomIdx][i];
+                complex<double> v2 = derivatives_ant.adpDerivatives[atomIdx][i];
+                if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
+                    if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
+                        out << atomIdx << " " << i << " real\n";
+                if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
+                    if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
+                        out << atomIdx << " " << i << " imag\n";
+
+            }
+        }
+    }
+
+
+    out.close();
+    */
+}
+
+//void defaultInput(
+//    bool electronScatteringIfNoAspherJsonFile,
+//    bool unitCellChargeIfNoAspherJsonFile,
+//    double unitCellCharge,
+//    nlohmann::json& jsonData,
+//    const std::string& jobName)
+//{
+//    nlohmann::json data;
+//
+//    stringstream ss;
+//    ss <<
+//        "{\n"
+//        "    \"use discamb\": \"yes\",\n"
+//        "        \"form factor engine\" :\n"
+//        "    {\n"
+//        "        \"type\": \"ubdb\",\n"
+//        "            \"data\" :\n"
+//        "        {\n"
+//        "            \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
+//        "            \"multipole cif\" : \"" + jobName + ".cif_rho\"";
+//    if (electronScatteringIfNoAspherJsonFile)
+//        ss << ",\n   \"electron_scattering\": true";
+//
+//    if (unitCellChargeIfNoAspherJsonFile)
+//        ss << ",\n   \"unit cell charge\": " << unitCellCharge;
+//
+//    ss << "\n"
+//        "        }\n"
+//        "    }\n"
+//        "}\n";
+//
+//    ss >> data;
+//
+//    jsonData = data;
+//}
+
+void defaultInput(
+    bool electronScatteringIfNoAspherJsonFile,
+    bool unitCellChargeIfNoAspherJsonFile,
+    double unitCellCharge,
+    nlohmann::json& jsonData,
+    const std::string& jobName)
+{
+    nlohmann::json data;
+
+    stringstream ss;
+    ss <<
+        "{\n"
+        "    \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
+        "    \"multipole cif\" : \"" + jobName + ".cif_rho\"";
+    if (electronScatteringIfNoAspherJsonFile)
+        ss << ",\n   \"electron_scattering\": true";
+
+    if (unitCellChargeIfNoAspherJsonFile)
+        ss << ",\n   \"unit cell charge\": " << unitCellCharge;
+
+    ss << "\n"
+        "}\n";
+
+    ss >> data;
+
+    jsonData = data;
+}
+
+std::shared_ptr<HcAtomBankStructureFactorCalculator> sfCalculatorFromJsonFile(
+    const Crystal& crystal,
+    bool& aspherJsonPresent,
+    bool electronScatteringIfNoAspherJsonFile,
+    bool unitCellChargeIfNoAspherJsonFile,
+    double unitCellCharge,
+    bool& electronScattering,
+    const string& jobName)
+{
+
+    aspherJsonPresent = filesystem::exists(filesystem::path("aspher.json"));
+    nlohmann::json jsonData;
+
+    if (aspherJsonPresent)
+    {
+        ifstream jsonFileStream("aspher.json");
+
+        if (jsonFileStream.good())
+        {
+            nlohmann::json jsonDataFromFile;
+            jsonFileStream >> jsonDataFromFile;
+            auto data = jsonDataFromFile.find("form factor engine");
+            if (data != jsonDataFromFile.end())
+                jsonData = jsonDataFromFile["form factor engine"]["data"];
+            else
+                jsonData = jsonDataFromFile;
+        }
+        else
+        {
+            on_error::throwException("can not read aspher.json file, expected to be present in the current directory", __FILE__, __LINE__);
+            return std::shared_ptr<HcAtomBankStructureFactorCalculator>(nullptr);
+        }
+    }
+    else
+        defaultInput(electronScatteringIfNoAspherJsonFile, unitCellChargeIfNoAspherJsonFile, unitCellCharge, jsonData, jobName);
+
+
+    // electrons? bank path give?
+    electronScattering = false;
+    bool hasBankPath = false;
+
+    
+    electronScattering = jsonData.value("electron_scattering", electronScattering);
+    electronScattering = jsonData.value("electron scattering", electronScattering);
+    if (jsonData.find("bank path") != jsonData.end())
+        hasBankPath = true;
+
+    //if (!hasBankPath)
+    return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData);
+
+    //string bankString;
+    //default_ubdb_bank_string(bankString);
+    //return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData, bankString);
+}
+
+void addMattsCitation(string mattsVersion)
+{
+    clog << "Citation\n"
+        << "If you used discambMATTS2tsc in your work please add the following text\n"
+        << "to the resulting.cif file :\n"
+        << "_refine_special_details\n"
+        << ";\n"
+        << "TAAM / MATTS refinement.\n"
+        << "Uses aspherical atomic scattering factors computed by the DiSCaMB library\n"
+        << "(Chodkiewicz et.al., J.Appl.Cryst., 2018, 51, 193 - 199)\n"
+        << "from multipole model\n"
+        << "(Hansen & Coppens, Acta Cryst.A, 1978, 34, 909 - 921)\n"
+        << "parametrized using the MATTS2021 data bank\n"
+        << "(Jha, et al., J.Chem.Inf.Model., 2022, 62, 3752 - 3765,\n"
+        << "    Rybicka, et al., J.Chem.Inf.Model., 2022, 62, 3766 - 3783)\n"
+        << "Refinement performed with.tsc generated by discamb2TAAMtsc " << mattsVersion << "\n"
+        << ";\n"
+        << "and in your publication, please, cite:\n"
+        << "Chodkiewicz et.al., J.Appl.Cryst., 2018, 51, 193 - 199\n"
+        << "Hansen & Coppens, Acta Cryst.A, 1978, 34, 909 - 921\n"
+        << "Jha, et al., J.Chem.Inf.Model., 2022, 62, 3752 - 3765\n"
+        << "Rybicka, et al., J.Chem.Inf.Model., 2022, 62, 3766 - 3783\n";
+}
+
+void test_bnk(const string& structureFile)
+{
+    ofstream logFile("discambMATTS2tsc.log");
+    auto clog_orginal_rdbuf = std::clog.rdbuf();
+    std::clog.rdbuf(logFile.rdbuf());
+
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    bool aspherJsonPresent;
+    bool electronScatteringIfNoAspherJsonFile = false;
+    bool unitCellChargeIfNoAspherJsonFile = false;
+    double unitCellCharge = 0.0;
+    bool electronScattering;
+    string jobName="jobName";
+    time_t time_now = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
+    string date = __DATE__;
+    string time = __TIME__;
+    string discambMATTS2tscVersion = "3.009";
+
+    string header = string("\n  discambMATTS2tsc, version ") + discambMATTS2tscVersion + string("\n  compiled on ") +
+        date + string(" , ") + time + string(".\n\n");
+
+    clog << header
+        << "\n" << "file created at " << ctime(&time_now) << "\n";
+
+
+    auto sfCalculator = sfCalculatorFromJsonFile(
+        crystal,
+        aspherJsonPresent,
+        electronScatteringIfNoAspherJsonFile,
+        unitCellChargeIfNoAspherJsonFile,
+        unitCellCharge,
+        electronScattering,
+        jobName);
+    
+    addMattsCitation(discambMATTS2tscVersion);
+    std::clog.rdbuf(clog_orginal_rdbuf);
+    logFile.close();
+
+}
+
 int main(int argc, char* argv[])
 {
     try {
+        test_bnk(argv[1]);
+        return 0;
+
+        check_args(argc, argv, 2, { "structure file", "hkl file" });
+        taam_parallel(argv[1], argv[2]);
+        return 0;
+
+        copy_compare();
+        return 0;
 
         printFractional(argv[1], argv[2]);
         return 0;

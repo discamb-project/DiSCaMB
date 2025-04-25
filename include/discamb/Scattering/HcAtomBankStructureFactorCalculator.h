@@ -29,6 +29,8 @@ namespace discamb {
         int mN_Threads = 1;
         double mTotalCharge = 0.0;
         std::vector<std::pair<std::string, std::string> > mModelInfo;
+        std::string mAlgorithm = "standard";
+        //std::string mAssignmentInfo;
     public:
         /**
         if assignemntInfoFile is empty the assignment info is not printed
@@ -48,10 +50,26 @@ namespace discamb {
             bool scaleToMatchCharge = true,
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
-            bool frozen_lcs = false);
+            bool frozen_lcs = false,
+            const std::string &algorithm = "standard");
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
+
+        HcAtomBankStructureFactorCalculator(
+            const Crystal& crystal,
+            const nlohmann::json& data,
+            const std::string & bankString/*,
+            std::string &assignemntInfo,
+            bool generateAssignementInfo*/);
+
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
+
+        void set(const Crystal& crystal,
+            const nlohmann::json& data,
+            const std::string& bankString/*,
+            bool generateAssignementInfo=false*/);
+
+
         void set(
             const Crystal &crystal,
             const std::vector<AtomType> &atomTypes,
@@ -67,7 +85,9 @@ namespace discamb {
             bool scaleToMatchCharge = true,
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
-            bool frozen_lcs = false);
+            bool frozen_lcs = false,
+            const std::string& algorithm = "standard"/*,
+            bool generateAssignmentInfo = false*/);
         
 
         virtual ~HcAtomBankStructureFactorCalculator();

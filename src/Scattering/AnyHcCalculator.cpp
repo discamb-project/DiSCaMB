@@ -206,15 +206,20 @@ namespace discamb {
         const std::vector<bool> &countAtomContribution)
     {
         
-		//if (!mUseImplementationForLargeMolecules)
-		//{
+		if (!mUseImplementationForLargeMolecules)
+		{
 			mCalculator->update(atoms);
 			mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
-		//}
-		//else
-		//{
-
-		//}
+		}
+		else
+		{
+            mHcCalculator->calculateStructureFactorsAndDerivatives(
+                atoms, mLcsMatrices, hkl,
+                f,
+                dTarget_dparam,
+                dTarget_df,
+                countAtomContribution);
+		}
     }
 
 	void AnyHcCalculator::calculateFormFactors(

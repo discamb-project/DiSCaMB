@@ -284,6 +284,12 @@ namespace discamb{
 			std::vector<std::complex<double> >& f,
 			const std::vector<bool>& countAtomContribution)
 		{
+            /*calculateStructureFactors2(
+                _hkl,
+                f,
+                countAtomContribution);
+            return;*/
+
 			std::vector<Vector3d> hkl;
 			makeCartesianHkl(_hkl, hkl);
 
@@ -435,7 +441,8 @@ namespace discamb{
 #pragma omp parallel for
             for (int hklIndex = 0; hklIndex < nHklVectors; hklIndex++)
             {
-
+                if (hklIndex == 0)
+                    cout << "n threads " << omp_get_max_threads() << endl;
                 //
                 vector < vector<complex<double> > > atomic_ff(nSymmOps, vector < complex<double> >(nAtoms));
                 REAL temperature_factor, hVectorLength, hVectorLength2;
