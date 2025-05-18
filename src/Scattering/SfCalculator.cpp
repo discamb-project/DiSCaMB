@@ -115,6 +115,18 @@ namespace discamb {
 
     }
 
+    void SfCalculator::calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df,
+        const std::vector<bool>& countAtomContribution,
+        const DerivativesSelector& derivativesSwitch)
+    {
+        calculateStructureFactorsAndDerivatives(atoms, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+    }
+
     void SfCalculator::calculateFormFactorsCart(
         const Vector3d& hkl,
         std::vector<std::complex<double> >& formFactors,

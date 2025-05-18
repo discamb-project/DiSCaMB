@@ -13,11 +13,14 @@
 
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
+#include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/HC_Model/HC_WfnData.h"
 #include "discamb/MathUtilities/real_spherical_harmonics.h"
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/Scattering/scattering_utilities.h"
 
+#include "discamb/Scattering/HansenCoppens_SF_Engine2.h"
+#include "discamb/Scattering/HansenCoppens_SF_Engine3.h"
 #include <fstream>
 #include <iostream>
 #include <exception>
@@ -152,6 +155,8 @@ void HansenCoppensStructureFactorCalculator::setModel(
     mAdpInputType = crystal.adpConvention;
     mXyzInputCoordinateSystem = crystal.xyzCoordinateSystem;
 
+
+    crystal_structure_utilities::atomicNumbers(crystal, mAtomicNumbers);
 
     // space group related things
 
@@ -298,8 +303,15 @@ const std::vector<bool> &countAtomContribution)
 {
     mWithGradients = false;
     vector<complex<double> > fake_dTarget_df(hkl.size(),1.0);
+
+    DerivativesSelector derivativesSelector;
+    derivativesSelector.d_adp = false;
+    derivativesSelector.d_anom = false;
+    derivativesSelector.d_occ = false;
+    derivativesSelector.d_xyz = false;
+
     vector<TargetFunctionAtomicParamDerivatives> dTarget_dparam;
-    calculateStructureFactorsAndDerivatives(atoms, localCoordinateSystems,hkl,f,dTarget_dparam,fake_dTarget_df,countAtomContribution);
+    calculateStructureFactorsAndDerivatives(atoms, localCoordinateSystems,hkl,f,dTarget_dparam,fake_dTarget_df,countAtomContribution, derivativesSelector);
     mWithGradients = true;
 }
 
@@ -315,7 +327,7 @@ void HansenCoppensStructureFactorCalculator::useGPU()
 
 void HansenCoppensStructureFactorCalculator::useCPU_IAM()
 {
-    setEngineType(CPU_IAM);
+    setEngineType(CPU_IAM); 
 }
 
 
@@ -339,7 +351,118 @@ void HansenCoppensStructureFactorCalculator::setCalculationMode(
     }
 }
 
+void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
+    const std::vector<AtomInCrystal>& atoms,
+    const std::vector<Matrix3d>& localCoordinateSystems,
+    const std::vector<Vector3i>& hkl,
+    std::vector<std::complex<double> >& f,
+    std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+    const std::vector<std::complex<double> >& _dTarget_df,
+    const std::vector<bool>& countAtomContribution,
+    const DerivativesSelector& derivativesSelector)
+{
+    vector<complex<double> > dTarget_df = _dTarget_df;
+    vector<double> sfMultipliers;
+    char latticeCentering;
+    bool obverse;
 
+    latticeCentering = mSpaceGroup.centering(obverse);
+    scattering_utilities::centeringSfMultipliers(latticeCentering, hkl, sfMultipliers, obverse);
+
+    int hklIdx, nHkl = hkl.size();
+
+    if (dTarget_df.size() != hkl.size())
+        on_error::throwException("Inconsistent size of hkl vectors set and (d target/ d F) table when calculating multipolar structure factors.", __FILE__, __LINE__);
+
+    for (hklIdx = 0; hklIdx < nHkl; ++hklIdx)
+        dTarget_df[hklIdx] = conj(dTarget_df[hklIdx]) * sfMultipliers[hklIdx];
+
+
+    prepareDataForEngine(atoms, hkl, f, dTarget_dparam);
+
+
+    vector<Matrix3i> rotations;
+    vector<Vector3d> translations;
+    Vector3d a, b, c, a_star, b_star, c_star;
+    Vector3<CrystallographicRational> translation;
+    ReciprocalLatticeUnitCell reciprocalLattice;
+    Matrix3d rotation;
+
+    switch (mEngineType)
+    {
+    case GPU:
+    {
+        Crystal crystal;
+        crystal.atoms = atoms;
+        crystal.spaceGroup = mSpaceGroup;
+        crystal.unitCell = mUnitCell;
+
+        mCpuTimer.start();
+        mWallClockTimer.start();
+        calculate_using_GPU_batched(crystal, localCoordinateSystems, hkl, f, dTarget_dparam, dTarget_df);
+
+
+        mCpuTime = mCpuTimer.stop();
+        mWallClockTime = mWallClockTimer.stop();
+
+        break;
+    }
+    case CPU:
+    {
+        HansenCoppens_SF_Engine3 engine;
+
+        engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+            mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+            localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+            mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector, 
+            mElectronScattering, mAtomicNumbers);
+
+        //HansenCoppens_SF_Engine2 engine;
+
+        //engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+        //    mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+        //    localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+        //    mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
+
+        break;
+    }
+    case CPU_IAM:
+    {
+        HansenCoppens_SF_Engine engine;
+        int wfnTypeIdx, nWfnTypes = mWfnParameters.size();
+        vector<complex<double> > anomalousScattering(nWfnTypes);
+
+        for (wfnTypeIdx = 0; wfnTypeIdx < nWfnTypes; wfnTypeIdx++)
+            anomalousScattering[wfnTypeIdx] = mWfnParameters[wfnTypeIdx].anomalous_scattering;
+        mCpuTimer.start();
+        mWallClockTimer.start();
+
+        engine.calculateSF_IAM(mWfnTypeLabels, anomalousScattering, mAtomToWfnTypeMap, mAtomicPositions,
+            mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+            mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+            mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution,
+            mN_Threads);
+
+        mCpuTime = mCpuTimer.stop();
+        mWallClockTime = mWallClockTimer.stop();
+
+        break;
+    }
+    default:
+        on_error::throwException("wrong engine type", __FILE__, __LINE__);
+    }
+
+    for (hklIdx = 0; hklIdx < nHkl; ++hklIdx)
+        f[hklIdx] *= sfMultipliers[hklIdx];
+
+    convertDerivatives(dTarget_dparam);
+}
+
+void HansenCoppensStructureFactorCalculator::setElectronScattering(
+    bool electronScattering)
+{
+    mElectronScattering = electronScattering;
+}
 
 void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivatives( 
 const std::vector<AtomInCrystal> &atoms,
@@ -351,99 +474,111 @@ const std::vector<std::complex<double> > &_dTarget_df,
 const std::vector<bool> &countAtomContribution)
 
 {
-    vector<complex<double> > dTarget_df = _dTarget_df;
-    vector<double> sfMultipliers;
-    char latticeCentering;
-    bool obverse;
-    
-    latticeCentering = mSpaceGroup.centering(obverse);
-    scattering_utilities::centeringSfMultipliers(latticeCentering, hkl, sfMultipliers, obverse);
-    
-    int hklIdx, nHkl =  hkl.size();
+    DerivativesSelector selector;
+    calculateStructureFactorsAndDerivatives(
+        atoms,
+        localCoordinateSystems,
+        hkl,
+        f,
+        dTarget_dparam,
+        _dTarget_df,
+        countAtomContribution,
+        selector);
 
-    if(dTarget_df.size() != hkl.size())
-        on_error::throwException("Inconsistent size of hkl vectors set and (d target/ d F) table when calculating multipolar structure factors.",__FILE__,__LINE__);
-    
-    for( hklIdx = 0 ; hklIdx<nHkl ; ++hklIdx)
-        dTarget_df[hklIdx] = conj(dTarget_df[hklIdx]) * sfMultipliers[hklIdx];
+    //vector<complex<double> > dTarget_df = _dTarget_df;
+    //vector<double> sfMultipliers;
+    //char latticeCentering;
+    //bool obverse;
+    //
+    //latticeCentering = mSpaceGroup.centering(obverse);
+    //scattering_utilities::centeringSfMultipliers(latticeCentering, hkl, sfMultipliers, obverse);
+    //
+    //int hklIdx, nHkl =  hkl.size();
 
-    
-    prepareDataForEngine(atoms,hkl,f,dTarget_dparam);
-    
+    //if(dTarget_df.size() != hkl.size())
+    //    on_error::throwException("Inconsistent size of hkl vectors set and (d target/ d F) table when calculating multipolar structure factors.",__FILE__,__LINE__);
+    //
+    //for( hklIdx = 0 ; hklIdx<nHkl ; ++hklIdx)
+    //    dTarget_df[hklIdx] = conj(dTarget_df[hklIdx]) * sfMultipliers[hklIdx];
 
-    vector<Matrix3i> rotations;
-    vector<Vector3d> translations;
-    Vector3d a, b, c, a_star, b_star, c_star;
-    Vector3<CrystallographicRational> translation;
-    ReciprocalLatticeUnitCell reciprocalLattice;
-    Matrix3d rotation;
+    //
+    //prepareDataForEngine(atoms,hkl,f,dTarget_dparam);
+    //
 
-    switch(mEngineType)
-    {
-        case GPU:
-        {
-            Crystal crystal;
-            crystal.atoms = atoms;
-            crystal.spaceGroup = mSpaceGroup;
-            crystal.unitCell = mUnitCell;
+    //vector<Matrix3i> rotations;
+    //vector<Vector3d> translations;
+    //Vector3d a, b, c, a_star, b_star, c_star;
+    //Vector3<CrystallographicRational> translation;
+    //ReciprocalLatticeUnitCell reciprocalLattice;
+    //Matrix3d rotation;
+    //DerivativesSelector selector;
+    //switch(mEngineType)
+    //{
+    //    case GPU:
+    //    {
+    //        Crystal crystal;
+    //        crystal.atoms = atoms;
+    //        crystal.spaceGroup = mSpaceGroup;
+    //        crystal.unitCell = mUnitCell;
 
-            mCpuTimer.start();
-            mWallClockTimer.start();
-            calculate_using_GPU_batched(crystal, localCoordinateSystems, hkl, f, dTarget_dparam, dTarget_df);
-            
+    //        mCpuTimer.start();
+    //        mWallClockTimer.start();
+    //        calculate_using_GPU_batched(crystal, localCoordinateSystems, hkl, f, dTarget_dparam, dTarget_df);
+    //        
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        mCpuTime = mCpuTimer.stop();
+    //        mWallClockTime = mWallClockTimer.stop();
 
-            break;
-        }
-        case CPU:
-        {
-            HansenCoppens_SF_Engine engine;
+    //        break;
+    //    }
+    //    case CPU:
+    //    {
+    //        HansenCoppens_SF_Engine3 engine;
+    //        
+    //        engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+    //                           mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+    //                           localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+    //                           mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
 
-            mCpuTimer.start();
-            mWallClockTimer.start();
-            
-            engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
-                               mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-                               localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-                               mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
+    //        //HansenCoppens_SF_Engine2 engine;
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        //engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+    //        //    mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+    //        //    localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+    //        //    mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads);
 
-            break;
-        }   
-        case CPU_IAM:
-        {
-            HansenCoppens_SF_Engine engine;
-            int wfnTypeIdx, nWfnTypes = mWfnParameters.size();
-            vector<complex<double> > anomalousScattering( nWfnTypes );
+    //        break;
+    //    }   
+    //    case CPU_IAM:
+    //    {
+    //        HansenCoppens_SF_Engine engine;
+    //        int wfnTypeIdx, nWfnTypes = mWfnParameters.size();
+    //        vector<complex<double> > anomalousScattering( nWfnTypes );
 
-            for(wfnTypeIdx=0 ; wfnTypeIdx<nWfnTypes ; wfnTypeIdx++ )
-                anomalousScattering[wfnTypeIdx] = mWfnParameters[wfnTypeIdx].anomalous_scattering;
-            mCpuTimer.start();
-            mWallClockTimer.start();
+    //        for(wfnTypeIdx=0 ; wfnTypeIdx<nWfnTypes ; wfnTypeIdx++ )
+    //            anomalousScattering[wfnTypeIdx] = mWfnParameters[wfnTypeIdx].anomalous_scattering;
+    //        mCpuTimer.start();
+    //        mWallClockTimer.start();
 
-            engine.calculateSF_IAM(mWfnTypeLabels, anomalousScattering, mAtomToWfnTypeMap,mAtomicPositions,
-                               mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-                               mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-                                   mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution,
-                               mN_Threads);
+    //        engine.calculateSF_IAM(mWfnTypeLabels, anomalousScattering, mAtomToWfnTypeMap,mAtomicPositions,
+    //                           mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+    //                           mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+    //                               mHKL_Cartesian, f, dTarget_dparam, dTarget_df, countAtomContribution,
+    //                           mN_Threads);
 
-            mCpuTime = mCpuTimer.stop();
-            mWallClockTime = mWallClockTimer.stop();
+    //        mCpuTime = mCpuTimer.stop();
+    //        mWallClockTime = mWallClockTimer.stop();
 
-            break;
-        }
-        default:
-            on_error::throwException("wrong engine type",__FILE__,__LINE__);
-    } 
-
-    for (hklIdx = 0; hklIdx<nHkl; ++hklIdx)
-        f[hklIdx] *= sfMultipliers[hklIdx];
-
-    convertDerivatives(dTarget_dparam);
+    //        break;
+    //    }
+    //    default:
+    //        on_error::throwException("wrong engine type",__FILE__,__LINE__);
+    //} 
+    //
+    //for (hklIdx = 0; hklIdx<nHkl; ++hklIdx)
+    //    f[hklIdx] *= sfMultipliers[hklIdx];
+    //
+    //convertDerivatives(dTarget_dparam);
 
 }
 

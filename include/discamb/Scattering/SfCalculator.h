@@ -33,13 +33,23 @@ namespace discamb {
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const = 0;
 
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous) =0;
+
+        virtual void calculateStructureFactorsAndDerivatives(
+            const std::vector<AtomInCrystal>& atoms,
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df,
+            const std::vector<bool>& countAtomContribution) = 0;
+
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,
             std::vector<std::complex<double> > &f,
             std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
             const std::vector<std::complex<double> > &dTarget_df,
-            const std::vector<bool> &countAtomContribution)=0;
+            const std::vector<bool> &countAtomContribution,
+            const DerivativesSelector &selector);
 
         virtual void calculateStructureFactors(
             const std::vector<AtomInCrystal> &atoms,

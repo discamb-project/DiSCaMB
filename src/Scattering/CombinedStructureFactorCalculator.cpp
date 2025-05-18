@@ -1,4 +1,5 @@
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
+#include "discamb/BasicUtilities/Timer.h"
 
 #include <memory>
 
@@ -125,12 +126,13 @@ namespace discamb {
     }
 
     void CombinedStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
-        const std::vector<AtomInCrystal> &atoms,
-        const std::vector<Vector3i> &hkl,
-        std::vector<std::complex<double> > &f,
-        std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-        const std::vector<std::complex<double> > &dTarget_df,
-        const std::vector<bool> &countAtomContribution) 
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df,
+        const std::vector<bool>& countAtomContribution,
+        const DerivativesSelector& derivativesSelector)
     {
         int calculatorIdx, nCalculators = mCalculators.size();
         int atomIdx, nAtoms = countAtomContribution.size();
@@ -150,15 +152,16 @@ namespace discamb {
                     mPartialScatteringFactorMultiHkl[calculatorIdx],
                     mPartial_dTarget_dparam[calculatorIdx],
                     dTarget_df,
-                    atomContribution);
+                    atomContribution,
+                    derivativesSelector);
         }
 
         // merge results for scattering factors
-        
+
         int hklIdx, nHkl = hkl.size();
-        
+
         f = mPartialScatteringFactorMultiHkl[0];
-        
+
         for (calculatorIdx = 1; calculatorIdx < nCalculators; calculatorIdx++)
             for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
                 f[hklIdx] += mPartialScatteringFactorMultiHkl[calculatorIdx][hklIdx];
@@ -169,6 +172,28 @@ namespace discamb {
         for (calculatorIdx = 0; calculatorIdx < nCalculators; calculatorIdx++)
             for (int atomIdx : mCalculatorsAtoms[calculatorIdx])
                 dTarget_dparam[atomIdx] = mPartial_dTarget_dparam[calculatorIdx][atomIdx];
+
+    }
+
+
+    void CombinedStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal> &atoms,
+        const std::vector<Vector3i> &hkl,
+        std::vector<std::complex<double> > &f,
+        std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
+        const std::vector<std::complex<double> > &dTarget_df,
+        const std::vector<bool> &countAtomContribution) 
+    {
+        DerivativesSelector derivativesSelector;
+        calculateStructureFactorsAndDerivatives(
+            atoms,
+            hkl,
+            f,
+            dTarget_dparam,
+            dTarget_df,
+            countAtomContribution,
+            derivativesSelector);
+
     }
 
     void CombinedStructureFactorCalculator::calculateStructureFactors(
@@ -182,16 +207,22 @@ namespace discamb {
         vector<bool> atomContribution;
 
         atomContribution = countAtomContribution;
-
+        //WallClockTimer timer;
         for (calculatorIdx = 0; calculatorIdx < nCalculators; calculatorIdx++)
         {
-
+            //timer.start();
+            //int nAtomsCounted = 0;
             for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
                 atomContribution[atomIdx] = countAtomContribution[atomIdx] && mCalculatorsAtomsInclusion[calculatorIdx][atomIdx];
+                //    if (atomContribution[atomIdx])
+                //        nAtomsCounted++;
+            }
 
 
             mCalculators[calculatorIdx]->
                 calculateStructureFactors(atoms, hkl, mPartialScatteringFactorMultiHkl[calculatorIdx], atomContribution);
+            //cout << "calculator " << calculatorIdx << " time " << timer.stop() << "\n";// << ", n atoms counted = " << nAtomsCounted << "\n";
         }
 
         // merge scattering factors

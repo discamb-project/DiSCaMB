@@ -29,6 +29,15 @@ namespace discamb {
             const std::vector<std::complex<double> > &dTarget_df,
             const std::vector<bool> &countAtomContribution);
 
+        virtual void calculateStructureFactorsAndDerivatives(
+            const std::vector<AtomInCrystal>& atoms,
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df,
+            const std::vector<bool>& countAtomContribution,
+            const DerivativesSelector &derivativesSelector);
+
         virtual void calculateStructureFactors(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,

@@ -16,6 +16,18 @@ namespace discamb {
 
 
 /**
+  \brief specifies which derivatives should be calculated
+*/
+
+    struct DerivativesSelector {
+        bool d_xyz = true;
+        bool d_adp = true;
+        bool d_occ = true;
+        bool d_anom = true;
+    };
+
+
+/**
   \brief Structure for storing derivatives of a target function with respect to atomic parameters.
 
   Stores data for parameter of one atom.
@@ -40,6 +52,7 @@ struct SfDerivativesAtHkl
     std::vector<Vector3<std::complex<REAL> > > atomicPostionDerivatives;
     std::vector<std::vector<std::complex<REAL> > > adpDerivatives;
     std::vector<std::complex<REAL> > occupancyDerivatives;
+    std::vector<std::complex<REAL> > anomalousScatteringDerivatives;
 };
 
 struct ScatteringParameters

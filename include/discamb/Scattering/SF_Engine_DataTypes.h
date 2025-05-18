@@ -24,6 +24,8 @@ namespace discamb {
     namespace sf_engine_data_types {
 
 
+
+
         /**
           \brief structure intended mainly for internal use
 

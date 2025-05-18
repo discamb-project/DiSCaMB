@@ -149,6 +149,14 @@ namespace discamb{
 
 
         void calculateStructureFactorsAndDerivatives(
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df,
+            const std::vector<bool>& countAtomContribution,
+            const DerivativesSelector & derivativesSelector);
+
+        void calculateStructureFactorsAndDerivatives(
             const Vector3i &hkl,
             std::complex<double> &scatteringFactor,
             discamb::SfDerivativesAtHkl &derivatives,

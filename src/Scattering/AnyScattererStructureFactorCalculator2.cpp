@@ -1,5 +1,6 @@
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
+#include "discamb/Scattering/scattering_utilities.h"
 #include "discamb/MathUtilities/math_utilities.h"
 
 #include <set>
@@ -246,68 +247,68 @@ namespace discamb{
         }
 
 
-        int  AnyScattererStructureFactorCalculator2::findPreferredHklOrderingDirection(
-            const std::vector<Vector3i>& hkl,
-            std::vector<std::vector<Vector3i> >& orderedHklLines,
-            std::vector<std::vector<int> >& mapToOriginalSetIndices)
-        {
-            orderedHklLines.clear();
+        //int  AnyScattererStructureFactorCalculator2::findPreferredHklOrderingDirection(
+        //    const std::vector<Vector3i>& hkl,
+        //    std::vector<std::vector<Vector3i> >& orderedHklLines,
+        //    std::vector<std::vector<int> >& mapToOriginalSetIndices)
+        //{
+        //    orderedHklLines.clear();
 
-            set<vector<int> > lines[3];
-            for(auto const &h: hkl)
-            {
-                lines[0].insert({ h[1], h[2] });
-                lines[1].insert({ h[0], h[2] });
-                lines[2].insert({ h[0], h[1] });
-            }
-            
-            int preferredDirection = 0;
-            int nLines = lines[0].size();
-            for (int i = 1; i < 3; i++)
-            {
-                if (nLines > lines[i].size())
-                {
-                    preferredDirection = i;
-                    nLines = lines[i].size();
-                }
-            }
-            map<vector<int>, int> line2idx;
-            int idx = 0;
-            for (auto& pq : lines[preferredDirection])
-                line2idx[pq] = idx++;
+        //    set<vector<int> > lines[3];
+        //    for(auto const &h: hkl)
+        //    {
+        //        lines[0].insert({ h[1], h[2] });
+        //        lines[1].insert({ h[0], h[2] });
+        //        lines[2].insert({ h[0], h[1] });
+        //    }
+        //    
+        //    int preferredDirection = 0;
+        //    int nLines = lines[0].size();
+        //    for (int i = 1; i < 3; i++)
+        //    {
+        //        if (nLines > lines[i].size())
+        //        {
+        //            preferredDirection = i;
+        //            nLines = lines[i].size();
+        //        }
+        //    }
+        //    map<vector<int>, int> line2idx;
+        //    int idx = 0;
+        //    for (auto& pq : lines[preferredDirection])
+        //        line2idx[pq] = idx++;
 
-            orderedHklLines.resize(nLines);
-            vector<int> otherIndices;   
-            if (preferredDirection == 0)
-                otherIndices = { 1, 2 };
-            else if (preferredDirection == 1)
-                otherIndices = { 0, 2 };
-            else
-                otherIndices = { 0, 1 };
+        //    orderedHklLines.resize(nLines);
+        //    vector<int> otherIndices;   
+        //    if (preferredDirection == 0)
+        //        otherIndices = { 1, 2 };
+        //    else if (preferredDirection == 1)
+        //        otherIndices = { 0, 2 };
+        //    else
+        //        otherIndices = { 0, 1 };
 
-            for (auto const& h : hkl)
-            {
-                vector<int> pq = { h[otherIndices[0]], h[otherIndices[1]]};
-                orderedHklLines[line2idx[pq]].push_back(h);
-            }
+        //    for (auto const& h : hkl)
+        //    {
+        //        vector<int> pq = { h[otherIndices[0]], h[otherIndices[1]]};
+        //        orderedHklLines[line2idx[pq]].push_back(h);
+        //    }
 
-            for (auto& line : orderedHklLines)
-                std::sort(line.begin(), line.end());
+        //    for (auto& line : orderedHklLines)
+        //        std::sort(line.begin(), line.end());
 
-            mapToOriginalSetIndices.clear();
-            mapToOriginalSetIndices.resize(nLines);
-            for (int i = 0; i < nLines; i++)
-            {
-                for (auto const& h : orderedHklLines[i])
-                {
-                    auto it = find(hkl.begin(), hkl.end(), h);
-                    int idx = distance(hkl.begin(), it);
-                    mapToOriginalSetIndices[i].push_back(idx);
-                }
-            }
+        //    mapToOriginalSetIndices.clear();
+        //    mapToOriginalSetIndices.resize(nLines);
+        //    for (int i = 0; i < nLines; i++)
+        //    {
+        //        for (auto const& h : orderedHklLines[i])
+        //        {
+        //            auto it = find(hkl.begin(), hkl.end(), h);
+        //            int idx = distance(hkl.begin(), it);
+        //            mapToOriginalSetIndices[i].push_back(idx);
+        //        }
+        //    }
 
-            return preferredDirection;
-        }
+        //    return preferredDirection;
+        //}
 
         void AnyScattererStructureFactorCalculator2::calculate_line_phase_factors(
             //in:
@@ -376,9 +377,9 @@ namespace discamb{
             int nSymmOps = mSymOps.size();
             double two_pi = 2 * M_PI;
 
-            bool calc_tf_from_scratch; // first point after break/start or second point after break/start, but no continuation
-            bool calc_tf_and_multiplier_from_scratch; // second point after break/start and there will be continuation
-            bool calc_tf_from_multiplier; // third or further points afger start/break
+            //bool calc_tf_from_scratch; // first point after break/start or second point after break/start, but no continuation
+            //bool calc_tf_and_multiplier_from_scratch; // second point after break/start and there will be continuation
+            //bool calc_tf_from_multiplier; // third or further points afger start/break
 
             int points_after_break = 0;
             int points_before_break = 0;
@@ -572,7 +573,7 @@ namespace discamb{
 
             vector<vector<Vector3i> > orderedHklLines;
             vector<vector<int> > mapToOriginalSetIndices;
-            int lineDirection = findPreferredHklOrderingDirection(_hkl, orderedHklLines, mapToOriginalSetIndices);
+            int lineDirection = scattering_utilities::findPreferredHklOrderingDirection(_hkl, orderedHklLines, mapToOriginalSetIndices);
             int nLines = orderedHklLines.size();
             //[atom][symmOp]
             vector<vector<complex<double> > > phase_factor_multiplier(nAtoms, vector<complex<double> >(nSymmOps));
@@ -587,6 +588,7 @@ namespace discamb{
             step_frac[lineDirection] = 1.0;
             mReciprocalLatticeUnitCell.fractionalToCartesian(step_frac, step);
 
+            
             for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
                 for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
                 {
@@ -616,7 +618,7 @@ namespace discamb{
                     }
                 }
             }
-
+            
             for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
             {
                 auto& hklLine = orderedHklLines[lineIdx];

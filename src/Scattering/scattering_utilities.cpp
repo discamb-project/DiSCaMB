@@ -1,6 +1,7 @@
 #include "discamb/Scattering/scattering_utilities.h"
 #include "discamb/MathUtilities/math_utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/Timer.h"
 
 #include "json.hpp"
 
@@ -239,6 +240,495 @@ namespace scattering_utilities
 
     }
     
+    //int  findPreferredHklOrderingDirection(
+    //    const std::vector<Vector3i>& hkl,
+    //    std::vector<std::vector<Vector3i> >& orderedHklLines,
+    //    std::vector<std::vector<int> >& mapToOriginalSetIndices)
+    //{
+    //    WallClockTimer timer;
+
+    //    timer.start();
+
+    //    orderedHklLines.clear();
+
+    //    set<vector<int> > lines[3];
+    //    for (auto const& h : hkl)
+    //    {
+    //        lines[0].insert({ h[1], h[2] });
+    //        lines[1].insert({ h[0], h[2] });
+    //        lines[2].insert({ h[0], h[1] });
+    //    }
+
+    //    cout << "step 4.1.1 time = " << timer.stop() << "\n";
+    //    timer.start();
+
+
+    //    int preferredDirection = 0;
+    //    int nLines = lines[0].size();
+    //    for (int i = 1; i < 3; i++)
+    //    {
+    //        if (nLines > lines[i].size())
+    //        {
+    //            preferredDirection = i;
+    //            nLines = lines[i].size();
+    //        }
+    //    }
+
+    //    cout << "step 4.1.2 time = " << timer.stop() << "\n";
+    //    timer.start();
+
+
+    //    map<vector<int>, int> line2idx;
+    //    int idx = 0;
+    //    for (auto& pq : lines[preferredDirection])
+    //        line2idx[pq] = idx++;
+
+    //    cout << "step 4.1.3 time = " << timer.stop() << "\n";
+    //    timer.start();
+
+
+    //    orderedHklLines.resize(nLines);
+    //    vector<int> otherIndices;
+    //    if (preferredDirection == 0)
+    //        otherIndices = { 1, 2 };
+    //    else if (preferredDirection == 1)
+    //        otherIndices = { 0, 2 };
+    //    else
+    //        otherIndices = { 0, 1 };
+
+    //    vector<vector<pair<Vector3i, int> > > orderedHklLinesWithOrgIndices(nLines);
+    //    
+    //    int nHkl = hkl.size();
+
+    //    for(int hklIdx = 0; hklIdx<nHkl; hklIdx++)
+    //    {
+    //        auto const h = hkl[hklIdx];
+    //        vector<int> pq = { h[otherIndices[0]], h[otherIndices[1]] };
+    //        orderedHklLines[line2idx[pq]].push_back(h);
+    //    }
+
+    //    //for (auto const& h : hkl)
+    //    //{
+    //    //    vector<int> pq = { h[otherIndices[0]], h[otherIndices[1]] };
+    //    //    orderedHklLines[line2idx[pq]].push_back(h);
+    //    //}
+
+    //    cout << "step 4.1.2 time = " << timer.stop() << "\n";
+    //    timer.start();
+
+
+    //    for (auto& line : orderedHklLines)
+    //        std::sort(line.begin(), line.end());
+
+    //    cout << "step 4.1.3 time = " << timer.stop() << "\n";
+    //    timer.start();
+
+
+    //    mapToOriginalSetIndices.clear();
+    //    mapToOriginalSetIndices.resize(nLines);
+    //    for (int i = 0; i < nLines; i++)
+    //    {
+    //        for (auto const& h : orderedHklLines[i])
+    //        {
+    //            auto it = find(hkl.begin(), hkl.end(), h);
+    //            int idx = distance(hkl.begin(), it);
+    //            mapToOriginalSetIndices[i].push_back(idx);
+    //        }
+    //    }
+
+    //    cout << "step 4.1.4 time = " << timer.stop() << "\n";
+
+
+    //    return preferredDirection;
+    //}
+
+    int  findPreferredHklOrderingDirection(
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::vector<Vector3i> >& orderedHklLines,
+        std::vector<std::vector<int> >& mapToOriginalSetIndices)
+    {
+        orderedHklLines.clear();
+
+        set<pair<int, int> > lines[3];
+        for (auto const& h : hkl)
+        {
+            lines[0].insert({ h[1], h[2] });
+            lines[1].insert({ h[0], h[2] });
+            lines[2].insert({ h[0], h[1] });
+        }
+
+        int preferredDirection = 0;
+        int nLines = lines[0].size();
+        for (int i = 1; i < 3; i++)
+        {
+            if (nLines > lines[i].size())
+            {
+                preferredDirection = i;
+                nLines = lines[i].size();
+            }
+        }
+
+        map<pair<int, int>, int> line2idx;
+        int idx = 0;
+        for (auto& pq : lines[preferredDirection])
+            line2idx[pq] = idx++;
+
+        orderedHklLines.resize(nLines);
+        vector<int> otherIndices;
+        if (preferredDirection == 0)
+            otherIndices = { 1, 2 };
+        else if (preferredDirection == 1)
+            otherIndices = { 0, 2 };
+        else
+            otherIndices = { 0, 1 };
+
+        vector<vector<pair<Vector3i, int> > > orderedHklLinesWithOrgIndices(nLines);
+
+        int nHkl = hkl.size();
+
+        for (int hklIdx = 0; hklIdx < nHkl; hklIdx++)
+        {
+            auto const h = hkl[hklIdx];
+            pair<int, int> pq = { h[otherIndices[0]], h[otherIndices[1]] };
+            int lineIdx = line2idx[pq];
+            orderedHklLines[lineIdx].push_back(h);
+            orderedHklLinesWithOrgIndices[lineIdx].push_back({ h, hklIdx });
+        }
+
+
+        for (auto& line : orderedHklLines)
+            std::sort(line.begin(), line.end());
+
+        mapToOriginalSetIndices.clear();
+        mapToOriginalSetIndices.resize(nLines);
+        for (int i = 0; i < nLines; i++)
+            for (auto const& h_idx : orderedHklLinesWithOrgIndices[i])
+                mapToOriginalSetIndices[i].push_back(h_idx.second);
+
+        return preferredDirection;
+    }
+
+
+    void splitHklLines(
+        int nSets,
+        const std::vector<std::vector<Vector3i> >& orderedHklLines,
+        std::vector<std::vector<int> >& lineGroups)
+    {
+        lineGroups.clear();
+        lineGroups.resize(nSets);
+        vector<pair<int, int> > lineSizeIdx;
+        vector<int> setSizes(nSets, 0);
+
+        for (int lineIdx = 0; lineIdx < orderedHklLines.size(); lineIdx++)
+        {
+            int lineSize = orderedHklLines[lineIdx].size();
+            lineSizeIdx.push_back(make_pair(lineSize, lineIdx));
+        }
+
+        sort(lineSizeIdx.begin(), lineSizeIdx.end());
+        
+        for (int i = lineSizeIdx.size() - 1; i >= 0; i--)
+        {
+            int smallestSetIdx = distance(setSizes.begin(), min(setSizes.begin(), setSizes.end()));
+            lineGroups[smallestSetIdx].push_back(i);
+        }
+    }
+
+    void splitHklLines(
+        int nSubstes,
+        const std::vector<std::vector<Vector3i> >& orderedHklLines,
+        const std::vector<std::vector<int> > &hklIdxInOriginalSet,
+        std::vector < std::vector<std::vector<Vector3i> > > & newHklLines,
+        std::vector < std::vector <std::vector<std::pair<int, int> > > > & hklMap,
+        std::vector < std::vector<std::vector<int> > >& subsetDataHklIdxInOryginalSet)
+    {
+        newHklLines.clear();
+        hklMap.clear();
+        newHklLines.resize(nSubstes);
+        hklMap.resize(nSubstes);
+        subsetDataHklIdxInOryginalSet.resize(nSubstes);
+
+        int lineIdx, nLines = orderedHklLines.size();
+        int nHkl = 0;
+        for (auto const& line : orderedHklLines)
+            nHkl += line.size();
+        int nHklPerLine = nHkl / nSubstes;
+        int nExtrendedLines = nHkl - nHklPerLine * nSubstes;
+        
+        //merge lines
+        vector<Vector3i> mergedHkl;
+        vector<pair<int, int> > mergedIndices;
+        for (lineIdx = 0; lineIdx < nLines; lineIdx++)
+        {
+            mergedHkl.insert(mergedHkl.end(), orderedHklLines[lineIdx].begin(), orderedHklLines[lineIdx].end());
+            for (int hklIdx = 0; hklIdx < orderedHklLines[lineIdx].size(); hklIdx++)
+                mergedIndices.push_back(make_pair(lineIdx, hklIdx));
+        }
+
+        int idx0 = 0;
+        
+        for (int setIdx = 0; setIdx < nSubstes; setIdx++)
+        {
+            int n = (setIdx < nExtrendedLines ? nHklPerLine + 1 : nHklPerLine);
+            int lastInputLineIdx = -1;
+            int idx = idx0;
+            for ( ; idx < idx0 + n; idx++)
+            {
+                if (lastInputLineIdx != mergedIndices[idx].first)
+                {
+                    int currentSize = newHklLines[setIdx].size();
+                    newHklLines[setIdx].resize(currentSize + 1);
+                    hklMap[setIdx].resize(currentSize + 1);
+                    subsetDataHklIdxInOryginalSet[setIdx].resize(currentSize + 1);
+                }
+                lastInputLineIdx = mergedIndices[idx].first;
+                newHklLines[setIdx].back().push_back(mergedHkl[idx]);
+                hklMap[setIdx].back().push_back(mergedIndices[idx]);
+                subsetDataHklIdxInOryginalSet[setIdx].back().push_back(hklIdxInOriginalSet[mergedIndices[idx].first][mergedIndices[idx].second]);
+            }
+            idx0 = idx;
+        }
+    }
+
+
+    void init_line_multipliers(
+        const Vector3d& lineStepCart,
+        const std::vector< std::vector<Vector3d> >& r_atom_symm,
+        const std::vector<std::vector<double> >& adps,
+        const std::vector<Matrix3d>& symmOpRotationCart,
+        std::vector<std::vector<std::complex<double> > >& phase_factor_multiplier,
+        std::vector<std::vector<double> >& temp_factor_multiplier_multiplier)
+    {
+        phase_factor_multiplier.clear();
+        temp_factor_multiplier_multiplier.clear();
+
+        int nAtoms = r_atom_symm.size();
+        if (nAtoms == 0)
+            return;
+        int nSymmOps = r_atom_symm[0].size();
+        double two_pi = 2 * M_PI;
+
+        phase_factor_multiplier.resize(nAtoms, vector<complex<double> >(nSymmOps));
+        temp_factor_multiplier_multiplier.resize(nAtoms, vector<double>(nSymmOps));
+
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+            {
+                double phase_angle = two_pi * r_atom_symm[atomIdx][symOpIdx] * lineStepCart;
+                phase_factor_multiplier[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
+            }
+
+        //temp_factor_multiplier_multiplier
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            vector<double> const & adp = adps[atomIdx];
+            int nADPComponents = adp.size();
+            if (nADPComponents == 1)
+                temp_factor_multiplier_multiplier[atomIdx][0] = exp(-2.0 * lineStepCart * lineStepCart * adp[0]);
+            else if (nADPComponents == 6)
+            {
+
+                for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                {
+
+                    Vector3d step_rot = lineStepCart * symmOpRotationCart[symOpIdx];
+                    double exponent = step_rot[0] * step_rot[0] * adp[0] +
+                        step_rot[1] * step_rot[1] * adp[1] +
+                        step_rot[2] * step_rot[2] * adp[2] +
+                        2.0 * (step_rot[0] * step_rot[1] * adp[3] +
+                            step_rot[0] * step_rot[2] * adp[4] +
+                            step_rot[1] * step_rot[2] * adp[5]);
+                    temp_factor_multiplier_multiplier[atomIdx][symOpIdx] = exp(-2.0 * exponent);
+                }
+            }
+        }
+
+    }
+
+
+    void calculate_line_phase_factors(
+        //in:
+        const std::vector<std::vector<Vector3d> >& r_at,
+        const std::vector<Vector3d>& hkl_cart,
+        int hkl_idx,
+        const std::vector<Vector3i>& hkl_line,
+        int idx_in_line,
+        int line_direction,
+        const std::vector<Vector3<double> >& rotated_h,
+        const std::vector< std::vector<std::complex<double > > >& phase_factor_multiplier,
+        //std::vector<Vector3d> &rotated_h_2pi,
+        //std::vector<double> &translation_factor_2pi,
+
+        //out:
+        std::vector< std::vector<std::complex<double > > >& line_phase_factor)
+    {
+        int nAtoms = r_at.size();
+        if (nAtoms == 0)
+            return;
+        int nSymmOps = r_at[0].size();
+        double two_pi = 2 * M_PI;
+        if (idx_in_line == 0)
+        {
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+                for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                {
+                    double phase_angle = two_pi * r_at[atomIdx][symOpIdx] * hkl_cart[hkl_idx];
+                    line_phase_factor[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
+                }
+            }
+        }
+        else
+        {
+
+
+            int lineBreak = hkl_line[idx_in_line][line_direction] - hkl_line[idx_in_line - 1][line_direction] - 1;
+            if (lineBreak == 0)
+                for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                        line_phase_factor[atomIdx][symOpIdx] *= phase_factor_multiplier[atomIdx][symOpIdx];
+            else
+                for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    {
+                        double phase_angle = two_pi * r_at[atomIdx][symOpIdx] * hkl_cart[hkl_idx];
+                        //double phase_angle = rotated_h_2pi[symOpIdx] * mR_at[atomIdx] + translation_factor_2pi[symOpIdx];
+                        line_phase_factor[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
+                    }
+
+        }
+
+    }
+
+    void calculate_line_temperature_factors(
+        //in:
+        const std::vector<Vector3d> &coordinates,
+        const std::vector< std::vector<double> >& atoms_adps,
+        const std::vector<Vector3d>& hkl_cart,
+        int hkl_idx,
+        const std::vector<Vector3i>& hkl_line,
+        int idx_in_line,
+        int line_direction,
+        const std::vector<Vector3<double> >& rotated_h,
+        std::vector< std::vector<double> >& temp_factor_multiplier,
+        const std::vector< std::vector<double> >& temp_factor_multiplier_multiplier,
+        std::vector<std::vector<double> >& adpMultipliers,
+        //out:
+        std::vector< std::vector<double> >& line_temperature_factors)
+    {
+        int nAtoms = coordinates.size();
+        int nSymmOps = rotated_h.size();
+        double two_pi = 2 * M_PI;
+
+        bool calc_tf_from_scratch; // first point after break/start or second point after break/start, but no continuation
+        bool calc_tf_and_multiplier_from_scratch; // second point after break/start and there will be continuation
+        bool calc_tf_from_multiplier; // third or further points afger start/break
+
+        int points_after_break = 0;
+        int points_before_break = 0;
+        vector<int> line;
+        for (int i = 0; i < hkl_line.size(); i++)
+            line.push_back(hkl_line[i][line_direction]);
+
+        for (int i = idx_in_line + 1; i < line.size(); i++)
+        {
+            if (line[i] == line[i - 1] + 1)
+                points_before_break++;
+            else
+                break;
+        }
+        for (int i = idx_in_line - 1; i >= 0; i--)
+        {
+            if (line[i] == line[i + 1] - 1)
+                points_after_break++;
+            else
+                break;
+        }
+        double const* adps;
+        double hVectorLength2 = hkl_cart[hkl_idx] * hkl_cart[hkl_idx];
+
+        // first point after break/start or second point after break/start, but no continuation
+        // just calculate temperature factors from scratch
+        if (points_after_break == 0 || (points_after_break == 1 && points_before_break == 0))
+        {
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+
+                int n_adp_components = atoms_adps[atomIdx].size();// atomic_displacement_parameters[atomIdx].size();
+
+                if (n_adp_components > 0)
+                    adps = &atoms_adps[atomIdx][0];
+
+                if (n_adp_components == 6)
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    {
+                        double* multipliers = &adpMultipliers[symOpIdx][0];
+                        line_temperature_factors[atomIdx][symOpIdx] = exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
+                            - multipliers[2] * adps[2] - multipliers[3] * adps[3]
+                            - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
+                    }
+                else if (n_adp_components == 1)
+                    line_temperature_factors[atomIdx][0] = exp(-hVectorLength2 * (*adps));
+
+            }
+        }
+        else if (points_after_break == 1 && points_before_break > 0)
+        {
+            // second point after break/start and there will be continuation
+
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+
+                int n_adp_components = atoms_adps[atomIdx].size();
+
+                if (n_adp_components > 0)
+                    adps = &atoms_adps[atomIdx][0];
+
+                if (n_adp_components == 6)
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    {
+                        double* multipliers = &adpMultipliers[symOpIdx][0];
+                        double previous_temp_factor = line_temperature_factors[atomIdx][symOpIdx];
+                        line_temperature_factors[atomIdx][symOpIdx] = exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
+                            - multipliers[2] * adps[2] - multipliers[3] * adps[3]
+                            - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
+                        temp_factor_multiplier[atomIdx][symOpIdx] =
+                            line_temperature_factors[atomIdx][symOpIdx] / previous_temp_factor;
+                    }
+                else if (n_adp_components == 1)
+                {
+                    double previous_temp_factor = line_temperature_factors[atomIdx][0];
+                    line_temperature_factors[atomIdx][0] = exp(-hVectorLength2 * (*adps));
+                    temp_factor_multiplier[atomIdx][0] =
+                        line_temperature_factors[atomIdx][0] / previous_temp_factor;
+                }
+
+            }
+        }
+        else
+        {
+            // third or further points after start/break
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+                int n_adp_components = atoms_adps[atomIdx].size();
+
+                if (n_adp_components == 6)
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    {
+                        temp_factor_multiplier[atomIdx][symOpIdx] *= temp_factor_multiplier_multiplier[atomIdx][symOpIdx];
+                        line_temperature_factors[atomIdx][symOpIdx] *= temp_factor_multiplier[atomIdx][symOpIdx];
+                    }
+                else if (n_adp_components == 1)
+                {
+                    temp_factor_multiplier[atomIdx][0] *= temp_factor_multiplier_multiplier[atomIdx][0];
+                    line_temperature_factors[atomIdx][0] *= temp_factor_multiplier[atomIdx][0];
+                }
+
+            }
+        }
+
+    }
+
 }
 
 } // namespace discamb

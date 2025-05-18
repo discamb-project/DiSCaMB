@@ -566,6 +566,24 @@ namespace discamb{
         //    const std::vector<Vector3i> &hkl,
         //    std::vector<std::complex<double> > &f) {}
 
+       void AnyScattererStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df,
+            const std::vector<bool>& countAtomContribution,
+            const DerivativesSelector& derivativesSelector) 
+        {
+           calculateStructureFactorsAndDerivatives(
+               hkl,
+               f,
+               dTarget_dparam,
+               dTarget_df,
+               countAtomContribution);
+
+        }
+
+
         /** \brief Calculates structure factors and derivatives of target function with respet to structural parameters.
 
         \param atoms carry atomic structural parameters (positions, ADPs, occupancy)

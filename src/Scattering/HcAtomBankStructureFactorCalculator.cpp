@@ -311,7 +311,7 @@ namespace discamb {
         /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
-
+        mAlgorithm = algorithm;
         mModelInfo.push_back({ "SCATTERING MODEL", "TAAM" });
         mModelInfo.push_back({ "TAAM DATABANK", "MATTS (Kumar, P., Gruza, B., Bojarowski, S. A. & Dominiak, P. M. (2019). Acta Cryst. A75, 398-408.)" });
 
@@ -588,7 +588,8 @@ namespace discamb {
     {
         mCalculator->setAnomalous(anomalous);
     }
-    
+ 
+
     void HcAtomBankStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,
@@ -600,6 +601,21 @@ namespace discamb {
         mCalculator->calculateStructureFactorsAndDerivatives(
             atoms, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
     }
+
+    void HcAtomBankStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df,
+        const std::vector<bool>& countAtomContribution,
+        const DerivativesSelector& selector)
+    {
+        mCalculator->calculateStructureFactorsAndDerivatives(
+            atoms, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, selector);
+
+    }
+
 
 	void HcAtomBankStructureFactorCalculator::calculateFormFactors(
 		const Vector3i& hkl,

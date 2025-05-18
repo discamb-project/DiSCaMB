@@ -7,6 +7,7 @@
 #include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
 #include "discamb/BasicUtilities/Timer.h"
 #include "HansenCoppens_SF_Engine.h"
+//#include "HansenCoppens_SF_Engine3.h"
 #include "scattering_utilities.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/CrystalStructure/StructuralParametersConverter.h"
@@ -50,7 +51,7 @@ public:
     /** Sets model of the electron density (note that the model is also set in constructor).*/
     void setModel(const Crystal &crystal, const HC_ModelParameters &parameters);
 
-    
+    void setElectronScattering(bool electronScattering);
 
     /**
     Sets convention for derivatives calculation:
@@ -140,6 +141,16 @@ public:
             const std::vector<std::complex<double> > &dTarget_df,
             const std::vector<bool> &countAtomContribution);
 
+    void calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Matrix3d>& localCoordinateSystems,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df,
+        const std::vector<bool>& countAtomContribution,
+        const DerivativesSelector &derivativesSelector);
+
 	/**
 
 	*/
@@ -226,6 +237,9 @@ public:
                      std::ostream &output);
 
 private:
+
+    bool mElectronScattering = false;
+    std::vector<int> mAtomicNumbers;
 
     enum HC_SF_EngineId
     {            

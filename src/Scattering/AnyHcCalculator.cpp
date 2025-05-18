@@ -182,6 +182,8 @@ namespace discamb {
 		if (implementationForLargeMolecules)
 		{
 			mHcCalculator = new HansenCoppensStructureFactorCalculator(mCrystal, parameters);
+            if (electronScattering)
+                mHcCalculator->setElectronScattering(true);
 			mLcs = lcs;
 			int nLcs = mLcs.size();
 			mLcsMatrices.resize(nLcs);
@@ -195,6 +197,8 @@ namespace discamb {
     AnyHcCalculator::~AnyHcCalculator()
     {
         delete mCalculator;
+        if (mUseImplementationForLargeMolecules)
+            delete mHcCalculator;
     }
 
     void AnyHcCalculator::calculateStructureFactorsAndDerivatives(
@@ -221,6 +225,33 @@ namespace discamb {
                 countAtomContribution);
 		}
     }
+
+    void AnyHcCalculator::calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df,
+        const std::vector<bool>& countAtomContribution,
+        const DerivativesSelector& derivativesSelector)
+    {
+
+        if (!mUseImplementationForLargeMolecules)
+        {
+            mCalculator->update(atoms);
+            mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, derivativesSelector);
+        }
+        else
+        {
+            mHcCalculator->calculateStructureFactorsAndDerivatives(
+                atoms, mLcsMatrices, hkl,
+                f,
+                dTarget_dparam,
+                dTarget_df,
+                countAtomContribution, derivativesSelector);
+        }
+    }
+
 
 	void AnyHcCalculator::calculateFormFactors(
 		const Vector3i& hkl,

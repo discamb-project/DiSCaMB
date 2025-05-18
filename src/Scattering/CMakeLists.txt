@@ -14,6 +14,8 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/ElectronFromXrayFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/gar_utilities.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine2.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine3.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppensStructureFactorCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppensStructureFactorCalculatorDev.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
@@ -54,6 +56,8 @@ SET(TARGET_SRC
     ElectronFromXrayFormFactorCalculationsManager.cpp
     gar_utilities.cpp
     HansenCoppens_SF_Engine.cpp 
+    HansenCoppens_SF_Engine2.cpp
+    HansenCoppens_SF_Engine3.cpp
     HansenCoppensStructureFactorCalculator.cpp 
     # HansenCoppensStructureFactorCalculatorDev.cpp 
     HcAtomBankStructureFactorCalculator.cpp

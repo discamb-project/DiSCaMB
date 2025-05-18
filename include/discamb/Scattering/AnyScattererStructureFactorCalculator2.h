@@ -91,10 +91,10 @@ namespace discamb{
         void convertDerivatives(discamb::SfDerivativesAtHkl &derivatives) const;
 
     public:
-        static int findPreferredHklOrderingDirection(
-            const std::vector<Vector3i>& hkl, 
-            std::vector<std::vector<Vector3i> > &orderedHklLines,
-            std::vector<std::vector<int> > &mapToOriginalSetIndices);
+        //static int findPreferredHklOrderingDirection(
+        //    const std::vector<Vector3i>& hkl, 
+        //    std::vector<std::vector<Vector3i> > &orderedHklLines,
+        //    std::vector<std::vector<int> > &mapToOriginalSetIndices);
         /** Calculate structure factors and their derivatives*/
         AnyScattererStructureFactorCalculator2(const Crystal &crystal);
 

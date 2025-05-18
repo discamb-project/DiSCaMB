@@ -1,6 +1,4 @@
-#ifndef _DISCAMB_SCATTERING_ANYSCATTERERSTRUCTUREFACTORCALCULATOR2
-#define _DISCAMB_SCATTERING_ANYSCATTERERSTRUCTUREFACTORCALCULATOR2
-
+#pragma once
 
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/Scattering/SF_Engine_DataTypes.h"
@@ -257,4 +255,3 @@ namespace discamb{
     /** @}*/
     } // namespace discamb
 
-#endif

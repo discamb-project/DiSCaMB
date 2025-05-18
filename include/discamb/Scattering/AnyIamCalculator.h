@@ -2,6 +2,7 @@
 
 #include "SfCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
+#include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
 
 namespace discamb {
 
@@ -14,10 +15,13 @@ namespace discamb {
     class AnyIamCalculator : public SfCalculator
     {
         Crystal mCrystal;
-        AnyScattererStructureFactorCalculator *mCalculator;
+        AnyScattererStructureFactorCalculator2 *mCalculator2;
+        AnyScattererStructureFactorCalculator* mCalculator;
 		std::shared_ptr<AtomicFormFactorCalculationsManager> mManager;
-        void set(const Crystal &crystal, bool electronScattering, const std::string& table);
+        void set(const Crystal &crystal, bool electronScattering, const std::string& table, const std::string &algorithm);
         std::vector<std::pair<std::string, std::string> > mModelInfo;
+        bool mUseLineAlgorithm=false;
+        
     public:
         AnyIamCalculator(const Crystal &crystal, bool electronScattering = false, const std::string & table = std::string());
         AnyIamCalculator(const Crystal &crystal, const nlohmann::json &data);

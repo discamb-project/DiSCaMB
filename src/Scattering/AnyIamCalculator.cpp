@@ -5,6 +5,7 @@
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 
 
+
 using namespace std;
 
 namespace discamb {
@@ -14,7 +15,7 @@ namespace discamb {
         bool electronScattering,
         const std::string& table)
     {
-        set(crystal, electronScattering, table);
+        set(crystal, electronScattering, table, "standard");
     }
 
     AnyIamCalculator::AnyIamCalculator(
@@ -34,7 +35,9 @@ namespace discamb {
         if (data.find("table") != data.end())
             table = data.find("table")->get<string>();
 
-        set(crystal, electronScattering, table);
+        string algorithm = data.value("algorithm", "standard");
+
+        set(crystal, electronScattering, table, algorithm);
     }
 
     void AnyIamCalculator::setAnomalous(
@@ -46,7 +49,8 @@ namespace discamb {
     void AnyIamCalculator::set(
         const Crystal &crystal,
         bool electronScattering,
-        const string &table)
+        const string &table,
+        const std::string& algorithm)
     {
         mModelInfo.clear();
         mModelInfo.push_back({ "SCATTERING MODEL", "IAM" });
@@ -70,6 +74,7 @@ namespace discamb {
                 Tables 4.2.6.8 and 6.1.1.4 in of International Tables for Crystallography Vol.C(Wilson & Geist, 1993[Wilson, A.J.C. & Geist, V. (1993).Cryst.Res.Technol. 28, 110.])
                 */
         string tableName;
+        mUseLineAlgorithm = (algorithm == "macromol");
 
         mCrystal = crystal;
         string message = string(", setting IAM sf calculator with ");
@@ -128,7 +133,9 @@ namespace discamb {
         add_to_log(__LINE__, string(__FILE__) + message);
 
         mCalculator = new AnyScattererStructureFactorCalculator(crystal);
+        mCalculator2 = new AnyScattererStructureFactorCalculator2(crystal);
         mCalculator->setAtomicFormfactorManager(mManager);
+        mCalculator2->setAtomicFormfactorManager(mManager);
 
         mModelInfo.push_back({ "FORM FACTORS PARAMETERISATION", tableName });
 
@@ -159,8 +166,17 @@ namespace discamb {
         const std::vector<std::complex<double> > &dTarget_df,
         const std::vector<bool> &countAtomContribution)
     {
-        mCalculator->update(atoms);
-        mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+        if (mUseLineAlgorithm)
+        {
+            mCalculator2->update(atoms);
+            mCalculator2->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+        }
+        else
+        {
+            mCalculator->update(atoms);
+            mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+        }
+
     }
 
     void AnyIamCalculator::calculateStructureFactors(
@@ -169,12 +185,30 @@ namespace discamb {
         std::vector<std::complex<double> > &f,
         const std::vector<bool> &countAtomContribution)
     {
+        bool skip = true;
+        for (bool count : countAtomContribution)
+            if (count)
+                skip = false;
+        if (skip)
+        {
+            f.assign(hkl.size(), 0.0);
+            return;
+        }
         //vector<complex<double> > fake_dTarget_df(hkl.size());
         //std::vector<TargetFunctionAtomicParamDerivatives> dTarget_dparam;
         //mCalculator->update(atoms);
         //mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, fake_dTarget_df, countAtomContribution);
-		mCalculator->update(atoms);
-		mCalculator->calculateStructureFactors(hkl, f, countAtomContribution);
+        if (mUseLineAlgorithm)
+        {
+            cout << "use line algorithm\n";
+            mCalculator2->update(atoms);
+            mCalculator2->calculateStructureFactors(hkl, f, countAtomContribution);
+        }
+        else
+        {
+            mCalculator->update(atoms);
+            mCalculator->calculateStructureFactors(hkl, f, countAtomContribution);
+        }
 
     }
 
@@ -184,7 +218,10 @@ namespace discamb {
 		const std::vector<bool>& includeAtom)
 		const
 	{
-		mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
+        if (mUseLineAlgorithm)
+		    mCalculator2->calculateFormFactors(hkl, formFactors, includeAtom);
+        else
+            mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
 	}
 
 
@@ -200,8 +237,13 @@ namespace discamb {
         discamb::SfDerivativesAtHkl &derivatives,
         const std::vector<bool> &countAtomContribution)
     {
-        mCalculator->calculateStructureFactorsAndDerivatives(hkl, scatteringFactor, derivatives,
-            countAtomContribution);
+        if (mUseLineAlgorithm)
+            mCalculator2->calculateStructureFactorsAndDerivatives(hkl, scatteringFactor, derivatives,
+                countAtomContribution);
+        else
+            mCalculator->calculateStructureFactorsAndDerivatives(hkl, scatteringFactor, derivatives,
+                countAtomContribution);
+
     }
 
 

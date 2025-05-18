@@ -7,12 +7,14 @@
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/IO/cif_io.h"
 #include "discamb/IO/discamb_io.h"
+#include "discamb/IO/NativeIAM_Reader.h"
 #include "discamb/IO/fragmentation_io.h"
 #include "discamb/IO/hkl_io.h"
 #include "discamb/IO/structure_io.h"
 #include "discamb/IO/MATTS_BankReader.h"
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/xyz_io.h"
+#include "discamb/MathUtilities/SphConverter.h"
 #include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
@@ -23,6 +25,7 @@
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamSfCalculator.h"
 #include "discamb/Scattering/NGaussianFormFactor.h"
+#include "discamb/Scattering/scattering_utilities.h"
 #include "discamb/Scattering/statistics.h"
 #include "discamb/Scattering/taam_utilities.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
@@ -181,7 +184,7 @@ double agreementFactor(
     }
 
     double scale = s12 / s22;
-    cout << "scale = " << scale << "\n";
+    //cout << "scale = " << scale << "\n";
     double num = 0, den = 0;
 
     for (int i = 0; i < n; i++)
@@ -1028,7 +1031,7 @@ void sort_hkl(const string& hklFile)
     hkl_io::readHklIndices(hklFile.c_str(), hkl);
     vector<vector<Vector3i> > orderedHklLines;
     vector<vector<int> > mapToOriginalSetIndices;
-    int direction = AnyScattererStructureFactorCalculator2::findPreferredHklOrderingDirection(hkl, orderedHklLines, mapToOriginalSetIndices);
+    int direction = scattering_utilities::findPreferredHklOrderingDirection(hkl, orderedHklLines, mapToOriginalSetIndices);
     Vector3i shift(0, 0, 0);
     shift[direction] = 1;
     ofstream out("sorted_hkl.txt");
@@ -1529,17 +1532,227 @@ void compare_derivatives(
 
 void taam_parallel(
     const string& structureFile,
-    const string& hklFile)
+    const string& hklFile,
+    bool calcOnlyNew,
+    bool sf_and_sfAndDf)
 {
     
     Crystal crystal;
     structure_io::read_structure(structureFile, crystal);
-    //for (auto& atom : crystal.atoms)
-      //  atom.adp.clear();
     vector<vector<complex<double> > > formFactors;
-    vector<Vector3i> hkl;
-
+    vector<Vector3i> hkl_all, hkl;
     hkl_io::readHklIndices(hklFile, hkl);
+    //hkl_io::readHklIndices(hklFile, hkl_all);
+    //set<Vector3i> uniqueHkl(hkl_all.begin(), hkl_all.end());
+    //hkl.insert(hkl.end(),uniqueHkl.begin(), uniqueHkl.end());
+
+    int nHkl = hkl.size();
+    int nAtoms = crystal.atoms.size();
+
+    nlohmann::json json_data;
+    ifstream jsonFileStream("aspher.json");
+    if (jsonFileStream.good())
+        jsonFileStream >> json_data;
+    jsonFileStream.close();
+    auto sfCalculator = SfCalculator::create(crystal, json_data);
+    json_data["algorithm"] = "macromol";
+    auto sfCalculator2 = SfCalculator::create(crystal, json_data);
+
+
+
+    vector<bool> countAtom(crystal.atoms.size(), true);
+    vector<complex<double> > sf_new, sf_standard, sf_plus, sf_minus;
+    vector<TargetFunctionAtomicParamDerivatives> dT_dp, dT_dp_new;
+    vector<complex<double> > dt_df(nHkl, complex<double>(1.0,0.3));
+    // x y z U occ
+    SfDerivativesAtHkl derivatives_ant, derivatives_num, derivatives_num_shift_all;
+    WallClockTimer timer;
+
+    // structure factors call 'calculateStructureFactors'
+
+    if (sf_and_sfAndDf)
+    {
+        if (!calcOnlyNew)
+        {
+            timer.start();
+            sfCalculator->calculateStructureFactors(crystal.atoms, hkl, sf_standard, countAtom);
+            cout << "time = " << timer.stop() << " ms\n";
+        }
+        timer.start();
+        sfCalculator2->calculateStructureFactors(crystal.atoms, hkl, sf_new, countAtom);
+        cout << "time = " << timer.stop() << " ms\n";
+        cout << "agreement factor " << agreementFactor(sf_new, sf_standard) << "\n";
+    }
+
+    // structure factors and derivatives:  'calculateStructureFactorsAndDerivatives'
+    if (!calcOnlyNew)
+    {
+        //auto sfCalculator = SfCalculator::create(crystal, json_data);
+        timer.start();
+        sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp, dt_df, countAtom);
+        cout << "time = " << timer.stop() << " ms\n";
+    }
+
+    DerivativesSelector derivativesSelector;
+    //derivativesSelector.d_adp = false;
+    //derivativesSelector.d_xyz = false;
+    timer.start();
+
+    sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_new, dT_dp_new, dt_df, countAtom, derivativesSelector);
+    cout << "time = " << timer.stop() << " ms\n";
+    if(!calcOnlyNew)
+        cout << "agreement factor " << agreementFactor(sf_new, sf_standard) << "\n";
+
+    //return;
+
+    // check calculateStructureFactorsAndDerivatives
+    //cout<< "calculate structure factors ansd derivatives\n";
+    //timer.start();
+    //sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp, dt_df, countAtom);
+    //cout << "time = " << timer.stop() << " ms\n";
+    //timer.start();
+    //sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_new, dT_dp_new, dt_df, countAtom);
+    //cout << "time = " << timer.stop() << " ms\n";
+
+    bool size_match;
+    double d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor;
+    compare_derivatives(
+        dT_dp,
+        dT_dp_new,
+        size_match,
+        d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor);
+
+    cout << "xyz : " << d_xyz_agreement_factor << "\n"
+         << "adp : " << d_adp_agreement_factor << "\n"
+         << "occ : " << d_occ_agreement_factor << "\n";
+
+
+    //cout << "size match " << boolalpha << size_match << "\n"
+    //    << "agreement factors\n"
+    //    << "xyz : " << d_xyz_agreement_factor << "\n"
+    //    << "adp : " << d_adp_agreement_factor << "\n"
+    //    << "occ : " << d_occ_agreement_factor << "\n";
+    
+
+}
+
+
+void convert_sph_harmonics_test()
+{
+    double v = 1.0 / sqrt(2.0);
+    vector<vector<double> > newCoordinates{ {v,v,0.0}, {-v,v,0.0},{0.0,0.0,1.0} };
+    vector<vector<double> > oldCoordinates{ {1.0,0.0,0.0}, {0.0,1.0,0.0},{0.0,0.0,1.0} };
+    SphConverter sphConverter;
+    vector<vector<vector<double> > > conversionMatrices;
+    sphConverter.setMaxL(4);
+    sphConverter.convert(oldCoordinates, newCoordinates, conversionMatrices);
+    cout << conversionMatrices.size() << endl;
+    vector<double> sph_l1_conv(3), sph_l1{0,0,1};
+
+    for (int i = 0; i < 3; i++)
+    {
+        sph_l1_conv[i] = 0;
+        for (int j = 0; j < 3; j++)
+            sph_l1_conv[i] += conversionMatrices[1][i][j] * sph_l1[j];
+        cout << sph_l1_conv[i] << " ";
+    }
+
+}
+
+void sort_split_hkl(const string& hklFile, int nSets)
+{
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile.c_str(), hkl);
+    vector<vector<Vector3i> > orderedHklLines;
+    vector<vector<int> > mapToOriginalSetIndices;
+    int direction = scattering_utilities::findPreferredHklOrderingDirection(hkl, orderedHklLines, mapToOriginalSetIndices);
+    vector<vector<vector<Vector3i> > > splitOrderedLines;
+    vector < vector < vector <pair<int, int> > > > splitOrderedIndices;
+    vector<vector<vector<int> > > subsetDataHklIdxInOryginalSet;
+    
+    scattering_utilities::splitHklLines(nSets, orderedHklLines, mapToOriginalSetIndices, splitOrderedLines, splitOrderedIndices, subsetDataHklIdxInOryginalSet);
+    Vector3i shift(0, 0, 0);
+    shift[direction] = 1;
+
+    ofstream out("sorted_hkl.txt");
+    for (auto& hklLine : orderedHklLines)
+    {
+        for (auto& h : hklLine)
+            out << h << " ";
+        out << "\n";
+    }
+    out.close();
+
+
+    ofstream out2("sorted_split_hkl.txt");
+
+    for (int setIdx = 0; setIdx < nSets; setIdx++)
+    {
+        out2 << "\n SET " << setIdx + 1 << "\n\n";
+
+        for (int i=0;i< splitOrderedLines[setIdx].size(); i++)
+        {
+            for (int j=0;j< splitOrderedLines[setIdx][i].size(); j++)
+                out2 << splitOrderedLines[setIdx][i][j] << "  " << splitOrderedIndices[setIdx][i][j].first << " " << splitOrderedIndices[setIdx][i][j].second 
+                     << " " << subsetDataHklIdxInOryginalSet[setIdx][i][j] << " , ";
+            out2 << "\n";
+        }
+    }
+    out2.close();
+
+    int nLineBreaks = 0;
+    int breakLenghtTotal = 0;
+    int longestBreak = 0;
+    for (auto& hklLine : orderedHklLines)
+        for (int i = 1; i < hklLine.size(); i++)
+            if (hklLine[i] != shift + hklLine[i - 1])
+            {
+                nLineBreaks++;
+                int breakLenght = hklLine[i][direction] - hklLine[i - 1][direction] + 1;
+                if (breakLenght > longestBreak)
+                    longestBreak = breakLenght;
+                breakLenghtTotal += breakLenght;
+            }
+    cout << "n reflections = " << hkl.size() << "\n";
+    cout << "n lines = " << orderedHklLines.size() << "\n";
+    cout << "n line breaks = " << nLineBreaks << "\n";
+    cout << "break length = " << breakLenghtTotal << "\n";
+    cout << "longest break = " << longestBreak << "\n";
+}
+
+void compare_olex_taam(
+    const string &fcf_file,
+    const string &dis_file)
+{
+    vector<cif_io::DataSet> data_sets;
+    cif_io::readCif(fcf_file, data_sets);
+    cif_io::DataSet& fcf = data_sets[0];
+    vector<Vector3i> hkl;
+    vector<complex<double> > sf_fcf, sf_discamb;
+    vector<int> tagsIndices;
+    int loopIdx;
+    bool hassLoop = cif_io::findLoopIndex(fcf, { "_refln_index_h" }, loopIdx, tagsIndices);
+    vector<string>& h_str = fcf.loops[loopIdx].values[0];
+    vector<string>& k_str = fcf.loops[loopIdx].values[1];
+    vector<string>& l_str = fcf.loops[loopIdx].values[2];
+    vector<string>& a_str = fcf.loops[loopIdx].values[5];
+    vector<string>& b_str = fcf.loops[loopIdx].values[6];
+
+    for (int i = 0; i < h_str.size(); i++)
+    {
+        hkl.push_back({ stoi(h_str[i]), stoi(k_str[i]) ,stoi(l_str[i]) });
+        sf_fcf.push_back({ stod(a_str[i]), stod(b_str[i]) });
+    }
+
+    ////
+
+    Crystal crystal;
+
+    structure_io::read_structure(dis_file, crystal);
+    //vector<vector<complex<double> > > formFactors;
+    //vector<Vector3i> hkl;
+
+    //hkl_io::readHklIndices(hklFile, hkl);
 
     int nHkl = hkl.size();
     int nAtoms = crystal.atoms.size();
@@ -1552,343 +1765,65 @@ void taam_parallel(
     auto sfCalculator = SfCalculator::create(crystal, json_data);
 
     vector<bool> countAtom(crystal.atoms.size(), true);
-    vector<complex<double> > sf_new, sf_standard, sf_plus, sf_minus;
-    vector<TargetFunctionAtomicParamDerivatives> dT_dp, dT_dp_new;
-    vector<complex<double> > dt_df(nHkl, 1.0);
-    // x y z U occ
-    SfDerivativesAtHkl derivatives_ant, derivatives_num, derivatives_num_shift_all;
-    WallClockTimer timer;
-    timer.start();
-    sfCalculator->calculateStructureFactors(crystal.atoms, hkl, sf_standard, countAtom);
-    cout << "time = " << timer.stop() << " ms\n";
+    sfCalculator->calculateStructureFactors(crystal.atoms, hkl, sf_discamb, countAtom);
+    cout << "agreement factor " << agreementFactor(sf_discamb, sf_fcf);
 
-    json_data["algorithm"] = "macromol";
-    //for (auto& atom : crystal.atoms)
-    //{
-    //    Vector3d cart;
-    //    crystal.unitCell.fractionalToCartesian(atom.coordinates, cart);
-    //    atom.coordinates = cart;
-    //}
-
-    auto sfCalculator2 = SfCalculator::create(crystal, json_data);
-    timer.start();
-
-    sfCalculator2->calculateStructureFactors(crystal.atoms, hkl, sf_new, countAtom);
-    cout << "time = " << timer.stop() << " ms\n";
-
-    cout << "agreement factor " << agreementFactor(sf_new, sf_standard) << "\n";
-
-    // check calculateStructureFactorsAndDerivatives
-    cout<< "calculate structure factors ansd derivatives\n";
-    timer.start();
-    sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp, dt_df, countAtom);
-    cout << "time = " << timer.stop() << " ms\n";
-    timer.start();
-    sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp_new, dt_df, countAtom);
-    cout << "time = " << timer.stop() << " ms\n";
-
-    bool size_match;
-    double d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor;
-    compare_derivatives(
-        dT_dp,
-        dT_dp_new,
-        size_match,
-        d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor);
-
-    cout << "size match " << boolalpha << size_match << "\n"
-        << "agreement factors\n"
-        << "xyz : " << d_xyz_agreement_factor << "\n"
-        << "adp : " << d_adp_agreement_factor << "\n"
-        << "occ : " << d_occ_agreement_factor << "\n";
-    
-
-    //dt_df[0] = 1.0;
-    //sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf, dT_dp, dt_df, countAtom);
-    //for (int i = 0; i < dT_dp.size(); i++)
-    //    cout << i << " " << dT_dp[i].atomic_position_derivatives << "\n";
-    /*
-    ofstream out("derivatives");
-
-    for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
+}
+struct Choice {
+    bool dx = false;
+    bool docc = false;
+    bool dU = false;
+    bool dfpfdp = false;
+    void set(int option)
     {
-        out << "\n HKL = " << hkl[hklIdx] << "\n\n";
-        calc_derivatives_numerically(crystal, sfCalculator, hkl[hklIdx], derivatives_num, countAtom);
-        calc_derivatives_numerically_shift_all(crystal, sfCalculator, hkl[hklIdx], derivatives_num_shift_all, countAtom);
-        sfCalculator->calculateStructureFactorsAndDerivatives(hkl[hklIdx], sf[hklIdx], derivatives_ant, countAtom);
-        out << "dF/dxyz\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        {
-            out << atomIdx << "\n";
-            for (int i = 0; i < 3; i++)
-                out << "    " << i << " " << fixed << setprecision(6) << derivatives_ant.atomicPostionDerivatives[atomIdx][i] << "  "
-                << fixed << setprecision(6) << derivatives_num.atomicPostionDerivatives[atomIdx][i] << "  "
-                << fixed << setprecision(6) << derivatives_num_shift_all.atomicPostionDerivatives[atomIdx][i] << "\n";
-        }
-        out << "dF/d_occ\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-            out << atomIdx << " " << fixed << setprecision(6) << derivatives_ant.occupancyDerivatives[atomIdx] << "  "
-            << fixed << setprecision(6) << derivatives_num.occupancyDerivatives[atomIdx] << "\n";
-        out << "dF/d_adp\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        {
-            out << atomIdx;
-            for (int i = 0; i < derivatives_ant.adpDerivatives[atomIdx].size(); i++)
-                out << "   " << i << " " << fixed << setprecision(6) << derivatives_ant.adpDerivatives[atomIdx][i] << "  "
-                << fixed << setprecision(6) << derivatives_num.adpDerivatives[atomIdx][i] << "\n";
-        }
+
     }
+};
 
-    for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
-    {
-        out << "\n HKL = " << hkl[hklIdx] << "\n\n";
-        calc_derivatives_numerically(crystal, sfCalculator, hkl[hklIdx], derivatives_num, countAtom);
-        calc_derivatives_numerically_shift_all(crystal, sfCalculator, hkl[hklIdx], derivatives_num_shift_all, countAtom);
-        sfCalculator->calculateStructureFactorsAndDerivatives(hkl[hklIdx], sf[hklIdx], derivatives_ant, countAtom);
-        out << "dF/dxyz\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                complex<double> v1 = derivatives_ant.atomicPostionDerivatives[atomIdx][i];
-                complex<double> v2 = derivatives_ant.atomicPostionDerivatives[atomIdx][i];
-                if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
-                    if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
-                        out << atomIdx << " " << i << " real\n";
-                if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
-                    if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
-                        out << atomIdx << " " << i << " imag\n";
-
-            }
-        }
-        out << "dF/d_occ\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        {
-            complex<double> v1 = derivatives_ant.occupancyDerivatives[atomIdx];
-            complex<double> v2 = derivatives_ant.occupancyDerivatives[atomIdx];
-            if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
-                if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
-                    out << atomIdx << " " << " real\n";
-            if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
-                if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
-                    out << atomIdx << " " << " imag\n";
-        }
-        out << "dF/d_adp\n";
-        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        {
-            out << atomIdx;
-            for (int i = 0; i < derivatives_ant.adpDerivatives[atomIdx].size(); i++)
-            {
-                complex<double> v1 = derivatives_ant.adpDerivatives[atomIdx][i];
-                complex<double> v2 = derivatives_ant.adpDerivatives[atomIdx][i];
-                if (fabs(v1.real()) > 1e-10 || fabs(v2.real()) > 1e-10)
-                    if (fabs(v1.real() - v2.real()) / (fabs(v1.real()) + fabs(v2.real())) > 1e-4)
-                        out << atomIdx << " " << i << " real\n";
-                if (fabs(v1.imag()) > 1e-10 || fabs(v2.imag()) > 1e-10)
-                    if (fabs(v1.imag() - v2.imag()) / (fabs(v1.imag()) + fabs(v2.imag())) > 1e-4)
-                        out << atomIdx << " " << i << " imag\n";
-
-            }
-        }
-    }
-
-
-    out.close();
-    */
-}
-
-//void defaultInput(
-//    bool electronScatteringIfNoAspherJsonFile,
-//    bool unitCellChargeIfNoAspherJsonFile,
-//    double unitCellCharge,
-//    nlohmann::json& jsonData,
-//    const std::string& jobName)
-//{
-//    nlohmann::json data;
-//
-//    stringstream ss;
-//    ss <<
-//        "{\n"
-//        "    \"use discamb\": \"yes\",\n"
-//        "        \"form factor engine\" :\n"
-//        "    {\n"
-//        "        \"type\": \"ubdb\",\n"
-//        "            \"data\" :\n"
-//        "        {\n"
-//        "            \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
-//        "            \"multipole cif\" : \"" + jobName + ".cif_rho\"";
-//    if (electronScatteringIfNoAspherJsonFile)
-//        ss << ",\n   \"electron_scattering\": true";
-//
-//    if (unitCellChargeIfNoAspherJsonFile)
-//        ss << ",\n   \"unit cell charge\": " << unitCellCharge;
-//
-//    ss << "\n"
-//        "        }\n"
-//        "    }\n"
-//        "}\n";
-//
-//    ss >> data;
-//
-//    jsonData = data;
-//}
-
-void defaultInput(
-    bool electronScatteringIfNoAspherJsonFile,
-    bool unitCellChargeIfNoAspherJsonFile,
-    double unitCellCharge,
-    nlohmann::json& jsonData,
-    const std::string& jobName)
-{
-    nlohmann::json data;
-
-    stringstream ss;
-    ss <<
-        "{\n"
-        "    \"assignment info\" : \"print_to_discamb2tsc_log_file\"\n,"
-        "    \"multipole cif\" : \"" + jobName + ".cif_rho\"";
-    if (electronScatteringIfNoAspherJsonFile)
-        ss << ",\n   \"electron_scattering\": true";
-
-    if (unitCellChargeIfNoAspherJsonFile)
-        ss << ",\n   \"unit cell charge\": " << unitCellCharge;
-
-    ss << "\n"
-        "}\n";
-
-    ss >> data;
-
-    jsonData = data;
-}
-
-std::shared_ptr<HcAtomBankStructureFactorCalculator> sfCalculatorFromJsonFile(
-    const Crystal& crystal,
-    bool& aspherJsonPresent,
-    bool electronScatteringIfNoAspherJsonFile,
-    bool unitCellChargeIfNoAspherJsonFile,
-    double unitCellCharge,
-    bool& electronScattering,
-    const string& jobName)
+void convert(int& optionInt, Choice& optionStruc)
 {
 
-    aspherJsonPresent = filesystem::exists(filesystem::path("aspher.json"));
-    nlohmann::json jsonData;
+}
 
-    if (aspherJsonPresent)
-    {
-        ifstream jsonFileStream("aspher.json");
-
-        if (jsonFileStream.good())
-        {
-            nlohmann::json jsonDataFromFile;
-            jsonFileStream >> jsonDataFromFile;
-            auto data = jsonDataFromFile.find("form factor engine");
-            if (data != jsonDataFromFile.end())
-                jsonData = jsonDataFromFile["form factor engine"]["data"];
-            else
-                jsonData = jsonDataFromFile;
-        }
-        else
-        {
-            on_error::throwException("can not read aspher.json file, expected to be present in the current directory", __FILE__, __LINE__);
-            return std::shared_ptr<HcAtomBankStructureFactorCalculator>(nullptr);
-        }
-    }
-    else
-        defaultInput(electronScatteringIfNoAspherJsonFile, unitCellChargeIfNoAspherJsonFile, unitCellCharge, jsonData, jobName);
-
-
-    // electrons? bank path give?
-    electronScattering = false;
-    bool hasBankPath = false;
-
+void options()
+{
+    // dx, docc, dU, dfpfdp
     
-    electronScattering = jsonData.value("electron_scattering", electronScattering);
-    electronScattering = jsonData.value("electron scattering", electronScattering);
-    if (jsonData.find("bank path") != jsonData.end())
-        hasBankPath = true;
-
-    //if (!hasBankPath)
-    return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData);
-
-    //string bankString;
-    //default_ubdb_bank_string(bankString);
-    //return make_shared<HcAtomBankStructureFactorCalculator>(crystal, jsonData, bankString);
-}
-
-void addMattsCitation(string mattsVersion)
-{
-    clog << "Citation\n"
-        << "If you used discambMATTS2tsc in your work please add the following text\n"
-        << "to the resulting.cif file :\n"
-        << "_refine_special_details\n"
-        << ";\n"
-        << "TAAM / MATTS refinement.\n"
-        << "Uses aspherical atomic scattering factors computed by the DiSCaMB library\n"
-        << "(Chodkiewicz et.al., J.Appl.Cryst., 2018, 51, 193 - 199)\n"
-        << "from multipole model\n"
-        << "(Hansen & Coppens, Acta Cryst.A, 1978, 34, 909 - 921)\n"
-        << "parametrized using the MATTS2021 data bank\n"
-        << "(Jha, et al., J.Chem.Inf.Model., 2022, 62, 3752 - 3765,\n"
-        << "    Rybicka, et al., J.Chem.Inf.Model., 2022, 62, 3766 - 3783)\n"
-        << "Refinement performed with.tsc generated by discamb2TAAMtsc " << mattsVersion << "\n"
-        << ";\n"
-        << "and in your publication, please, cite:\n"
-        << "Chodkiewicz et.al., J.Appl.Cryst., 2018, 51, 193 - 199\n"
-        << "Hansen & Coppens, Acta Cryst.A, 1978, 34, 909 - 921\n"
-        << "Jha, et al., J.Chem.Inf.Model., 2022, 62, 3752 - 3765\n"
-        << "Rybicka, et al., J.Chem.Inf.Model., 2022, 62, 3766 - 3783\n";
-}
-
-void test_bnk(const string& structureFile)
-{
-    ofstream logFile("discambMATTS2tsc.log");
-    auto clog_orginal_rdbuf = std::clog.rdbuf();
-    std::clog.rdbuf(logFile.rdbuf());
-
-    Crystal crystal;
-    structure_io::read_structure(structureFile, crystal);
-    bool aspherJsonPresent;
-    bool electronScatteringIfNoAspherJsonFile = false;
-    bool unitCellChargeIfNoAspherJsonFile = false;
-    double unitCellCharge = 0.0;
-    bool electronScattering;
-    string jobName="jobName";
-    time_t time_now = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
-    string date = __DATE__;
-    string time = __TIME__;
-    string discambMATTS2tscVersion = "3.009";
-
-    string header = string("\n  discambMATTS2tsc, version ") + discambMATTS2tscVersion + string("\n  compiled on ") +
-        date + string(" , ") + time + string(".\n\n");
-
-    clog << header
-        << "\n" << "file created at " << ctime(&time_now) << "\n";
-
-
-    auto sfCalculator = sfCalculatorFromJsonFile(
-        crystal,
-        aspherJsonPresent,
-        electronScatteringIfNoAspherJsonFile,
-        unitCellChargeIfNoAspherJsonFile,
-        unitCellCharge,
-        electronScattering,
-        jobName);
-    
-    addMattsCitation(discambMATTS2tscVersion);
-    std::clog.rdbuf(clog_orginal_rdbuf);
-    logFile.close();
+    int options;
+    enum class settings  {dx = 0, docc=2, dU=4, dfpfdp=8};
 
 }
 
 int main(int argc, char* argv[])
 {
     try {
-        test_bnk(argv[1]);
+        vector<string> arguments, options;
+        parse_cmd::get_args_and_options(argc, argv, arguments, options);
+        //check_args(argc, argv, 2, { "structure file", "hkl file" });
+        if (arguments.size() != 2)
+            on_error::throwException("expected structure file, hkl indices file and optionally -n - for new version calculation\n", __FILE__, __LINE__);
+        bool onlyNew = false;
+        if (!options.empty())
+            if (options[0] == "-n")
+                onlyNew = true;
+        bool sf_and_sfAndDf = true;
+        if (!options.empty())
+            if (options[0] == "-d")
+                sf_and_sfAndDf = false;
+
+        taam_parallel(argv[1], argv[2], onlyNew, sf_and_sfAndDf);
         return 0;
 
-        check_args(argc, argv, 2, { "structure file", "hkl file" });
-        taam_parallel(argv[1], argv[2]);
+        check_args(argc, argv, 2, { "fcf file", "structure file" });
+        compare_olex_taam(argv[1], argv[2]);
         return 0;
+
+        check_args(argc, argv, 2, { "hkl indices", "n sets" });
+        sort_split_hkl(argv[1], atoi(argv[2]));
+        return 0;
+
+        //convert_sph_harmonics_test();
+        //return 0;
 
         copy_compare();
         return 0;
