@@ -205,6 +205,63 @@ namespace discamb {
 
     void CrystalAtomTypeAssigner::assign(
         const Crystal& crystal,
+        const std::vector < std::vector <std::pair<int, std::string> > >& fragmentAtoms,
+        const std::vector< std::vector<int> >& atomsToAssign,
+        std::vector< std::vector<int> >& typeID,
+        std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > >& lcs) 
+        const
+    {
+        typeID.clear();
+        lcs.clear();
+
+        SpaceGroupOperation spaceGroupOperation;
+        //Vector3<CrystallographicRational> translation;
+        //Matrix3i rotation;
+        //Vector3i latticeTranslation;
+
+        int nFragments = fragmentAtoms.size();
+        typeID.resize(nFragments);
+        lcs.resize(nFragments);
+
+        vector<int> atomicNumbersASU;
+        vector<Vector3d> positions;
+
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersASU);
+
+        for (int fragmentIdx = 0; fragmentIdx < nFragments; fragmentIdx++)
+        {
+            vector<Vector3d> positions;
+            vector<int> atomicNumbers;
+            int nAtoms = fragmentAtoms[fragmentIdx].size();
+            vector<AtomInCrystalID> fragmentAtomsIds;
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+                auto const& atom = fragmentAtoms[fragmentIdx][atomIdx];
+                crystal_structure_utilities::atomPosition(atom.first, SpaceGroupOperation(atom.second), crystal);
+                atomicNumbers.push_back(atomicNumbersASU[atom.first]);
+                spaceGroupOperation = SpaceGroupOperation(fragmentAtoms[fragmentIdx][atomIdx].second);
+                fragmentAtomsIds.push_back({ atom.first, SpaceGroupOperation(atom.second)});
+            }
+
+            StructureWithDescriptors structureWithDescriptors;
+            structureWithDescriptors.set(atomicNumbers, positions);
+            vector<LocalCoordinateSystem<int> > lcsFragment;
+            vector<int> typeIds;
+            mAssigner.assign(structureWithDescriptors, atomsToAssign[fragmentIdx], typeIds, lcsFragment);
+
+            // convert lcs molecule to lcs crystal
+            int nAtomsToAssign = atomsToAssign[fragmentIdx].size();
+            lcs[fragmentIdx].resize(nAtomsToAssign);
+            for (int atomIdx = 0; atomIdx < nAtomsToAssign; atomIdx++)
+                convertUbdbLcs(lcsFragment[atomIdx], fragmentAtomsIds, lcs[fragmentIdx][atomIdx]);
+
+        }
+
+    }
+
+
+    void CrystalAtomTypeAssigner::assign(
+        const Crystal& crystal,
         std::vector<int> &typeID,
         std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs)
         const

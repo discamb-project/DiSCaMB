@@ -124,6 +124,22 @@ const Matrix3<T> operator-(const Matrix3<T> &matrix1,const Matrix3<T> &matrix2);
 template<typename T>
 bool operator==(const Matrix3<T> &matrix1, const Matrix3<T> &matrix2);
 
+template <typename T>
+bool operator<(const Matrix3<T>& v1, const Matrix3<T>& v2);
+
+template <typename T>
+bool operator<=(const Matrix3<T>& v1, const Matrix3<T>& v2);
+
+template <typename T>
+bool operator!=(const Matrix3<T>& v1, const Matrix3<T>& v2);
+
+template <typename T>
+bool operator>=(const Matrix3<T>& v1, const Matrix3<T>& v2);
+
+template <typename T>
+bool operator>(const Matrix3<T>& v1, const Matrix3<T>& v2);
+
+
 // matrix - vector
 
 template<typename T>
@@ -425,6 +441,54 @@ const Matrix3<T> &m2)
     return m1(0,0) == m2(0,0) && m1(0,1) == m2(0,1) && m1(0,2) == m2(0,2) &&
            m1(1,0) == m2(1,0) && m1(1,1) == m2(1,1) && m1(1,2) == m2(1,2) &&
            m1(2,0) == m2(2,0) && m1(2,1) == m2(2,1) && m1(2,2) == m2(2,2);
+}
+
+template <typename T>
+bool operator<(const Matrix3<T>& v1, const Matrix3<T>& v2)
+{
+    if (v1(0, 0) < v2(0, 0)) return true;
+    if (v1(0, 0) > v2(0, 0)) return false;
+    if (v1(0, 1) < v2(0, 1)) return true;
+    if (v1(0, 1) > v2(0, 1)) return false;
+    if (v1(0, 2) < v2(0, 2)) return true;
+    if (v1(0, 2) > v2(0, 2)) return false;
+    if (v1(1, 0) < v2(1, 0)) return true;
+    if (v1(1, 0) > v2(1, 0)) return false;
+    if (v1(1, 1) < v2(1, 1)) return true;
+    if (v1(1, 1) > v2(1, 1)) return false;
+    if (v1(1, 2) < v2(1, 2)) return true;
+    if (v1(1, 2) > v2(1, 2)) return false;
+    if (v1(2, 0) < v2(2, 0)) return true;
+    if (v1(2, 0) > v2(2, 0)) return false;
+    if (v1(2, 1) < v2(2, 1)) return true;
+    if (v1(2, 1) > v2(2, 1)) return false;
+    if (v1(2, 2) < v2(2, 2)) return true;
+    return false; // equal
+}
+
+template <typename T>
+bool operator<=(const Matrix3<T>& v1, const Matrix3<T>& v2)
+{
+    if (v1 == v2) return true;
+    return v1 < v2;
+}
+
+template <typename T>
+bool operator!=(const Matrix3<T>& v1, const Matrix3<T>& v2)
+{
+    return !(v1 == v2);
+}
+
+template <typename T>
+bool operator>=(const Matrix3<T>& v1, const Matrix3<T>& v2)
+{
+    return !(v1 < v2);
+}
+
+template <typename T>
+bool operator>(const Matrix3<T>& v1, const Matrix3<T>& v2)
+{
+    return !(v1 <= v2);
 }
 
 

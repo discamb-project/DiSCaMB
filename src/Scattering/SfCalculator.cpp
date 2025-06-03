@@ -136,6 +136,30 @@ namespace discamb {
         on_error::not_implemented(__FILE__, __LINE__);
     }
 
+    /*
+    nlohmann::json json_data;
+    ifstream jsonFileStream("aspher.json");
+
+    if (jsonFileStream.good())
+        jsonFileStream >> json_data;
+    jsonFileStream.close();
+
+    */
+
+    SfCalculator* SfCalculator::create(
+        const Crystal& crystal,
+        const std::string jsonFileName)
+    {
+        nlohmann::json json_data;
+        ifstream jsonFileStream(jsonFileName);
+
+        if (jsonFileStream.good())
+            jsonFileStream >> json_data;
+        jsonFileStream.close();
+        return create(crystal, json_data);
+    }
+
+
     SfCalculator *SfCalculator::create(
         const Crystal &crystal,
         const nlohmann::json &data)

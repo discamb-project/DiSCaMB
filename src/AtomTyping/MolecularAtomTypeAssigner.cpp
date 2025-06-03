@@ -76,7 +76,7 @@ namespace discamb {
 
     void MolecularAtomTypeAssigner::assign(
         const StructureWithDescriptors &descriptors,
-        std::vector<int> &atomsToAssign,
+        const std::vector<int> &atomsToAssign,
         std::vector<int> &typesID,
         std::vector<LocalCoordinateSystem<int> > &coordinateSystems)
         const

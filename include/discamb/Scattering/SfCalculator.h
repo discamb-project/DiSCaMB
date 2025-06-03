@@ -30,6 +30,9 @@ namespace discamb {
         static SfCalculator *create(const Crystal &crystal,
                                     const nlohmann::json &data = nlohmann::json());
 
+        static SfCalculator* create(const Crystal& crystal, const std::string jsonFileName);
+
+
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const = 0;
 
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous) =0;

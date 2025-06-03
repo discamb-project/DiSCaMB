@@ -1,3 +1,5 @@
+#define _CRTDBG_MAP_ALLOC
+
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/BasicChemistry/periodic_table.h"
@@ -1554,9 +1556,10 @@ void taam_parallel(
     if (jsonFileStream.good())
         jsonFileStream >> json_data;
     jsonFileStream.close();
-    auto sfCalculator = SfCalculator::create(crystal, json_data);
+    //auto sfCalculator = SfCalculator::create(crystal, json_data);
+    shared_ptr<SfCalculator> sfCalculator = shared_ptr<SfCalculator>(SfCalculator::create(crystal, json_data));
     json_data["algorithm"] = "macromol";
-    auto sfCalculator2 = SfCalculator::create(crystal, json_data);
+    shared_ptr<SfCalculator> sfCalculator2 = shared_ptr<SfCalculator>(SfCalculator::create(crystal, json_data));
 
 
 
@@ -1794,9 +1797,51 @@ void options()
 
 }
 
+void make_hkl(
+    const string& structureFile,
+    const string& indicesFile,
+    const std::string &_jsonFile)
+{
+    string jsonFile = _jsonFile;
+    if (jsonFile.empty())
+        jsonFile = "aspher.json";
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(indicesFile, hkl);
+    vector<complex<double> > sf;
+    vector<bool> countAtom(crystal.atoms.size(), true);
+    auto sfCalculator = SfCalculator::create(crystal, jsonFile);
+    sfCalculator->calculateStructureFactors(crystal.atoms, hkl, sf, countAtom);
+    
+    
+    /*
+    void writeShelxHkl(
+        const std::string & fileName,
+        const std::vector<Vector3i> &hkl,
+        const std::vector<double> &intensities,
+        const std::vector<double> &sigma,
+        const std::vector<int> &batchNumber,
+        bool freeFormat);
+    */
+
+    vector<double> intensities;
+    vector<double> sigma;
+    for (int i = 0; i < sf.size(); i++)
+    {
+        intensities.push_back(abs(sf[i]) * abs(sf[i]));
+        sigma.push_back(0.02 * intensities.back() + 0.01);
+    }
+    vector<int> batchNumber(sf.size(), 1);
+
+
+    hkl_io::writeShelxHkl("out.hkl", hkl, intensities, sigma, batchNumber, false);
+}
+
 int main(int argc, char* argv[])
 {
     try {
+
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
         //check_args(argc, argv, 2, { "structure file", "hkl file" });
@@ -1812,6 +1857,12 @@ int main(int argc, char* argv[])
                 sf_and_sfAndDf = false;
 
         taam_parallel(argv[1], argv[2], onlyNew, sf_and_sfAndDf);
+        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+        _CrtDumpMemoryLeaks();
+        return 0;
+
+        check_args(argc, argv, 3, { "structure file", "indices file", "json file"});
+        make_hkl(argv[1], argv[2], argc > 3 ? argv[3] : "");
         return 0;
 
         check_args(argc, argv, 2, { "fcf file", "structure file" });

@@ -25,6 +25,14 @@ namespace discamb {
         void setDescriptorsSettings(const DescriptorsSettings &settings);
 
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
+        
+        void assign(
+            const Crystal& crystal, 
+            const std::vector < std::vector <std::pair<int, std::string> > > &fragmentAtoms,
+            const std::vector< std::vector<int> >& atomsToAssign,
+            std::vector< std::vector<int> >& typeID, 
+            std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
+        
         void assign(const Crystal& crystal, std::vector<int>& typeID, std::vector<std::vector<Vector3d> > &lcs) const;
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs,
                     StructureWithDescriptors &descriptors) const;

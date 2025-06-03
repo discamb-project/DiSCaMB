@@ -131,9 +131,14 @@ namespace discamb {
         }
 
         add_to_log(__LINE__, string(__FILE__) + message);
-
-        mCalculator = new AnyScattererStructureFactorCalculator(crystal);
-        mCalculator2 = new AnyScattererStructureFactorCalculator2(crystal);
+        /*
+std::shared_ptr < AnyScattererStructureFactorCalculator2> mCalculator2;
+        std::shared_ptr < AnyScattererStructureFactorCalculator> mCalculator;
+        */
+        //mCalculator = new AnyScattererStructureFactorCalculator(crystal);
+        mCalculator = make_shared<AnyScattererStructureFactorCalculator>(crystal);
+        //mCalculator2 = new AnyScattererStructureFactorCalculator2(crystal);
+        mCalculator2 = make_shared<AnyScattererStructureFactorCalculator2>(crystal);
         mCalculator->setAtomicFormfactorManager(mManager);
         mCalculator2->setAtomicFormfactorManager(mManager);
 
@@ -147,7 +152,7 @@ namespace discamb {
     }
 
     AnyIamCalculator::~AnyIamCalculator() {
-        delete mCalculator;
+        //delete mCalculator;
     }
 
     void AnyIamCalculator::getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo)

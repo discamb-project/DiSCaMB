@@ -27,7 +27,7 @@ namespace discamb {
         void assign(const std::vector<int> &atomicNumbers, const std::vector<Vector3d> &positions, const std::vector<std::string> &labels, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
         void assign(const std::vector<int> &atomicNumbers, const std::vector<Vector3d> &positions, const std::vector<std::string> &labels, std::vector<int> &atomsToAssign, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
         void assign(const StructureWithDescriptors &descriptors, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
-        void assign(const StructureWithDescriptors &descriptors, std::vector<int> &atomsToAssign, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
+        void assign(const StructureWithDescriptors &descriptors, const std::vector<int> &atomsToAssign, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
 
 
 

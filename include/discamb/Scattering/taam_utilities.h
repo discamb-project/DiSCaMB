@@ -13,7 +13,7 @@ namespace discamb {
 
 
     namespace taam_utilities {
-
+       
        void type_assignment_to_unscaled_HC_parameters(
             const std::vector<AtomTypeHC_Parameters> &bankMultipoleParameters,
             const std::vector<int> &atomTypeAssignment,
