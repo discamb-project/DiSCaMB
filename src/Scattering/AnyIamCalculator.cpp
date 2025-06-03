@@ -148,6 +148,7 @@ namespace discamb {
 
     AnyIamCalculator::~AnyIamCalculator() {
         delete mCalculator;
+        delete mCalculator2;
     }
 
     void AnyIamCalculator::getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo)
