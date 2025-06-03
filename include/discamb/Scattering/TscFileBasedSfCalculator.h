@@ -22,13 +22,9 @@ namespace discamb {
 
 		TscFileBasedSfCalculator(const Crystal& crystal, const nlohmann::json& data);
 
-		virtual ~TscFileBasedSfCalculator() {};
+		virtual ~TscFileBasedSfCalculator();
         
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const {};
-		
-        virtual void setAnomalous(const std::vector<std::complex<double> >& anomalous);
-		
-        virtual void calculateStructureFactorsAndDerivatives(
 			const std::vector<AtomInCrystal>& atoms,
 			const std::vector<Vector3i>& hkl,
 			std::vector<std::complex<double> >& f,

@@ -157,5 +157,8 @@ namespace discamb {
 		mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
 	}
 
-
+	TscFileBasedSfCalculator::~TscFileBasedSfCalculator(){
+		delete mCalculator;
+	}
+	
 }
