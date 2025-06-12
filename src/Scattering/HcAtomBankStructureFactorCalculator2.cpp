@@ -311,6 +311,7 @@ namespace discamb {
         const std::string &algorithm,
         const std::vector<TaamFragmet>& taamFragments)
     {
+        mFragments = taamFragments;
         mModelInfo.clear();
         mAlgorithm = algorithm;
         mModelInfo.push_back({ "SCATTERING MODEL", "TAAM" });

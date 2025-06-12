@@ -17,10 +17,9 @@ namespace discamb {
     class AnyIamCalculator : public SfCalculator
     {
         Crystal mCrystal;
-        //AnyScattererStructureFactorCalculator2 *mCalculator2;
-        //AnyScattererStructureFactorCalculator* mCalculator;
-        std::shared_ptr < AnyScattererStructureFactorCalculator2> mCalculator2;
-        std::shared_ptr < AnyScattererStructureFactorCalculator> mCalculator;
+        AnyScattererStructureFactorCalculator2 *mCalculator2;
+        AnyScattererStructureFactorCalculator* mCalculator;
+        
 		std::shared_ptr<AtomicFormFactorCalculationsManager> mManager;
         void set(const Crystal &crystal, bool electronScattering, const std::string& table, const std::string &algorithm);
         std::vector<std::pair<std::string, std::string> > mModelInfo;

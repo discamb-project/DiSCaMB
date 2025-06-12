@@ -189,6 +189,7 @@ void calculateSF_IAM(
     const std::vector<REAL> &atomic_occupancy,
     const std::vector<REAL> &atomic_multiplicity_weight,
     const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
+    const std::vector<Matrix3i>& symmetry_operations_rotation_matrix,
     bool centrosymmetric,
     const Vector3<REAL> &inversionTranslation,
     const std::vector<Vector3<REAL> > &h_vectors,

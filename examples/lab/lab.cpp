@@ -1838,9 +1838,138 @@ void make_hkl(
     hkl_io::writeShelxHkl("out.hkl", hkl, intensities, sigma, batchNumber, false);
 }
 
+void readFragments(
+    const string& fragmentsFile,
+    const Crystal& crystal,
+    vector < vector <pair<int, std::string> > >& fragmentAtoms,
+    vector<vector<int> > &atomsToAssign)
+{
+    fragmentAtoms.clear();
+    atomsToAssign.clear();
+
+    ifstream in(fragmentsFile);
+    if (!in.good())
+        on_error::throwException("cannot open fragments file " + fragmentsFile, __FILE__, __LINE__);
+
+    string line;
+
+    while (getline(in, line))
+    {
+        if (line.empty())
+            continue;
+        if (line[0] == '#')
+            continue; // skip comments
+
+        vector<int> fragmentAtomsToAssign;
+        vector < pair<int, string> > atomListIntStr;
+        vector < pair<string, string> > atomListStrStr;
+        int nAtoms = stoi(line);
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            getline(in, line);
+            vector<string> words;
+            string_utilities::split(line, words, ' ');
+            if (words.size() < 2)
+                on_error::throwException("incorrect line in fragments file " + fragmentsFile + ": " + line, __FILE__, __LINE__);
+            double weight = stod(words[0]);
+            if(weight > 0.0)
+                fragmentAtomsToAssign.push_back(atomIdx);
+            string label = words[1];
+            string symmOp = "x,y,z"; // default
+            if (words.size() == 3)
+                symmOp = words[2];
+            atomListStrStr.push_back({ label, symmOp });
+        }
+        crystal_structure_utilities::convertAtomList(crystal, atomListStrStr, atomListIntStr);
+        fragmentAtoms.push_back(atomListIntStr);
+        atomsToAssign.push_back(fragmentAtomsToAssign);
+    }
+}
+
+void type_assign_disorder(
+    const string &structureFile,
+    const string &fragmentsFile,
+    const string& bankFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector < vector <pair<int, std::string> > > fragmentAtoms;
+    vector<vector<int> > atomsToAssign;
+    readFragments(fragmentsFile, crystal, fragmentAtoms, atomsToAssign);
+    CrystalAtomTypeAssigner assigner;
+    vector< vector<int> > typeID;
+    vector< vector<LocalCoordinateSystem<AtomInCrystalID> > > lcs;
+
+    //--------
+    MATTS_BankReader bankReader;
+    vector<AtomType> atomTypes;
+    vector<AtomTypeHC_Parameters> typeParameters;
+    BankSettings bankSettings;
+
+    bankReader.read(bankFile, atomTypes, typeParameters, bankSettings);
+
+    assigner.setAtomTypes(atomTypes);
+ 
+    assigner.assign(crystal, fragmentAtoms, atomsToAssign, typeID, lcs);
+    //--------
+    ofstream out("assigned_types.txt");
+    for (int i = 0; i < fragmentAtoms.size(); i++)
+    {
+        out << "Fragment " << i << "\n";
+        for (int j = 0; j < atomsToAssign[i].size(); j++)
+        {
+            int atomIdx = fragmentAtoms[i][atomsToAssign[i][j]].first;
+            out << "    " << crystal.atoms[atomIdx].label << " ";
+            if(typeID[i][j]>=0)
+                out << atomTypes[typeID[i][j]].id << " ";
+            else
+                out << "no type assigned ";
+            out << "\n";
+        }
+    }
+    out.close();
+
+}
+
+void type_assign_order(
+    const string& structureFile,
+    const string& bankFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    
+    CrystalAtomTypeAssigner assigner;
+    vector<int> typeID;
+    vector<LocalCoordinateSystem<AtomInCrystalID> > lcs;
+
+    //--------
+    MATTS_BankReader bankReader;
+    vector<AtomType> atomTypes;
+    vector<AtomTypeHC_Parameters> typeParameters;
+    BankSettings bankSettings;
+
+    bankReader.read(bankFile, atomTypes, typeParameters, bankSettings);
+
+    assigner.setAtomTypes(atomTypes);
+
+    assigner.assign(crystal, typeID, lcs);
+    ofstream out("assignment_info.txt");
+    assigner.printAssignment(out, crystal, typeID, lcs);
+
+}
+
+
 int main(int argc, char* argv[])
 {
     try {
+
+        check_args(argc, argv, 3, { "structure file", "fragments file or -ordered", "bank file" });
+        string arg2 = argv[2];
+        if (arg2 == "-ordered")
+            type_assign_order(argv[1], argv[3]);
+        else
+            type_assign_disorder(argv[1], argv[2], argv[3]);
+        return 0;
 
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
@@ -1857,8 +1986,10 @@ int main(int argc, char* argv[])
                 sf_and_sfAndDf = false;
 
         taam_parallel(argv[1], argv[2], onlyNew, sf_and_sfAndDf);
+#ifdef _MSC_VER
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
         _CrtDumpMemoryLeaks();
+#endif
         return 0;
 
         check_args(argc, argv, 3, { "structure file", "indices file", "json file"});

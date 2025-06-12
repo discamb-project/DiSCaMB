@@ -270,6 +270,7 @@ void HansenCoppens_SF_Engine4::calculateSF_IAM(
     const std::vector<REAL> &atomic_occupancy,
     const std::vector<REAL> &atomic_multiplicity_factor,
     const std::vector<sf_engine_data_types::SymmetryOperation> &symmetryOperations,
+    const std::vector<Matrix3i>& symmetry_operations_rotation_matrix,
     bool centrosymmetric,
     const Vector3<REAL> &inversionTranslation,
     const std::vector<Vector3<REAL> > &hVectors,
@@ -312,8 +313,9 @@ void HansenCoppens_SF_Engine4::calculateSF_IAM(
     DerivativesSelector derivativesSwitch;
     calculateSF(unitCell, wfnParams, typeParams, atomToWfnMap, atomToTypeMap, atomicPositions,
                 atomic_displacement_parameters, atomic_occupancy, atomic_multiplicity_factor,
-                localCoordinateSystems, symmetryOperations, centrosymmetric, inversionTranslation, 
-                hVectors, hkl_indices, f, dTarget_dparam, dTarget_df, include_atom_contribution, nThreads, derivativesSwitch);
+                localCoordinateSystems, symmetryOperations, symmetry_operations_rotation_matrix, centrosymmetric, inversionTranslation,
+                hVectors, hkl_indices, f, dTarget_dparam, dTarget_df, include_atom_contribution, nThreads,
+                derivativesSwitch);
     
     
 }

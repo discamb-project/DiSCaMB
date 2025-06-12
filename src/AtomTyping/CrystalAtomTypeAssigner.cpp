@@ -237,7 +237,7 @@ namespace discamb {
             for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
             {
                 auto const& atom = fragmentAtoms[fragmentIdx][atomIdx];
-                crystal_structure_utilities::atomPosition(atom.first, SpaceGroupOperation(atom.second), crystal);
+                positions.push_back(crystal_structure_utilities::atomPosition(atom.first, SpaceGroupOperation(atom.second), crystal));
                 atomicNumbers.push_back(atomicNumbersASU[atom.first]);
                 spaceGroupOperation = SpaceGroupOperation(fragmentAtoms[fragmentIdx][atomIdx].second);
                 fragmentAtomsIds.push_back({ atom.first, SpaceGroupOperation(atom.second)});
@@ -246,8 +246,8 @@ namespace discamb {
             StructureWithDescriptors structureWithDescriptors;
             structureWithDescriptors.set(atomicNumbers, positions);
             vector<LocalCoordinateSystem<int> > lcsFragment;
-            vector<int> typeIds;
-            mAssigner.assign(structureWithDescriptors, atomsToAssign[fragmentIdx], typeIds, lcsFragment);
+            //vector<int> typeIds;
+            mAssigner.assign(structureWithDescriptors, atomsToAssign[fragmentIdx], typeID[fragmentIdx], lcsFragment);
 
             // convert lcs molecule to lcs crystal
             int nAtomsToAssign = atomsToAssign[fragmentIdx].size();
