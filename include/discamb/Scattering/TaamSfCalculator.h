@@ -37,7 +37,7 @@ namespace discamb {
         std::string iamTable;
         bool iamElectronScattering = false;
         bool frozen_lcs = false;
-        bool splitWithlabels = false;
+        bool splitWithLabels = false;
         std::string algorithm = "standard";
         std::vector < std::vector <std::pair<std::string, double> > > orderedSubcrystalAtoms;
         std::vector<disordered_structure_fragments::Fragment> taamFragments;

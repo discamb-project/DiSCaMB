@@ -80,7 +80,7 @@ namespace discamb {
             descriptorsSettings = bankSettings.descriptorsSettings;
         }
 
-        splitWithlabels = data.value("split with labels", false);
+        splitWithLabels = data.value("split with labels", false);
 
         //if (splitWithlabels)
           //  disordered_structure_fragments::split_with_labels(crystal, orderedSubcrystalAtoms);
@@ -154,7 +154,7 @@ namespace discamb {
     {
         vector<vector<pair<string, double> > > orderedSubcrystalAtoms = settings.orderedSubcrystalAtoms;
 
-        if (settings.splitWithlabels && settings.orderedSubcrystalAtoms.empty())
+        if (settings.splitWithLabels && settings.orderedSubcrystalAtoms.empty())
             disordered_structure_fragments::split_with_labels(crystal, orderedSubcrystalAtoms);
 
         if (!orderedSubcrystalAtoms.empty())
