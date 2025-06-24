@@ -232,6 +232,14 @@ std::shared_ptr < AnyScattererStructureFactorCalculator2> mCalculator2;
             mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
 	}
 
+    void AnyIamCalculator::calculateFormFactorsCart(
+        const Vector3d& hkl,
+        std::vector<std::complex<double> >& formFactors,
+        const std::vector<bool>& includeAtom) const
+    {
+        mCalculator->calculateFormFactorsCart(hkl, formFactors, includeAtom);
+    }
+
 
     void AnyIamCalculator::update(const std::vector<AtomInCrystal> &atoms)
     {

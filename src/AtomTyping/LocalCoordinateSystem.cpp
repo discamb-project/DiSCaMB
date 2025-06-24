@@ -66,7 +66,8 @@ namespace discamb {
         lcsCrystal.refPoint_2.clear();
         lcsCrystal.chirality.clear();
 
-        lcsCrystal.centralAtom = lcsMolecule.centralAtom;
+        lcsCrystal.centralAtom = atomMap[lcsMolecule.centralAtom];
+        //lcsCrystal.centralAtom = lcsMolecule.centralAtom;
 
         for (auto atom : lcsMolecule.refPoint_1)
             lcsCrystal.refPoint_1.push_back(atomMap[atom]);

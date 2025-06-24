@@ -5,9 +5,12 @@
 #include "discamb/Scattering/AnyHcCalculator.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
+#include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
+#include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/Scattering/StockholderAtomSfCalculator.h"
 #include "discamb/Scattering/StockholderAtomBankSfCalculator.h"
+#include "discamb/Scattering/TaamSfCalculator.h"
 
 
 #include <map>
@@ -49,6 +52,9 @@ namespace discamb {
                 {"sab",{"sab"}},
                 {"tsc",{"tsc"}},
                 {"matts",{"matts", "taam", "ubdb"}},
+                {"taam_dis",{"taam_dis"}},
+                {"taam_mo",{"taam_mo"}},
+                {"taam ordered",{"taam ordered"}},
                 {"tham",{"tham"}}
              });
         
@@ -114,6 +120,26 @@ namespace discamb {
         }
 
     }
+
+    void SfCalculator::calculateStructureFactors(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f)
+    {
+        vector<bool> countAtomContribution(atoms.size(), true);
+        calculateStructureFactors(atoms, hkl, f, countAtomContribution);
+    }
+
+    void SfCalculator::calculateStructureFactorsAndDerivatives(
+        const std::vector<AtomInCrystal>& atoms,
+        const std::vector<Vector3i>& hkl,
+        std::vector<std::complex<double> >& f,
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<std::complex<double> >& dTarget_df)
+    {
+        calculateStructureFactorsAndDerivatives(atoms, hkl, f, dTarget_dparam, dTarget_df, vector<bool>(atoms.size(), true));
+    }
+
 
     void SfCalculator::calculateStructureFactorsAndDerivatives(
         const std::vector<AtomInCrystal>& atoms,
@@ -182,6 +208,12 @@ namespace discamb {
 		if (string("tsc") == type)
 			return new TscFileBasedSfCalculator(crystal, engineData);
         if (string("matts") == type)
+            return new TaamSfCalculator(crystal, engineData);
+        if (string("taam_dis") == type)
+            return new HcAtomBankStructureFactorCalculator2(crystal, engineData);
+        if (string("taam_mo") == type)
+            return new TaamSfCalculatorMultiOrderedImpl(crystal, engineData);
+        if (string("taam ordered") == type)
             return new HcAtomBankStructureFactorCalculator(crystal, engineData);
         if (string("tham") == type)
             return new StockholderAtomBankSfCalculator(crystal, engineData);

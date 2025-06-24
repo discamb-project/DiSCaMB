@@ -262,6 +262,13 @@ namespace discamb {
 		mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
 	}
 
+    void AnyHcCalculator::calculateFormFactorsCart(
+        const Vector3d& hkl,
+        std::vector<std::complex<double> >& formFactors,
+        const std::vector<bool>& includeAtom) const
+    {
+        mCalculator->calculateFormFactorsCart(hkl, formFactors, includeAtom);
+    }
 
     void AnyHcCalculator::calculateStructureFactors(
         const std::vector<AtomInCrystal> &atoms,

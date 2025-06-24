@@ -46,6 +46,13 @@ namespace discamb {
             const std::vector<bool>& countAtomContribution) = 0;
 
         virtual void calculateStructureFactorsAndDerivatives(
+            const std::vector<AtomInCrystal>& atoms,
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df);
+
+        virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,
             std::vector<std::complex<double> > &f,
@@ -60,6 +67,11 @@ namespace discamb {
             std::vector<std::complex<double> > &f,
             const std::vector<bool> &countAtomContribution)=0;
 
+        virtual void calculateStructureFactors(
+            const std::vector<AtomInCrystal>& atoms,
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f);
+
         virtual void update(const std::vector<AtomInCrystal> &atoms)=0;
 
         virtual void calculateStructureFactorsAndDerivatives(
@@ -68,8 +80,11 @@ namespace discamb {
                 discamb::SfDerivativesAtHkl &derivatives,
                 const std::vector<bool> &countAtomContribution)=0;
 
+        // formFactors[hkl idx][atom idx]
 	 	virtual void calculateFormFactors(const Vector3i& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const = 0;
+        // formFactors[hkl idx][atom idx]
         virtual void calculateFormFactors(const std::vector<Vector3i> &hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
+        // formFactors[hkl idx][atom idx]
         virtual void calculateFormFactorsCart(const Vector3d& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const;
 
         virtual std::string name() const { return std::string("undefined"); }

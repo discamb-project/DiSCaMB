@@ -1,9 +1,12 @@
+#pragma once
+
 #include "discamb/Scattering/SfCalculator.h"
 #include "discamb/AtomTyping/AtomType.h"
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
+#include "discamb/Scattering/disordered_structure_fragments.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
 #include "discamb/AtomTyping/LocalCoordinateSystem.h"
 
@@ -17,23 +20,10 @@ namespace discamb {
     */
 
 
-    struct TaamFragmet {
-        // list of atoms in fragment given by atom index in asymmetric unit + symmetry operation
-        std::vector < std::pair<int, std::string> >  atomList;
-        /*
-        atomRelativeWeights[i] - relative weight for i-th atom i the fragment (defined by atomList[i])
-        if relative weight is 0 i-th atom do not contribute to form factor of given atom
 
-        if atom appears in multiple fragments then the contribution from 
-        each fragment is weighted by this factor (the weights are rescaled to sum up to 1)
-        e.g the form factor for atom which appears in two fragments is given by:
-        f_a = (w1 f_a_1 + w2 f_a_2)/(w1+w2)
-        w1, w2 - relative weights, 
-        f_a_1, f_a_2 - atomic form factors for the atom in fragments 1 (f_a_1) and 2 (f_a_2), 
-        they may differ due to different local coordinate systems
-        */
-        std::vector<double> atomRelativeWeights;
-    };
+    /*
+    TAAM bank calclator with disorder handling
+    */
 
     class HcAtomBankStructureFactorCalculator2 : public SfCalculator
     {
@@ -48,7 +38,59 @@ namespace discamb {
         double mTotalCharge = 0.0;
         std::vector<std::pair<std::string, std::string> > mModelInfo;
         std::string mAlgorithm = "standard";
-        std::vector<TaamFragmet> mFragments;
+        std::vector<disordered_structure_fragments::Fragment> mFragments;
+        Crystal mExtendedCrystal;
+        Crystal mCrystal;
+        
+        void setExtendedCrystal(const Crystal &crystal, const std::vector<disordered_structure_fragments::Fragment>& fragments);
+        /**
+        assigns atom types both for case with and without fragments definitions provided
+        if taamFragments is not empty then
+        output vector elements are in the same order as in mExtendedeCrystal
+        i.e. loop over frgmants (loop over atoms in fragments (add if weight>0))
+        else the output vector elements are in the same order as in crystal
+        */
+        void assignAtomTypes(
+            const Crystal& crystal,
+            const std::vector<disordered_structure_fragments::Fragment>& taamFragments,
+            const std::vector<AtomType>& atomTypes,
+            const DescriptorsSettings& settings,
+            std::vector < LocalCoordinateSystem<AtomInCrystalID> >& lcs,
+            std::vector<int>& types,
+            const std::string &assignemntInfoFile,
+            const std::string& assignemntInfoCsvFile);
+
+        std::vector<std::vector<int> > mNormal2extended;
+        // mNormal2extendedByFrag[i][j] - idex in extended crystal the i-th atom of j-th fragment corresponds to
+        // not defined if taamFragments is empty
+        //std::vector<std::map<int, int> > mNormal2extendedByFrag;
+        std::vector<int> mExtended2normal;
+        std::vector<std::vector<int> > mFragmentToExtendedAtoms;
+        AtomInCrystalID regularToExtendedCrystalAtomId(const AtomInCrystalID& atom) const;
+        void updateExtendedCrystalAtoms(const std::vector<AtomInCrystal>& atoms);
+        mutable std::vector<bool> mExtendedCrystalAtomsContribution;
+        void updateExtendedCrystalAtomsContribution(const std::vector<bool>& countAtomContribution) const;
+        mutable std::vector<TargetFunctionAtomicParamDerivatives> mExtended_dTarget_dparam;
+        mutable SfDerivativesAtHkl mExtendedDerivatives1hkl;
+        mutable std::vector < std::vector<std::complex<double> > > mExtendedFormFactors;
+        mutable std::vector<std::complex<double> > mExtendedFormFactors1Hkl;
+        void mergeExtendedDerivatives(
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<TargetFunctionAtomicParamDerivatives>& extended_dTarget_dparam) const;
+        // [hkl index][atom index]
+        void mergeExtendedFormFactors(
+            const std::vector < std::vector<std::complex<double> > > &extended, 
+            const std::vector<bool>& includeAtom,
+            std::vector < std::vector<std::complex<double> > > &merged) const;
+        // [atom index]
+        void mergeExtendedFormFactors(
+            const std::vector<std::complex<double> >& extended,
+            const std::vector<bool>& includeAtom,
+            std::vector < std::complex<double> >& merged) const;
+
+        //order the same as in mNormal2extended
+        // f[i] = sum( f_extended[mNormal2extended[i][j]] * mAtomContributionWeights[i][j]) for j=0..n
+        std::vector<std::vector<double> > mAtomContributionWeights;
         //std::string mAssignmentInfo;
     public:
         /**
@@ -71,9 +113,10 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string &algorithm = "standard",
-            const std::vector<TaamFragmet> &taamFragments = std::vector<TaamFragmet>(0));
+            const std::vector<disordered_structure_fragments::Fragment> &taamFragments = std::vector<disordered_structure_fragments::Fragment>(0));
         
         HcAtomBankStructureFactorCalculator2(const Crystal &crystal, const nlohmann::json &data);
+        HcAtomBankStructureFactorCalculator2(const Crystal& crystal, const std::string &jsonFileName);
 
         HcAtomBankStructureFactorCalculator2(
             const Crystal& crystal,
@@ -107,10 +150,11 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string& algorithm = "standard",
-            const std::vector<TaamFragmet>& taamFragments = std::vector<TaamFragmet>(0));
+            const std::vector<disordered_structure_fragments::Fragment>& taamFragments = std::vector<disordered_structure_fragments::Fragment>(0));
         
 
         virtual ~HcAtomBankStructureFactorCalculator2();
+        //static void readTaamFragments(const Crystal &crystal, const std::string& fileName, std::vector<disordered_structure_fragments::Fragment>& taamFragments);
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous);
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
@@ -119,6 +163,8 @@ namespace discamb {
             std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
             const std::vector<std::complex<double> > &dTarget_df,
             const std::vector<bool> &countAtomContribution);
+
+        using SfCalculator::calculateStructureFactorsAndDerivatives;
 
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal>& atoms,

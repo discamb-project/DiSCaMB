@@ -87,6 +87,12 @@ namespace discamb {
 			const Vector3i& hkl, 
 			std::vector<std::complex<double> >& formFactors, 
 			const std::vector<bool>& includeAtom) const;
+
+        virtual void calculateFormFactorsCart(
+            const Vector3d& hkl,
+            std::vector<std::complex<double> >& formFactors,
+            const std::vector<bool>& includeAtom) const;
+
     };
     /** @}*/
 }

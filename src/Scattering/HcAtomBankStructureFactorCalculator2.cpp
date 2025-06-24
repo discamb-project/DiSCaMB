@@ -67,10 +67,10 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string& algorithm,
-        const std::vector<TaamFragmet>& taamFragments)
+        const std::vector<disordered_structure_fragments::Fragment>& taamFragments)
     {
         set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, taamFragments);
 
     }
 
@@ -91,7 +91,7 @@ namespace discamb {
         bool generateAssignementInfo*/)
     {
         bool electronScattering = false;
-        bool writeToDiscamb2tscLog = false;
+        //bool writeToDiscamb2tscLog = false;
         if (data.find("electron_scattering") != data.end())
             electronScattering = data.find("electron_scattering")->get<bool>();
 
@@ -179,11 +179,31 @@ namespace discamb {
         else
             bankReader.read(bankPath, types, hcParameters, bankSettings, true);
 
+        vector<disordered_structure_fragments::Fragment> taamFragments;
+        string fragmentsFile = data.value("fragments file", string());
+        if (!fragmentsFile.empty())
+            disordered_structure_fragments::from_file(crystal, fragmentsFile, taamFragments);
+
         set(crystal, types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs, algorithm);
+            parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, 
+            frozen_lcs, algorithm, taamFragments);
 
     }
 
+    
+    HcAtomBankStructureFactorCalculator2::HcAtomBankStructureFactorCalculator2(
+        const Crystal& crystal, 
+        const std::string& jsonFileName)
+    {
+        nlohmann::json json_data;
+        ifstream jsonFileStream(jsonFileName);
+
+        if (jsonFileStream.good())
+            jsonFileStream >> json_data;
+        jsonFileStream.close();
+
+        set(crystal, json_data, string());
+    }
 
     HcAtomBankStructureFactorCalculator2::HcAtomBankStructureFactorCalculator2(
         const Crystal &crystal, 
@@ -292,6 +312,191 @@ namespace discamb {
         modelInfo = mModelInfo;
     }
 
+    void HcAtomBankStructureFactorCalculator2::setExtendedCrystal(
+        const Crystal& crystal,
+        const std::vector<disordered_structure_fragments::Fragment>& taamFragments)
+    {
+        mExtended2normal.clear();
+        mNormal2extended.clear();
+        mExtendedCrystal = crystal;
+        int nAtoms = crystal.atoms.size();
+        mNormal2extended.resize(nAtoms);
+        mAtomContributionWeights.resize(nAtoms);
+        
+
+        if (taamFragments.empty())
+        {
+            for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+            {
+                mNormal2extended[atomIdx].push_back(atomIdx);
+                mAtomContributionWeights[atomIdx].push_back(1.0);
+                mExtended2normal.push_back(atomIdx);
+            }
+            return;
+        }
+        //vector<vector<int> > normal2extended;
+        //vector<int> extended2normal;mNormal2extended
+        mExtendedCrystal.atoms.clear();
+        
+        for (int fragmentIdx = 0; fragmentIdx < taamFragments.size(); fragmentIdx++)
+        {
+            int nAtoms = taamFragments[fragmentIdx].atomRelativeWeights.size();
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                if (taamFragments[fragmentIdx].atomRelativeWeights[atomIdx] > 0)
+                {
+                    SpaceGroupOperation op(taamFragments[fragmentIdx].atomList[atomIdx].second);
+                    if(!op.isIdentity())
+                        on_error::throwException("cannot use atoms with non-identity space group operation and non-zero weight in TAAM fragment", __FILE__, __LINE__);
+                    int idxInCrystal = taamFragments[fragmentIdx].atomList[atomIdx].first;
+                    mExtendedCrystal.atoms.push_back(crystal.atoms[idxInCrystal]);
+                    mExtendedCrystal.atoms.back().label = crystal.atoms[idxInCrystal].label + "_" + to_string(fragmentIdx+1);   
+                    mNormal2extended[idxInCrystal].push_back(mExtendedCrystal.atoms.size() - 1);
+                    int idxExtended = mExtendedCrystal.atoms.size()-1;
+                    mAtomContributionWeights[idxInCrystal].push_back(taamFragments[fragmentIdx].atomRelativeWeights[atomIdx]);
+                    //mExtendedAtomsContributionWeights
+                    mExtended2normal.push_back(idxInCrystal);
+                    //mNormal2extendedByFrag[idxInCrystal][fragmentIdx] = mExtendedCrystal.atoms.size() - 1;
+                }
+        }
+        // normalize weights
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            double sum = 0.0;
+            for(int i=0; i< mAtomContributionWeights[atomIdx].size();i++)
+                sum += mAtomContributionWeights[atomIdx][i];
+            
+            for (int i = 0; i < mAtomContributionWeights[atomIdx].size(); i++)
+                if (sum == 0.0)
+                    mAtomContributionWeights[atomIdx][i] = 0;
+                else
+                    mAtomContributionWeights[atomIdx][i] /= sum;
+        }
+    }
+
+    AtomInCrystalID HcAtomBankStructureFactorCalculator2::regularToExtendedCrystalAtomId(
+        const AtomInCrystalID& atom) const
+    {
+        return AtomInCrystalID(mNormal2extended[atom.index()][0], atom.getSymmetryOperation().string());
+    }
+
+    void HcAtomBankStructureFactorCalculator2::assignAtomTypes(
+        const Crystal& crystal,
+        const std::vector<disordered_structure_fragments::Fragment>& taamFragments,
+        const std::vector<AtomType>& atomTypes,
+        const DescriptorsSettings& settings,
+        std::vector < LocalCoordinateSystem<AtomInCrystalID> > &lcs,
+        std::vector<int> &types,
+        const std::string& assignemntInfoFile,
+        const std::string& assignmentCsvFile)
+    {
+        lcs.clear();
+        types.clear();
+
+        CrystalAtomTypeAssigner assigner;
+        assigner.setAtomTypes(atomTypes);
+        assigner.setDescriptorsSettings(settings);
+        
+
+        if (taamFragments.empty())
+            assigner.assign(crystal, types, lcs);
+        else
+        {
+            vector<vector<pair<int, string> > > fragments;
+            vector<vector<int> > atomsToAssign(taamFragments.size());
+
+            for (int fragmentIdx = 0; fragmentIdx < taamFragments.size(); fragmentIdx++)
+            {
+                fragments.push_back(taamFragments[fragmentIdx].atomList);
+                for (int atomIdx = 0; atomIdx < taamFragments[fragmentIdx].atomRelativeWeights.size(); atomIdx++)
+                    if (taamFragments[fragmentIdx].atomRelativeWeights[atomIdx] > 0)
+                        atomsToAssign[fragmentIdx].push_back(atomIdx);
+            }
+            vector<vector<int> > typeIdsFrag;
+            vector < vector < LocalCoordinateSystem<AtomInCrystalID> > > lcsFrag;
+            assigner.assign(crystal, fragments, atomsToAssign, typeIdsFrag, lcsFrag);
+            for (int fragmentIdx = 0; fragmentIdx < taamFragments.size(); fragmentIdx++)
+            {
+                types.insert(types.end(), typeIdsFrag[fragmentIdx].begin(), typeIdsFrag[fragmentIdx].end());
+                for(auto &lcsFragAtom: lcsFrag[fragmentIdx])
+                {
+                    LocalCoordinateSystem<AtomInCrystalID> lcsExtended = lcsFragAtom;
+                    int idxExtended = mNormal2extended[lcsFragAtom.centralAtom.index()][0];
+                    lcsExtended.centralAtom = regularToExtendedCrystalAtomId(lcsFragAtom.centralAtom);
+                    lcsExtended.refPoint_1.clear();
+                    lcsExtended.refPoint_2.clear();
+                    for(auto const &atom: lcsFragAtom.refPoint_1)
+                        lcsExtended.refPoint_1.push_back(regularToExtendedCrystalAtomId(atom));
+                    for (auto const& atom : lcsFragAtom.refPoint_2)
+                        lcsExtended.refPoint_2.push_back(regularToExtendedCrystalAtomId(atom));
+                    lcs.push_back(lcsExtended);
+                }
+                
+
+            }
+        }
+
+        if (!assignemntInfoFile.empty())
+        {
+            if (assignemntInfoFile == string("print_to_discamb2tsc_log_file") || assignemntInfoFile == string("print_to_discambMATTS2tsc_log_file"))
+            {
+                vector<string> unassignedAtoms;
+                for (int i = 0; i < types.size(); i++)
+                {
+                    if (types[i] < 0)
+                        unassignedAtoms.push_back(mExtendedCrystal.atoms[i].label);
+                    else
+                    {
+                        string typeLabel = atomTypes[types[i]].id;
+                        int labelSize = typeLabel.size();
+                        if (labelSize > 3)
+                        {
+                            string back = typeLabel.substr(labelSize - 3);
+                            string front = typeLabel.substr(0, labelSize - 3);
+
+                            if (back == string("000"))
+                            {
+                                bool hasDigit = false;
+                                for (auto& c : front)
+                                    if (isdigit(c))
+                                        hasDigit = true;
+                                if (!hasDigit)
+                                    unassignedAtoms.push_back(crystal.atoms[i].label);
+                            }
+                        }
+                    }
+                }
+
+                //ofstream out("discamb2tsc.log", std::ofstream::out | std::ofstream::app);
+                //clog << "atomic form factor for X-ray scattering calculated with\nHansen-Coppens model parameterized with MATTS databank.\n"
+                //    << "atom type assigned to " << crystal.atoms.size() - unassignedAtoms.size() << " of " << crystal.atoms.size() << " atoms\n";
+
+                assigner.printAssignment(clog, mExtendedCrystal, types, lcs);
+
+                //if (!unassignedAtoms.empty())
+                //{
+                //    clog << "atoms with unassigned atom types:\n";
+                //    for (auto& label : unassignedAtoms)
+                //        clog << label << "\n";
+                //}
+            }
+            else
+            {
+                ofstream out(assignemntInfoFile);
+                assigner.printAssignment(out, mExtendedCrystal, types, lcs);
+                out.close();
+            }
+        }
+        if (!assignmentCsvFile.empty())
+        {
+            ofstream out(assignmentCsvFile);
+            assigner.printAssignmentCSV(out, crystal, types, lcs);
+            out.close();
+        }
+
+
+    }
+
+
     void HcAtomBankStructureFactorCalculator2::set(
         const Crystal &crystal,
         const std::vector<AtomType> &atomTypes,
@@ -309,9 +514,11 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string &algorithm,
-        const std::vector<TaamFragmet>& taamFragments)
+        const std::vector<disordered_structure_fragments::Fragment>& taamFragments)
     {
         mFragments = taamFragments;
+        mCrystal = crystal;
+        setExtendedCrystal(crystal, taamFragments);
         mModelInfo.clear();
         mAlgorithm = algorithm;
         mModelInfo.push_back({ "SCATTERING MODEL", "TAAM" });
@@ -320,81 +527,23 @@ namespace discamb {
 
         mN_Threads = nThreads;
 
-        CrystalAtomTypeAssigner assigner;
-        assigner.setAtomTypes(atomTypes);
-        assigner.setDescriptorsSettings(settings);
         vector < LocalCoordinateSystem<AtomInCrystalID> > lcs;
         vector<int> types;
-        assigner.assign(crystal, types, lcs);
-        if (!assignemntInfoFile.empty())
-        {
-            if (assignemntInfoFile == string("print_to_discamb2tsc_log_file") || assignemntInfoFile == string("print_to_discambMATTS2tsc_log_file"))
-            {
-                vector<string> unassignedAtoms;
-                for (int i = 0; i < types.size(); i++)
-                {
-                    if (types[i] < 0)
-                        unassignedAtoms.push_back(crystal.atoms[i].label);
-                    else
-                    {
-                        string typeLabel = atomTypes[types[i]].id;
-                        int labelSize = typeLabel.size();
-                        if (labelSize > 3)
-                        {
-                            string back = typeLabel.substr(labelSize - 3);
-                            string front = typeLabel.substr(0, labelSize - 3);
-                            
-                            if ( back == string("000"))
-                            {
-                                bool hasDigit = false;
-                                for (auto& c : front)
-                                    if (isdigit(c))
-                                        hasDigit = true;
-                                if(!hasDigit)
-                                    unassignedAtoms.push_back(crystal.atoms[i].label);
-                            }
-                        }
-                    }
-                }
+        assignAtomTypes(crystal, taamFragments, atomTypes, settings, lcs, types, assignemntInfoFile, assignmentCsvFile);
 
-                //ofstream out("discamb2tsc.log", std::ofstream::out | std::ofstream::app);
-                //clog << "atomic form factor for X-ray scattering calculated with\nHansen-Coppens model parameterized with MATTS databank.\n"
-                //    << "atom type assigned to " << crystal.atoms.size() - unassignedAtoms.size() << " of " << crystal.atoms.size() << " atoms\n";
-                
-                assigner.printAssignment(clog, crystal, types, lcs);
 
-                //if (!unassignedAtoms.empty())
-                //{
-                //    clog << "atoms with unassigned atom types:\n";
-                //    for (auto& label : unassignedAtoms)
-                //        clog << label << "\n";
-                //}
-            }
-            else
-            {
-                ofstream out(assignemntInfoFile);
-                assigner.printAssignment(out, crystal, types, lcs);
-                out.close();
-            }
-        }
-        if (!assignmentCsvFile.empty())
-        {
-            ofstream out(assignmentCsvFile);
-            assigner.printAssignmentCSV(out, crystal, types, lcs);
-            out.close();
-        }
         HC_ModelParameters multipoleModelPalameters;
 
 
         vector<int> atomicNumbers;
         vector<int> nonMultipolarAtoms;
-        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        crystal_structure_utilities::atomicNumbers(mExtendedCrystal, atomicNumbers);
 
         vector<double> multiplicityTimesOccupancy;
-        for (auto& atom : crystal.atoms)
+        for (auto const & atom : mExtendedCrystal.atoms)
             multiplicityTimesOccupancy.push_back(atom.multiplicity * atom.occupancy);
         
-        //mFragments
+        
 
         if (scaleToMatchCharge)
             taam_utilities::type_assignment_to_HC_parameters(
@@ -405,7 +554,7 @@ namespace discamb {
                 multipoleModelPalameters, true, nonMultipolarAtoms);
 
         if (!multipolarCif.empty())
-            cif_io::saveCif(multipolarCif, crystal, multipoleModelPalameters, lcs);
+            cif_io::saveCif(multipolarCif, mExtendedCrystal, multipoleModelPalameters, lcs);
 
 
         //ubdb_utilities::ubdb_type_assignment_to_HC_parameters(
@@ -417,14 +566,14 @@ namespace discamb {
             lcaCalculators.push_back(
                 shared_ptr<LocalCoordinateSystemInCrystal>(
                     types[lcsIdx] >= 0 ?
-                    new LocalCoordinateSystemCalculator(lcs[lcsIdx], crystal) :
+                    new LocalCoordinateSystemCalculator(lcs[lcsIdx], mExtendedCrystal) :
                     new LocalCoordinateSystemCalculator()
                 )
             );
         if (!parametersInfoFile.empty())
             printAssignedMultipolarParameters(
                 parametersInfoFile,
-                crystal,
+                mExtendedCrystal,
                 lcs,
                 atomTypes,
                 bankParameters,
@@ -432,15 +581,15 @@ namespace discamb {
                 types);
         if(mAlgorithm == "standard")
             mHcCalculator = shared_ptr<SfCalculator>(
-                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs));
+                new AnyHcCalculator(mExtendedCrystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs));
         else
             mHcCalculator = shared_ptr<SfCalculator>(
-                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs));
+                                new AnyHcCalculator(mExtendedCrystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs));
         mIamCalculator = shared_ptr<SfCalculator>(
-            new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
+            new AnyIamCalculator(mExtendedCrystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };
         vector<vector<int> > calculatorAtoms(2);
-        for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+        for (int atomIdx = 0; atomIdx < mExtendedCrystal.atoms.size(); atomIdx++)
             if (find(nonMultipolarAtoms.begin(), nonMultipolarAtoms.end(), atomIdx) == nonMultipolarAtoms.end())
                 calculatorAtoms[0].push_back(atomIdx);
             else
@@ -460,9 +609,9 @@ namespace discamb {
         {
 
             mHcCalculators.push_back(shared_ptr<SfCalculator>(
-                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, 1, frozen_lcs)));
+                new AnyHcCalculator(mExtendedCrystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, 1, frozen_lcs)));
             mIamCalculators.push_back(shared_ptr<SfCalculator>(
-                new AnyIamCalculator(crystal, iamElectronScattering, iamTable)));
+                new AnyIamCalculator(mExtendedCrystal, iamElectronScattering, iamTable)));
 
             vector< std::shared_ptr<SfCalculator> > calculators2{ mHcCalculators.back(), mIamCalculators.back() };
             mCalculators.push_back(shared_ptr< CombinedStructureFactorCalculator>(new CombinedStructureFactorCalculator(calculators2, calculatorAtoms)));
@@ -471,20 +620,6 @@ namespace discamb {
 
     }
 
-    //void HcAtomBankStructureFactorCalculator2::printHcParameters(
-    //    std::ofstream& out,
-    //    const AtomTypeHC_Parameters& bankParameters)
-    //{
-    //    out << "kappa " << bankParameters.kappa << "\n"
-    //        << "kappa_prime " << bankParameters.kappa_prime << "\n"
-    //        << "P_val " << bankParameters.p_val << "\n"
-    //        << "number of Plm terms " << bankParameters.p_lms.size() << "\n"
-    //        << "Plms:\n";
-
-    //    for (int i = 0; i < bankParameters.p_lms.size(); i++)
-    //        out << bankParameters.p_lm_indices[i].first << " "
-    //            << bankParameters.p_lm_indices[i].second << " " << bankParameters.p_lms[i] << "\n";
-    //}
 
     void HcAtomBankStructureFactorCalculator2::printHcParameters(
         std::ofstream& out,
@@ -590,9 +725,40 @@ namespace discamb {
     void HcAtomBankStructureFactorCalculator2::setAnomalous(
         const std::vector<std::complex<double> > & anomalous) 
     {
-        mCalculator->setAnomalous(anomalous);
+        int nAtomsExtended = mExtended2normal.size();
+        vector<complex<double> > anomalousExtended(nAtomsExtended);
+        for (int atomIdx = 0; atomIdx < nAtomsExtended; atomIdx++)
+            anomalousExtended[atomIdx] = anomalous[mExtended2normal[atomIdx]];
+        mCalculator->setAnomalous(anomalousExtended);
     }
  
+    //std::vector<bool> mExtendedCrystalAtomsContribution;
+    void HcAtomBankStructureFactorCalculator2::updateExtendedCrystalAtomsContribution(
+        const std::vector<bool>& countAtomContribution)
+        const
+    {
+        int nAtomsExtended = mExtendedCrystal.atoms.size();
+        mExtendedCrystalAtomsContribution.resize(nAtomsExtended);
+        for (int i = 0; i < mExtended2normal.size(); i++)
+            mExtendedCrystalAtomsContribution[i] = countAtomContribution[mExtended2normal[i]];
+    }
+
+
+    void HcAtomBankStructureFactorCalculator2::updateExtendedCrystalAtoms(
+        const std::vector<AtomInCrystal>& atoms)
+    {
+        for (int i = 0; i < mExtended2normal.size(); i++)
+            mExtendedCrystal.atoms[i] = atoms[mExtended2normal[i]];
+        int nAtoms = atoms.size();
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            for (int instanceIdx = 0; instanceIdx < mNormal2extended[atomIdx].size(); instanceIdx++)
+            {
+                int extendedIdx = mNormal2extended[atomIdx][instanceIdx];
+                mExtendedCrystal.atoms[extendedIdx].occupancy *= mAtomContributionWeights[atomIdx][instanceIdx];
+            }
+        }
+    }
 
     void HcAtomBankStructureFactorCalculator2::calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
@@ -602,9 +768,47 @@ namespace discamb {
             const std::vector<std::complex<double> > &dTarget_df,
             const std::vector<bool> &countAtomContribution) 
     {
+        updateExtendedCrystalAtoms(atoms);
+        updateExtendedCrystalAtomsContribution(countAtomContribution);
         mCalculator->calculateStructureFactorsAndDerivatives(
-            atoms, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+            mExtendedCrystal.atoms, hkl, f, mExtended_dTarget_dparam, dTarget_df, mExtendedCrystalAtomsContribution);
+
+        mergeExtendedDerivatives(dTarget_dparam, mExtended_dTarget_dparam);
     }
+
+    void HcAtomBankStructureFactorCalculator2::mergeExtendedDerivatives(
+        std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+        const std::vector<TargetFunctionAtomicParamDerivatives>& extended_dTarget_dparam)
+        const
+    {
+        int nAtoms = mNormal2extended.size();
+        dTarget_dparam.resize(nAtoms);
+        int instanceIdx = 0;
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            dTarget_dparam[atomIdx] = extended_dTarget_dparam[mNormal2extended[atomIdx][instanceIdx]];
+            dTarget_dparam[atomIdx].occupancy_derivatives *= mAtomContributionWeights[atomIdx][instanceIdx];
+        }
+
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            for (instanceIdx = 1; instanceIdx < mNormal2extended[atomIdx].size(); instanceIdx++)
+            {
+                int extendedIdx = mNormal2extended[atomIdx][instanceIdx];
+                for (int k = 0; k < dTarget_dparam[atomIdx].adp_derivatives.size(); k++)
+                    dTarget_dparam[atomIdx].adp_derivatives[k] += 
+                        extended_dTarget_dparam[extendedIdx].adp_derivatives[k];
+
+                dTarget_dparam[atomIdx].atomic_position_derivatives += 
+                    extended_dTarget_dparam[extendedIdx].atomic_position_derivatives;
+
+                dTarget_dparam[atomIdx].occupancy_derivatives += 
+                    extended_dTarget_dparam[extendedIdx].occupancy_derivatives *
+                    mAtomContributionWeights[atomIdx][instanceIdx];
+            }
+            
+
+    }
+
 
     void HcAtomBankStructureFactorCalculator2::calculateStructureFactorsAndDerivatives(
         const std::vector<AtomInCrystal>& atoms,
@@ -615,9 +819,11 @@ namespace discamb {
         const std::vector<bool>& countAtomContribution,
         const DerivativesSelector& selector)
     {
+        updateExtendedCrystalAtoms(atoms);
+        updateExtendedCrystalAtomsContribution(countAtomContribution);
         mCalculator->calculateStructureFactorsAndDerivatives(
-            atoms, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, selector);
-
+            mExtendedCrystal.atoms, hkl, f, mExtended_dTarget_dparam, dTarget_df, mExtendedCrystalAtomsContribution, selector);
+        mergeExtendedDerivatives(dTarget_dparam, mExtended_dTarget_dparam);
     }
 
 
@@ -627,7 +833,10 @@ namespace discamb {
 		const std::vector<bool>& includeAtom)
 		const
 	{
-		mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
+        updateExtendedCrystalAtomsContribution(includeAtom);
+        mExtendedFormFactors1Hkl.resize(mExtended2normal.size());
+		mCalculator->calculateFormFactors(hkl, mExtendedFormFactors1Hkl, mExtendedCrystalAtomsContribution);
+        mergeExtendedFormFactors(mExtendedFormFactors1Hkl, includeAtom, formFactors);
 	}
 
     void HcAtomBankStructureFactorCalculator2::calculateFormFactorsCart(
@@ -636,16 +845,47 @@ namespace discamb {
         const std::vector<bool>& includeAtom)
         const
     {
-        mCalculator->calculateFormFactorsCart(hkl, formFactors, includeAtom);
+        updateExtendedCrystalAtomsContribution(includeAtom);
+        mExtendedFormFactors1Hkl.resize(mExtended2normal.size());
+        mCalculator->calculateFormFactorsCart(hkl, mExtendedFormFactors1Hkl, mExtendedCrystalAtomsContribution);
+        mergeExtendedFormFactors(mExtendedFormFactors1Hkl, includeAtom, formFactors);
     }
 
-    //void HcAtomBankStructureFactorCalculator2::calculateFormFactors(
-    //    const std::vector<Vector3d>& hkl,
-    //    std::vector< std::vector<std::complex<double> > >& formFactors,
-    //    const std::vector<bool>& includeAtom) const
-    //{
 
-    //}
+    void HcAtomBankStructureFactorCalculator2::mergeExtendedFormFactors(
+        const std::vector<std::complex<double> >& extended,
+        const std::vector<bool>& includeAtom,// regular (not extended)
+        std::vector < std::complex<double> >& merged)
+        const
+    {
+        int atomIdx, nAtoms = mNormal2extended.size();      
+        merged.resize(nAtoms);
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            if (includeAtom[atomIdx])
+            {
+                int nInstances = mNormal2extended[atomIdx].size();
+                merged[atomIdx] = 0.0;
+                for (int instanceIdx = 0; instanceIdx < mNormal2extended[atomIdx].size(); instanceIdx++)
+                    merged[atomIdx] += extended[mNormal2extended[atomIdx][instanceIdx]] * mAtomContributionWeights[atomIdx][instanceIdx];
+            }
+
+    }
+
+
+    void HcAtomBankStructureFactorCalculator2::mergeExtendedFormFactors(
+        const std::vector < std::vector<std::complex<double> > >& extended,
+        const std::vector<bool>& includeAtom,
+        std::vector < std::vector<std::complex<double> > >& merged)
+        const
+    {
+        int hklIdx, nHkl = extended.size();
+        merged.resize(nHkl);      
+
+        for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+            mergeExtendedFormFactors(extended[hklIdx], includeAtom, merged[hklIdx]);
+        
+    }
+
 
     void HcAtomBankStructureFactorCalculator2::calculateFormFactors(
         const std::vector<Vector3i>& hkl,
@@ -653,43 +893,54 @@ namespace discamb {
         const std::vector<bool>& includeAtom)
         const
     {
+        updateExtendedCrystalAtomsContribution(includeAtom);
+
+
+        vector< vector<complex<double> > > formFactorsExtended;
+
         if (mN_Threads == 1)
         {
-            SfCalculator::calculateFormFactors(hkl, formFactors, includeAtom);
-            return;
+            formFactorsExtended.resize(hkl.size());
+            for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
+                mCalculator->calculateFormFactors(hkl[hklIdx], formFactorsExtended[hklIdx], mExtendedCrystalAtomsContribution);
+            //SfCalculator::calculateFormFactors(hkl, formFactorsExtended, mExtendedCrystalAtomsContribution);
         }
-
-        vector< vector<Vector3i> > hklsPerThread(mN_Threads);
-        vector < vector< vector<complex<double> > > > formFactorsPerThread(mN_Threads);
-
-        int nHkl = hkl.size();
-        int reminder = nHkl % mN_Threads;
-        int quotient = nHkl / mN_Threads;
-
-        for (int i = 0; i < mN_Threads; i++)
+        else
         {
-            int start = i * quotient + min(i, reminder);
-            int end = (i + 1) * quotient + min(i+1, reminder);
-            hklsPerThread[i].insert(hklsPerThread[i].begin(), hkl.begin() + start, hkl.begin() + end);
-        }
 
-        omp_set_num_threads(static_cast<int>(mN_Threads));
+            vector< vector<Vector3i> > hklsPerThread(mN_Threads);
+            vector < vector< vector<complex<double> > > > formFactorsPerThread(mN_Threads);
+
+            int nHkl = hkl.size();
+            int reminder = nHkl % mN_Threads;
+            int quotient = nHkl / mN_Threads;
+
+            for (int i = 0; i < mN_Threads; i++)
+            {
+                int start = i * quotient + min(i, reminder);
+                int end = (i + 1) * quotient + min(i + 1, reminder);
+                hklsPerThread[i].insert(hklsPerThread[i].begin(), hkl.begin() + start, hkl.begin() + end);
+            }
+
+            omp_set_num_threads(static_cast<int>(mN_Threads));
 #pragma omp parallel
-        {
-            
-            int id = omp_get_thread_num();
-            cout << "thread " << id << "\n";
-            int nHkl = hklsPerThread[id].size();
-            formFactorsPerThread[id].resize(nHkl);
-            for(int i=0; i<nHkl; i++)
-                mCalculators[id]->calculateFormFactors(
-                    hklsPerThread[id][i], 
-                    formFactorsPerThread[id][i], includeAtom);
-        }
+            {
 
-        formFactors.clear();
-        for (int i = 0; i < mN_Threads; i++)
-            formFactors.insert(formFactors.end(), formFactorsPerThread[i].begin(), formFactorsPerThread[i].end());
+                int id = omp_get_thread_num();
+                cout << "thread " << id << "\n";
+                int nHkl = hklsPerThread[id].size();
+                formFactorsPerThread[id].resize(nHkl);
+                for (int i = 0; i < nHkl; i++)
+                    mCalculators[id]->calculateFormFactors(
+                        hklsPerThread[id][i],
+                        formFactorsPerThread[id][i], mExtendedCrystalAtomsContribution);
+            }
+
+            formFactorsExtended.clear();
+            for (int i = 0; i < mN_Threads; i++)
+                formFactorsExtended.insert(formFactorsExtended.end(), formFactorsPerThread[i].begin(), formFactorsPerThread[i].end());
+        }
+        mergeExtendedFormFactors(formFactorsExtended, includeAtom, formFactors);
 
     }
 
@@ -701,13 +952,16 @@ namespace discamb {
             std::vector<std::complex<double> > &f,
             const std::vector<bool> &countAtomContribution) 
         {
-            mCalculator->calculateStructureFactors(atoms, hkl, f, countAtomContribution);
+            updateExtendedCrystalAtoms(atoms);
+            updateExtendedCrystalAtomsContribution(countAtomContribution);
+            mCalculator->calculateStructureFactors(mExtendedCrystal.atoms, hkl, f, mExtendedCrystalAtomsContribution);
         }
 
         void HcAtomBankStructureFactorCalculator2::update(
             const std::vector<AtomInCrystal> &atoms) 
         {
-            mCalculator->update(atoms);
+            updateExtendedCrystalAtoms(atoms);
+            mCalculator->update(mExtendedCrystal.atoms);
         }
 
         void HcAtomBankStructureFactorCalculator2::calculateStructureFactorsAndDerivatives(
@@ -716,7 +970,35 @@ namespace discamb {
             discamb::SfDerivativesAtHkl &derivatives,
             const std::vector<bool> &countAtomContribution) 
         {
-            mCalculator->calculateStructureFactorsAndDerivatives(hkl, scatteringFactor, derivatives, countAtomContribution);
+            updateExtendedCrystalAtomsContribution(countAtomContribution);
+            mCalculator->calculateStructureFactorsAndDerivatives(hkl, scatteringFactor, mExtendedDerivatives1hkl, mExtendedCrystalAtomsContribution);
+            /*merge the derivatives*/
+            int nAtoms = mNormal2extended.size();
+            derivatives.adpDerivatives.resize(nAtoms);
+            derivatives.anomalousScatteringDerivatives.resize(nAtoms);
+            derivatives.atomicPostionDerivatives.resize(nAtoms);
+            derivatives.occupancyDerivatives.resize(nAtoms);
+
+            for(int atomIdx=0; atomIdx<nAtoms; atomIdx++)
+                if (countAtomContribution[atomIdx])
+                {
+                    int nAdps = mCrystal.atoms[atomIdx].adp.size();
+                    derivatives.adpDerivatives[atomIdx].assign(nAdps, 0.0);
+                    derivatives.anomalousScatteringDerivatives[atomIdx] = 0.0;
+                    derivatives.atomicPostionDerivatives[atomIdx] = Vector3d(0.0, 0.0, 0.0);
+                    derivatives.occupancyDerivatives[atomIdx] = 0.0;
+
+                    int nInstances = mNormal2extended[atomIdx].size();
+                    for (int instanceIdx = 0; instanceIdx < nInstances; instanceIdx++)
+                    {
+                        int idxExtended = mNormal2extended[atomIdx][instanceIdx];
+                        for (int adpIdx = 0; adpIdx < nAdps; adpIdx++)
+                            derivatives.adpDerivatives[atomIdx][adpIdx] += mExtendedDerivatives1hkl.adpDerivatives[idxExtended][adpIdx];
+
+                        derivatives.atomicPostionDerivatives[atomIdx] += mExtendedDerivatives1hkl.atomicPostionDerivatives[idxExtended];
+                        derivatives.occupancyDerivatives[atomIdx] += mExtendedDerivatives1hkl.occupancyDerivatives[idxExtended] * mAtomContributionWeights[atomIdx][instanceIdx];
+                    }
+                }
         }
 
 

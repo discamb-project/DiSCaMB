@@ -1,5 +1,6 @@
   
 SET(TARGET_H 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/agreement_factors.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyHcCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyIamCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/AnyScattererStructureFactorCalculator.h"
@@ -12,6 +13,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/CombinedStructureFactorCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/ConstFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/deformation_valence_calc.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/disordered_structure_fragments.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/ElectronFromXrayFormFactorCalculationsManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/gar_utilities.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine.h"
@@ -42,11 +44,14 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/StockholderAtomFormFactorCalcManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/StockholderAtomSfCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/taam_utilities.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TaamSfCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TscFileBasedSfCalculator.h")
     
   
     
 SET(TARGET_SRC
+    agreement_factors.cpp
     AnyHcCalculator.cpp
     AnyIamCalculator.cpp
     AnyScattererStructureFactorCalculator.cpp
@@ -57,6 +62,7 @@ SET(TARGET_SRC
     CombinedStructureFactorCalculator.cpp
     ConstFormFactorCalculationsManager.cpp
     deformation_valence_calc.cpp
+    disordered_structure_fragments.cpp
     ElectronFromXrayFormFactorCalculationsManager.cpp
     gar_utilities.cpp
     HansenCoppens_SF_Engine.cpp 
@@ -85,6 +91,8 @@ SET(TARGET_SRC
     StockholderAtomFormFactorCalcManager.cpp
     StockholderAtomSfCalculator.cpp
     taam_utilities.cpp
+	TaamSfCalculator.cpp
+    TaamSfCalculatorMultiOrderedImpl.cpp
     TscFileBasedSfCalculator.cpp)
 
 

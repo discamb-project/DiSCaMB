@@ -18,11 +18,13 @@
 #include "discamb/IO/xyz_io.h"
 #include "discamb/MathUtilities/SphConverter.h"
 #include "discamb/QuantumChemistry/fragmentation.h"
+#include "discamb/Scattering/agreement_factors.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
 #include "discamb/Scattering/ConstFormFactorCalculationsManager.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
+#include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamSfCalculator.h"
@@ -30,6 +32,7 @@
 #include "discamb/Scattering/scattering_utilities.h"
 #include "discamb/Scattering/statistics.h"
 #include "discamb/Scattering/taam_utilities.h"
+#include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include <fstream>
@@ -1465,72 +1468,72 @@ void copy_compare()
         }
 }
 
-double relative_l1_100_agreement_factor(
-    const vector<double> &v1,
-    const vector<double> &v2)
-{
-    double numerator, denominator;
-    int i, n = v1.size();
-    if (n != v2.size())
-        on_error::throwException("vectors size do not match when trying to calculate L1 agreement factor", __FILE__, __LINE__);
-    numerator = 0.0;
-    denominator = 0.0;
-
-    for (i = 0; i < n; i++)
-    {
-        numerator += abs(v1[i] - v2[i]);
-        denominator += abs(v1[i]) + abs(v2[i]);
-    }
-    if(denominator == 0)
-        on_error::throwException("denominator 0 when trying to calculate L1 agreement factor", __FILE__, __LINE__);
-
-    return numerator / denominator * 200;
-}
-
-void compare_derivatives(
-    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp1,
-    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp2,
-    bool &size_match,
-    double &d_xyz_agreement_factor,
-    double& d_adp_agreement_factor,
-    double& d_occ_agreement_factor,
-    double& d_fpfdp_agreement_factor)
-{
-    /*
-    Vector3<REAL> atomic_position_derivatives;
-    std::vector<REAL> adp_derivatives;
-    REAL occupancy_derivatives = 0;
-    */
-    int atomIdx, nAtoms = dT_dp1.size();
-    size_match = (nAtoms == dT_dp2.size());
-    vector<double> xyz1, xyz2, adps1, adps2, occ1, occ2;
-    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    {
-        if (dT_dp1[atomIdx].adp_derivatives.size() != dT_dp2[atomIdx].adp_derivatives.size())
-        {
-            size_match = false;
-            return;
-        }
-        for (int i = 0; i < 3; i++)
-        {
-            xyz1.push_back(dT_dp1[atomIdx].atomic_position_derivatives[i]);
-            xyz2.push_back(dT_dp2[atomIdx].atomic_position_derivatives[i]);
-        }
-        for (int i = 0; i < dT_dp1[atomIdx].adp_derivatives.size(); i++)
-        {
-            adps1.push_back(dT_dp1[atomIdx].adp_derivatives[i]);
-            adps2.push_back(dT_dp2[atomIdx].adp_derivatives[i]);
-        }
-        occ1.push_back(dT_dp1[atomIdx].occupancy_derivatives);
-        occ2.push_back(dT_dp2[atomIdx].occupancy_derivatives);
-    }
-    
-    d_xyz_agreement_factor=relative_l1_100_agreement_factor(xyz1, xyz2); 
-    d_adp_agreement_factor=relative_l1_100_agreement_factor(adps1, adps2);
-    d_occ_agreement_factor=relative_l1_100_agreement_factor(occ1, occ2);
-
-    //for(int )
-}
+//double relative_l1_100_agreement_factor(
+//    const vector<double> &v1,
+//    const vector<double> &v2)
+//{
+//    double numerator, denominator;
+//    int i, n = v1.size();
+//    if (n != v2.size())
+//        on_error::throwException("vectors size do not match when trying to calculate L1 agreement factor", __FILE__, __LINE__);
+//    numerator = 0.0;
+//    denominator = 0.0;
+//
+//    for (i = 0; i < n; i++)
+//    {
+//        numerator += abs(v1[i] - v2[i]);
+//        denominator += abs(v1[i]) + abs(v2[i]);
+//    }
+//    if(denominator == 0)
+//        on_error::throwException("denominator 0 when trying to calculate L1 agreement factor", __FILE__, __LINE__);
+//
+//    return numerator / denominator * 200;
+//}
+//
+//void compare_derivatives(
+//    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp1,
+//    const vector<TargetFunctionAtomicParamDerivatives>& dT_dp2,
+//    bool &size_match,
+//    double &d_xyz_agreement_factor,
+//    double& d_adp_agreement_factor,
+//    double& d_occ_agreement_factor,
+//    double& d_fpfdp_agreement_factor)
+//{
+//    /*
+//    Vector3<REAL> atomic_position_derivatives;
+//    std::vector<REAL> adp_derivatives;
+//    REAL occupancy_derivatives = 0;
+//    */
+//    int atomIdx, nAtoms = dT_dp1.size();
+//    size_match = (nAtoms == dT_dp2.size());
+//    vector<double> xyz1, xyz2, adps1, adps2, occ1, occ2;
+//    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+//    {
+//        if (dT_dp1[atomIdx].adp_derivatives.size() != dT_dp2[atomIdx].adp_derivatives.size())
+//        {
+//            size_match = false;
+//            return;
+//        }
+//        for (int i = 0; i < 3; i++)
+//        {
+//            xyz1.push_back(dT_dp1[atomIdx].atomic_position_derivatives[i]);
+//            xyz2.push_back(dT_dp2[atomIdx].atomic_position_derivatives[i]);
+//        }
+//        for (int i = 0; i < dT_dp1[atomIdx].adp_derivatives.size(); i++)
+//        {
+//            adps1.push_back(dT_dp1[atomIdx].adp_derivatives[i]);
+//            adps2.push_back(dT_dp2[atomIdx].adp_derivatives[i]);
+//        }
+//        occ1.push_back(dT_dp1[atomIdx].occupancy_derivatives);
+//        occ2.push_back(dT_dp2[atomIdx].occupancy_derivatives);
+//    }
+//    
+//    d_xyz_agreement_factor=relative_l1_100_agreement_factor(xyz1, xyz2); 
+//    d_adp_agreement_factor=relative_l1_100_agreement_factor(adps1, adps2);
+//    d_occ_agreement_factor=relative_l1_100_agreement_factor(occ1, occ2);
+//
+//    //for(int )
+//}
 
 void taam_parallel(
     const string& structureFile,
@@ -1604,7 +1607,7 @@ void taam_parallel(
     sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_new, dT_dp_new, dt_df, countAtom, derivativesSelector);
     cout << "time = " << timer.stop() << " ms\n";
     if(!calcOnlyNew)
-        cout << "agreement factor " << agreementFactor(sf_new, sf_standard) << "\n";
+        cout << "agreement factor " << agreement_factors::value(sf_new, sf_standard) << "\n";
 
     //return;
 
@@ -1619,7 +1622,7 @@ void taam_parallel(
 
     bool size_match;
     double d_xyz_agreement_factor, d_adp_agreement_factor, d_occ_agreement_factor, d_fpfdp_agreement_factor;
-    compare_derivatives(
+    agreement_factors::for_derivatives(
         dT_dp,
         dT_dp_new,
         size_match,
@@ -1958,17 +1961,298 @@ void type_assign_order(
 
 }
 
+void sf_taam_disorder(
+    const string &strucureFile,
+    std::vector<std::string> substructureFiles,
+    const string &jsonFile_taam_multiordered,
+    const string &jsonFile_taam_disordered,
+    const string &jsonFile_taam_regular,
+    const vector<string> &aspherFiles)
+{
+    Crystal crystal;
+    int nSubstructures = substructureFiles.size();
+
+    if (nSubstructures == 0)
+        on_error::throwException("zero substructures defined", __FILE__, __LINE__);
+
+    vector<Crystal> substructures(nSubstructures);
+    for(int substructureIdx=0; substructureIdx<nSubstructures; substructureIdx++)
+        structure_io::read_structure(substructureFiles[substructureIdx], substructures[substructureIdx]);
+    structure_io::read_structure(strucureFile, crystal);
+
+    TaamSfCalculatorMultiOrderedImpl tamm_mo_calc(crystal, jsonFile_taam_multiordered);
+    HcAtomBankStructureFactorCalculator2 taam_disordered_calc(crystal, jsonFile_taam_disordered);
+
+    nlohmann::json json_data;
+    ifstream jsonFileStream(jsonFile_taam_regular);
+
+    if (jsonFileStream.good())
+        jsonFileStream >> json_data;
+    jsonFileStream.close();
+    
+    vector<shared_ptr<HcAtomBankStructureFactorCalculator2> > taam_regular_calc(nSubstructures);// (crystal, jsonFile_taam_disordered);
+    for (int substructureIdx = 0; substructureIdx < nSubstructures; substructureIdx++)
+        taam_regular_calc[substructureIdx] = make_shared<HcAtomBankStructureFactorCalculator2>(substructures[substructureIdx], json_data);
+
+    vector<shared_ptr<SfCalculator> > aspherSfCalculators;
+    for (auto const& aspherFile : aspherFiles)
+    {
+        nlohmann::json aspherJson;
+        ifstream aspherJsonFileStream(aspherFile);
+        if (aspherJsonFileStream.good())
+            aspherJsonFileStream >> aspherJson;
+        aspherJsonFileStream.close();
+        aspherSfCalculators.push_back(shared_ptr<SfCalculator>(SfCalculator::create(crystal, aspherJson)));
+    }
+
+    int nAdditionalCalculators = aspherSfCalculators.size();
+
+   // vector<Vector3i> hkl{ Vector3i(0,0,1), Vector3i(0,0,2), Vector3i(0,2,0) };
+    //vector<Vector3i> hkl{ Vector3i(0,2,0) };
+
+    vector<Vector3i> hkl{
+        { 0, 0, 1 }, { 0, 0, 2 }, { 0, 0, 3 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 1, 2 },
+        { 0, 1, 3 }, { 0, 2, 0 }, { 0, 2, 1 }, { 0, 2, 2 }, { 0, 2, 3 }, { 0, 3, 0 },
+        { 0, 3, 1 }, { 0, 3, 2 }, { 0, 3, 3 }, { 1, 0, 0 }, { 1, 0, 1 }, { 1, 0, 2 },
+        { 1, 0, 3 }, { 1, 1, 0 }, { 1, 1, 1 }, { 1, 1, 2 }, { 1, 1, 3 }, { 1, 2, 0 },
+        { 1, 2, 1 }, { 1, 2, 2 }, { 1, 2, 3 }, { 1, 3, 0 }, { 1, 3, 1 }, { 1, 3, 2 },
+        { 1, 3, 3 }, { 2, 0, 0 }, { 2, 0, 1 }, { 2, 0, 2 }, { 2, 0, 3 }, { 2, 1, 0 },
+        { 2, 1, 1 }, { 2, 1, 2 }, { 2, 1, 3 }, { 2, 2, 0 }, { 2, 2, 1 }, { 2, 2, 2 },
+        { 2, 2, 3 }, { 2, 3, 0 }, { 2, 3, 1 }, { 2, 3, 2 }, { 2, 3, 3 }, { 3, 0, 0 },
+        { 3, 0, 1 }, { 3, 0, 2 }, { 3, 0, 3 }, { 3, 1, 0 }, { 3, 1, 1 }, { 3, 1, 2 },
+        { 3, 1, 3 }, { 3, 2, 0 }, { 3, 2, 1 }, { 3, 2, 2 }, { 3, 2, 3 }, { 3, 3, 0 },
+        { 3, 3, 1 }, { 3, 3, 2 }, { 3, 3, 3 }
+    };
+
+
+
+    //#######################################
+    //   structure factors
+    //#######################################
+
+    vector<complex<double> > f_mo, f_dis, f_reg;
+    vector<vector<complex<double> > > f_part(nSubstructures),f_additional(nAdditionalCalculators);
+
+    cout << "tamm_mo_calc\n";
+    tamm_mo_calc.calculateStructureFactors(crystal.atoms, hkl, f_mo, vector<bool>(crystal.atoms.size(), true));
+    cout << "taam_disordered_calc\n";
+    taam_disordered_calc.calculateStructureFactors(crystal.atoms, hkl, f_dis, vector<bool>(crystal.atoms.size(), true));
+    
+    for (int substructureIdx = 0; substructureIdx < nSubstructures; substructureIdx++)
+    {
+        cout << "taam_regular_calc " << substructureIdx << "\n";
+        taam_regular_calc[substructureIdx]->calculateStructureFactors(substructures[substructureIdx].atoms, hkl, f_part[substructureIdx],
+            vector<bool>(substructures[substructureIdx].atoms.size(), true));
+    }
+
+    //vector<complex
+    f_reg = f_part[0];
+    int nHkl = hkl.size();
+    for (int substructureIdx = 1; substructureIdx < nSubstructures; substructureIdx++)
+        for (int i = 0; i < nHkl; i++)
+            f_reg[i] += f_part[substructureIdx][i];
+
+    for (int i = 0; i < nAdditionalCalculators; i++)
+        aspherSfCalculators[i]->calculateStructureFactors(crystal.atoms, hkl, f_additional[i]);
+
+    cout << "structure factors comparison - methods: reglar vs. disordered\n"
+         << agreement_factors::value(f_dis, f_reg) << "\n";
+    cout << "structure factors comparison - methods: reglar vs. multi-ordered\n"
+        << agreement_factors::value(f_reg, f_mo) << "\n";
+    for (int i = 0; i < nAdditionalCalculators; i++)
+        cout << "structure factors comparison - methods: reglar vs. method " << i+1 << "\n"
+             << agreement_factors::value(f_reg, f_additional[i]) << "\n";
+
+        
+
+
+    /*
+    for (int i = 0; i < nHkl; i++)
+    {
+        cout << f_mo[i] << " " << f_dis[i] << f_reg[i];
+        for (int j = 0; j < nAdditionalCalculators; j++)
+            cout << f_additional[j][i] << " ";
+        cout << endl;
+    }
+    */
+
+    //#######################################
+    //   structure factor derivatives
+    //#######################################
+
+    vector<TargetFunctionAtomicParamDerivatives> dT_dp_reg, dT_dp_mo, dT_dp_dis;
+    vector< vector<TargetFunctionAtomicParamDerivatives> > dT_dp_additional(nAdditionalCalculators);
+    vector<vector<TargetFunctionAtomicParamDerivatives> > dT_dp_reg_partial(nSubstructures);
+    vector<std::complex<double> > dTarget_df(nHkl, 1.0);
+
+    cout << "tamm_mo_calc derivatives\n";
+    tamm_mo_calc.calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, f_mo, dT_dp_mo, dTarget_df);
+    cout << "taam_disordered_calc derivatives\n";
+    taam_disordered_calc.calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, f_dis, dT_dp_dis, dTarget_df);
+
+    for (int i = 0; i < nAdditionalCalculators; i++)
+    {
+        cout << "derivatives additional calculator " << i+1 << "\n";
+        aspherSfCalculators[i]->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, f_dis, dT_dp_additional[i], dTarget_df);
+    }
+
+
+    for (int substructureIdx = 0; substructureIdx < nSubstructures; substructureIdx++)
+    {
+        cout << "taam_regular_calc derivatives " << substructureIdx << "\n";
+        taam_regular_calc[substructureIdx]->calculateStructureFactorsAndDerivatives(substructures[substructureIdx].atoms, hkl, f_part[substructureIdx],
+            dT_dp_reg_partial[substructureIdx], dTarget_df,
+            vector<bool>(substructures[substructureIdx].atoms.size(), true));
+    }
+    
+    int atomIdx, nAtoms = crystal.atoms.size();
+    TargetFunctionAtomicParamDerivatives dT_dp_0;
+    dT_dp_0.atomic_position_derivatives.set(0.0, 0.0, 0.0);
+    dT_dp_0.occupancy_derivatives = 0.0;
+    dT_dp_reg.assign(nAtoms, dT_dp_0);
+    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        dT_dp_reg[atomIdx].adp_derivatives.assign(crystal.atoms[atomIdx].adp.size(), 0.0);
+    vector<double> total_weight(nAtoms, 0.0);
+    for (int substructureIdx = 0; substructureIdx < nSubstructures; substructureIdx++)
+    {
+        map<string, int> label2idx_substructure;
+        for (int i = 0; i < substructures[substructureIdx].atoms.size(); i++)
+            label2idx_substructure[substructures[substructureIdx].atoms[i].label] = i;
+
+        for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            if (label2idx_substructure.count(crystal.atoms[atomIdx].label) == 0)
+                continue;
+            int idxPartial = label2idx_substructure[crystal.atoms[atomIdx].label];
+            int nAdpComponents = crystal.atoms[atomIdx].adp.size();
+            for (int i = 0; i < nAdpComponents; i++)
+                dT_dp_reg[atomIdx].adp_derivatives[i] += dT_dp_reg_partial[substructureIdx][idxPartial].adp_derivatives[i];
+            dT_dp_reg[atomIdx].atomic_position_derivatives += dT_dp_reg_partial[substructureIdx][idxPartial].atomic_position_derivatives;
+            dT_dp_reg[atomIdx].occupancy_derivatives += dT_dp_reg_partial[substructureIdx][idxPartial].occupancy_derivatives *
+                substructures[substructureIdx].atoms[idxPartial].occupancy;
+            total_weight[atomIdx] += substructures[substructureIdx].atoms[idxPartial].occupancy;
+        }
+    }
+    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        dT_dp_reg[atomIdx].occupancy_derivatives /= total_weight[atomIdx];
+    // dT_dp_reg, dT_dp_mo, dT_dp_dis;
+    bool size_match;
+    double rel_l1_100_adp, rel_l1_100_xyz, rel_l1_100_occ, rel_l1_100_fpfdp;
+    agreement_factors::for_derivatives(dT_dp_reg, dT_dp_mo, size_match, rel_l1_100_xyz, rel_l1_100_adp, rel_l1_100_occ, rel_l1_100_fpfdp);
+    cout<< "derivatives comparison - methods: reglar vs. multi-ordered\n"
+        << "  xyz " << rel_l1_100_xyz << "\n"
+        << "  adp " << rel_l1_100_adp << "\n"
+        << "  occ " << rel_l1_100_occ << "\n";
+    agreement_factors::for_derivatives(dT_dp_reg, dT_dp_dis, size_match, rel_l1_100_xyz, rel_l1_100_adp, rel_l1_100_occ, rel_l1_100_fpfdp);
+    cout << "derivatives comparison - methods: reglar vs. disordered\n"
+        << "  xyz " << rel_l1_100_xyz << "\n"
+        << "  adp " << rel_l1_100_adp << "\n"
+        << "  occ " << rel_l1_100_occ << "\n";
+    for (int i = 0; i < nAdditionalCalculators; i++)
+    {
+        double af_xyz, af_adp, af_occ, af_fpfdp;
+        agreement_factors::for_derivatives(dT_dp_reg, dT_dp_additional[i], size_match, af_xyz, af_adp, af_occ, af_fpfdp);
+        
+        cout << "derivatives comparison - methods: reglar vs. method " << i + 1 << "\n"
+            << "  xyz " << af_xyz << "\n"
+            << "  adp " << af_adp << "\n"
+            << "  occ " << af_occ << "\n";
+
+    }
+
+    //dT_dp_additional[i]
+    //#######################################
+    //   atomic form factors
+    //#######################################
+
+    vector < vector<complex<double> > > regular_ff, multi_ordered_ff, disordered_ff, substructure_ff;
+
+    tamm_mo_calc.calculateFormFactors(hkl, multi_ordered_ff, vector<bool>(crystal.atoms.size(), true));
+    taam_disordered_calc.calculateFormFactors(hkl, disordered_ff, vector<bool>(crystal.atoms.size(), true));
+    vector<vector<int> > substructureAtom2StructureAtom(nSubstructures);
+    map<string, int> label2idx;
+    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        label2idx[crystal.atoms[atomIdx].label] = atomIdx;
+
+    regular_ff.assign(nHkl, vector<complex<double> >(nAtoms, 0.0));
+
+    for (int substructureIdx = 0; substructureIdx < nSubstructures; substructureIdx++)
+    {
+        taam_regular_calc[substructureIdx]->calculateFormFactors(hkl, substructure_ff,
+            vector<bool>(substructures[substructureIdx].atoms.size(), true));
+        int nAtomsSubstructure = substructures[substructureIdx].atoms.size();
+        for (int atomIdxSubstructure = 0; atomIdxSubstructure < nAtomsSubstructure; atomIdxSubstructure++)
+        {
+            int atomIdx = label2idx[substructures[substructureIdx].atoms[atomIdxSubstructure].label];
+            for (int hklIdx = 0; hklIdx < nHkl; hklIdx++)
+                regular_ff[hklIdx][atomIdx] += substructure_ff[hklIdx][atomIdxSubstructure]*substructures[substructureIdx].atoms[atomIdxSubstructure].occupancy;
+        }
+    }
+    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        for (int hklIdx = 0; hklIdx < nHkl; hklIdx++)
+            regular_ff[hklIdx][atomIdx] /= total_weight[atomIdx];
+
+
+    vector<double> atomic_agreement_factors;
+    agreement_factors::for_atomic_form_factors(regular_ff, multi_ordered_ff, atomic_agreement_factors);
+    auto it = max_element(atomic_agreement_factors.begin(), atomic_agreement_factors.end());
+    int idx = distance(atomic_agreement_factors.begin(), it);
+    cout << "max agreement factor for atoms (reglar vs. multi-ordered)\n"
+        << " " << *it << " for " << crystal.atoms[idx].label << "\n";
+    
+    agreement_factors::for_atomic_form_factors(regular_ff, disordered_ff, atomic_agreement_factors);
+    it = max_element(atomic_agreement_factors.begin(), atomic_agreement_factors.end());
+    idx = distance(atomic_agreement_factors.begin(), it);
+    cout << "max agreement factor for atoms (reglar vs. disordered)\n"
+        << " " << *it << " for " << crystal.atoms[idx].label << "\n";
+
+}
 
 int main(int argc, char* argv[])
 {
     try {
-
         check_args(argc, argv, 3, { "structure file", "fragments file or -ordered", "bank file" });
         string arg2 = argv[2];
         if (arg2 == "-ordered")
             type_assign_order(argv[1], argv[3]);
         else
             type_assign_disorder(argv[1], argv[2], argv[3]);
+        return 0;
+
+        string commandLineArgsInfo =
+            "(1) structure file\n" 
+            "(2) substructure files as file1,file2,.. \n" 
+            "(3) json file for TAAM multiordered\n" 
+            "(4) json file for TAAM disordered\n" 
+            "(5) json file for TAAM regular\n" 
+            "(6) optionally json files for model defined in the file as file1,file2,..\n";
+        if (argc < 6)
+            on_error::throwException("expected arguments:\n" + commandLineArgsInfo, __FILE__, __LINE__);
+
+        int nSubstructureFiles = argc - 5;
+
+        string strucureFile = argv[1];
+        string substructureFileList = argv[2];
+        vector<string> substructureFiles;
+        string_utilities::split(substructureFileList, substructureFiles, ',');
+        string jsonFile_taam_multiordered = argv[3];
+        string jsonFile_taam_disordered = argv[4];
+        string jsonFile_taam_regular = argv[5];
+        vector<string> aspherFiles;
+
+        if (argc == 7)
+        {
+            string aspherFilesList = argv[6];
+            string_utilities::split(aspherFilesList, aspherFiles, ',');
+        }
+
+        sf_taam_disorder(
+            strucureFile,
+            substructureFiles,
+            jsonFile_taam_multiordered,
+            jsonFile_taam_disordered,
+            jsonFile_taam_regular,
+            aspherFiles);
         return 0;
 
         vector<string> arguments, options;

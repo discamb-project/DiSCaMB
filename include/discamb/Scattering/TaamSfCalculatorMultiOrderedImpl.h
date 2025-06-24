@@ -1,12 +1,7 @@
 #pragma once
+
 #include "discamb/Scattering/SfCalculator.h"
-#include "discamb/AtomTyping/AtomType.h"
-#include "discamb/AtomTyping/StructureWithDescriptors.h"
-#include "discamb/Scattering/AtomTypeHC_Parameters.h"
-#include "discamb/HC_Model/HC_ModelParameters.h"
-#include "discamb/Scattering/CombinedStructureFactorCalculator.h"
-#include "discamb/CrystalStructure/AtomInCrystalID.h"
-#include "discamb/AtomTyping/LocalCoordinateSystem.h"
+#include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 
 #include <memory>
 
@@ -18,26 +13,42 @@ namespace discamb {
     */
 
 
-    class HcAtomBankStructureFactorCalculator : public SfCalculator
+    class TaamSfCalculatorMultiOrderedImpl : public SfCalculator
     {
-        // indices of atoms for which there were no data in Clementi-Roetti dataset
-        std::vector<int> mIamAtoms;
-        std::shared_ptr<SfCalculator> mHcCalculator, mIamCalculator;
-        std::shared_ptr<CombinedStructureFactorCalculator> mCalculator;
-        //
-        std::vector<std::shared_ptr<CombinedStructureFactorCalculator> > mCalculators;
-        std::vector < std::shared_ptr<SfCalculator> > mHcCalculators, mIamCalculators;
-        int mN_Threads = 1;
-        double mTotalCharge = 0.0;
-        std::vector<std::pair<std::string, std::string> > mModelInfo;
-        std::string mAlgorithm = "standard";
-        //std::string mAssignmentInfo;
+        std::vector<std::shared_ptr< HcAtomBankStructureFactorCalculator> > mCalculators;
+        std::vector<std::vector<int> > mSubcrystal2CrystalAtomsMap;
+        std::vector<std::vector<double> > mSubcrystalAtomsWeight;
+        struct AtomReconstructionData {
+            //[instance].first - subcrystal index
+            //[iinsstance].second - atom in subcrystal
+            std::vector<std::pair<int, int> > atoms;
+            std::vector<double> weights;
+        };
+        
+        std::vector<AtomReconstructionData> mReconstructionData;
+        void setReconstructionData(
+            const Crystal& crystal,
+            const std::vector < std::vector <std::pair<std::string, double> > >& atomList);
+        std::vector<Crystal> mSubcrystals;
+        Crystal mCrystal;
+        /* 
+        the subcrystals which should be updated on update(atoms)
+        used by methods that do no take current atomic parameters
+        const std::vector<AtomInCrystal> &atoms
+        as an argument
+        */
+        std::vector<Crystal> mSubcrystalsForUpdate;
+        ReciprocalLatticeUnitCell mReciprocalLatticeUnitCell;
+        void findSubstructureContributingAtoms(
+            const std::vector<bool>& countAtomContribution,
+            std::vector< std::vector<bool> >& substructureAtomContribution) const;
     public:
         /**
         if assignemntInfoFile is empty the assignment info is not printed
         */
-        HcAtomBankStructureFactorCalculator(
+        TaamSfCalculatorMultiOrderedImpl(
             const Crystal &crystal,
+            const std::vector < std::vector <std::pair<std::string, double> > >& atomList,
             const std::vector<AtomType> &atomTypes,
             const std::vector<AtomTypeHC_Parameters> &parameters,
             bool electronScattering = false,
@@ -54,9 +65,10 @@ namespace discamb {
             bool frozen_lcs = false,
             const std::string &algorithm = "standard");
         
-        HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
+        TaamSfCalculatorMultiOrderedImpl(const Crystal &crystal, const nlohmann::json &data);
+        TaamSfCalculatorMultiOrderedImpl(const Crystal& crystal, const std::string &jsonFile);
 
-        HcAtomBankStructureFactorCalculator(
+        TaamSfCalculatorMultiOrderedImpl(
             const Crystal& crystal,
             const nlohmann::json& data,
             const std::string & bankString/*,
@@ -73,6 +85,7 @@ namespace discamb {
 
         void set(
             const Crystal &crystal,
+            const std::vector < std::vector <std::pair<std::string, double> > >& atomList,
             const std::vector<AtomType> &atomTypes,
             const std::vector<AtomTypeHC_Parameters> &parameters,
             bool electronScattering = false,
@@ -91,8 +104,11 @@ namespace discamb {
             bool generateAssignmentInfo = false*/);
         
 
-        virtual ~HcAtomBankStructureFactorCalculator();
+        virtual ~TaamSfCalculatorMultiOrderedImpl();
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous);
+
+        using SfCalculator::calculateStructureFactorsAndDerivatives;
+
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,
@@ -130,22 +146,9 @@ namespace discamb {
         virtual void calculateFormFactors(const std::vector<Vector3i>& hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
         virtual void calculateFormFactorsCart(const Vector3d& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const;
         //virtual void calculateFormFactors(const std::vector<Vector3d>& hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
-        virtual std::string name() const { return std::string("MATTS"); }
+        virtual std::string name() const { return std::string("TaamMultiOrder"); }
 
-    private:
-        HC_ModelParameters mHcParameters;
-
-        void printAssignedMultipolarParameters(
-            const std::string& fName, 
-            const Crystal& crystal,
-            const std::vector < LocalCoordinateSystem<AtomInCrystalID> > &lcs,
-            const std::vector<AtomType>& atomTypes, 
-            const std::vector<AtomTypeHC_Parameters>& bankParameters, 
-            const HC_ModelParameters &multipoleModelPalameters,
-            const std::vector<int> &assignedTypeIdx);
-
-        //void printHcParameters(std::ofstream &out, const AtomTypeHC_Parameters& bankParameters);
-        void printHcParameters(std::ofstream& out, const HC_ModelParameters& multipoleModelPalameters, int atomIdx);
+        //static void readSubstructuresFromFile(const std::string& fragmentsFile, std::vector<std::vector <std::pair<std::string, double> > >& fragmentAtoms);
     };
     /** @}*/
 }

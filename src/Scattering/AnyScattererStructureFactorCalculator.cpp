@@ -248,6 +248,15 @@ namespace discamb{
 			mManager->calculateFrac(hkl, formFactors, includeAtom);
 		}
 
+        void AnyScattererStructureFactorCalculator::calculateFormFactorsCart(
+            const Vector3d& hkl,
+            std::vector<std::complex<double> >& formFactors,
+            const std::vector<bool>& includeAtom) const
+        { 
+            mManager->calculateCart(hkl, formFactors, includeAtom);
+        }
+
+
         void AnyScattererStructureFactorCalculator::calculateFormFactors(
             const std::vector<Vector3i>& hkl,
             std::vector< std::vector<std::complex<double> > >& formFactors,
@@ -256,6 +265,8 @@ namespace discamb{
         {
             mManager->calculateFrac(hkl, formFactors, includeAtom);
         }
+
+
 
 //        void AnyScattererStructureFactorCalculator::calculateFormFactorsFrac(
 //            const Vector3d& hkl,
@@ -410,9 +421,10 @@ namespace discamb{
 
 					realFContrib += unweightedTransformedAtomFF_Sum.real() * atomWeight;
 					imagFContrib += unweightedTransformedAtomFF_Sum.imag() * atomWeight;
+                    //cout << mCrystal.atoms[atomIdx].label << " " << unweightedTransformedAtomFF_Sum * atomWeight << endl;
 
 				} // symmetrically independent atoms
-
+                //cout << complex<REAL>(realFContrib, imagFContrib) << "\n";
 				f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
 				//cin >> hklIndex;
 			} // h vectors
@@ -795,7 +807,7 @@ namespace discamb{
                         aux.imag()*xyz_derivatives[i].real();
 
                 } // symmetrically independent atoms
-
+                //cout << complex<REAL>(realFContrib, imagFContrib) << "\n";
                 f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
                 //cin >> hklIndex;
             } // h vectors

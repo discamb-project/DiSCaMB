@@ -674,7 +674,7 @@ namespace discamb {
         {
             
             int id = omp_get_thread_num();
-            cout << "thread " << id << "\n";
+            //cout << "thread " << id << "\n";
             int nHkl = hklsPerThread[id].size();
             formFactorsPerThread[id].resize(nHkl);
             for(int i=0; i<nHkl; i++)

@@ -23,6 +23,7 @@ namespace discamb {
 
 namespace scattering_utilities
 {
+
     std::unique_ptr<SfCalculator> scatteringFactorCalculatorFromJsonFile(const Crystal& crystal, const std::string& jsonFile);
 
     void centeringSfMultipliers(char centering,const std::vector<Vector3i> &hkl, std::vector<double> &multipliers, bool obverse);
