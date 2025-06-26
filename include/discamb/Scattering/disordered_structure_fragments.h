@@ -2,6 +2,8 @@
 
 #include "discamb/CrystalStructure/Crystal.h"
 
+#include "json.hpp"
+
 namespace discamb{
 
 
@@ -27,7 +29,60 @@ namespace disordered_structure_fragments{
     };
 
     //void fragments_from_labels(const Crystal& crystal, std::vector<Fragment>& fragments);
-    void split_with_labels(const Crystal& crystal, std::vector< std::vector<std::pair<std::string, double> > > & ordered_parts);
+    void split_with_labels_0(
+        const Crystal& crystal,
+        std::vector< std::vector<std::pair<std::string, double> > > & ordered_parts);
+
+    void split_with_labels(
+        const Crystal& crystal,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
+    void split_with_labels_buster(
+        const Crystal& crystal,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
+
+    void split_with_labels_new_impl(
+        const Crystal& crystal,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
+    /*
+    populates ordered_parts which then can be used in TaamSfCalculator constructor
+    TaamSfCalculator(const Crystal& crystal, const TaamSfCalculatorSettings &settings);
+    by assigning settings.orderedSubcrystalAtoms = substructures
+    ordered_parts is not populated if disorder_groups is empty
+    */
+    void split_structure(
+        const Crystal& crystal,
+        const std::vector< std::vector<std::vector<int> > >& disorder_groups,
+        std::vector< std::vector<std::pair<std::string, double> > >& substructures);
+
+    void split_structure_json_int(
+        const Crystal& crystal,
+        const nlohmann::json & disorder_groups,
+        std::vector< std::vector<std::pair<std::string, double> > >& substructures);
+
+    void split_structure_json_str(
+        const Crystal& crystal,
+        const nlohmann::json& disorder_groups,
+        std::vector< std::vector<std::pair<std::string, double> > >& substructures);
+
+
+    void substructures_from_json(
+        const nlohmann::json& disorder_parts,
+        std::vector< std::vector<std::pair<std::string, double> > >& substructures);
+
+    void convert_ordered_parts_list(
+        const Crystal &crystal,
+        const std::vector< std::vector<std::pair<int, double> > >& ordered_parts_int,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts_str);
+
+    /*
+    void convert_list(
+        const Crystal& crystal, 
+        const std::vector< std::vector<std::pair<int, double> > >& ordered_parts_str, 
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts_int);
+    */
     void from_file(const std::string& fileName, std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
     void from_file(const Crystal& crystal, const std::string& fileName, std::vector<Fragment>& fragments);
 }

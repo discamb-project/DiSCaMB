@@ -87,11 +87,26 @@ namespace discamb {
 
         if (data.find("substructures file") != data.end())
             disordered_structure_fragments::from_file(data["substructures  file"].get<string>(), orderedSubcrystalAtoms);
-        
+        // to fix for gcc
+        //if (data.find("substructures") != data.end())
+        //{
+        //    auto & substructures = data.find("substructures");
+        //    disordered_structure_fragments::substructures_from_json(data["substructures"], orderedSubcrystalAtoms);
+        //}
+        if(data.find("substructures from disorder groups") != data.end())
+        {
+            auto& disorder_groups_json = data["substructures from disorder groups"];
+            disordered_structure_fragments::split_structure_json_str(
+                crystal, disorder_groups_json, orderedSubcrystalAtoms);
+        }
+
+
         //vector<disordered_structure_fragments::Fragment> taamFragments;
         string fragmentsFile = data.value("fragments file", string());
         if (!fragmentsFile.empty())
             disordered_structure_fragments::from_file(crystal, fragmentsFile, taamFragments);
+
+
 
     }
 

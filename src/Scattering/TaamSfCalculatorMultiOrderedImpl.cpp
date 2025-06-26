@@ -238,8 +238,8 @@ namespace discamb {
             bankReader.read(bankPath, types, hcParameters, bankSettings, true);
 
         vector < vector <pair<string, double> > > atomList;
-        if (data.find("substructures") != data.end())
-            disordered_structure_fragments::from_file(data["substructures"].get<string>(), atomList);
+        if (data.find("substructures file") != data.end())
+            disordered_structure_fragments::from_file(data["substructures file"].get<string>(), atomList);
         else
         {
             atomList.resize(1);

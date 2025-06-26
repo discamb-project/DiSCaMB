@@ -1997,6 +1997,7 @@ void sf_taam_disorder(
     vector<shared_ptr<SfCalculator> > aspherSfCalculators;
     for (auto const& aspherFile : aspherFiles)
     {
+        cout << "reading " << aspherFile << "\n";
         nlohmann::json aspherJson;
         ifstream aspherJsonFileStream(aspherFile);
         if (aspherJsonFileStream.good())
@@ -2208,15 +2209,56 @@ void sf_taam_disorder(
 
 }
 
+void test_json()
+{
+    nlohmann::json data;
+    data["list"] = { 1,2,3 };
+    for (auto& item : data["list"].items())
+        cout << item.key() << " " << item.value() << "\n";
+    data["list2"] = R"(
+      [ ["C1",0.1],["C2",0.2]]
+      )"_json;
+    for (auto& item : data["list2"].items())
+        cout << item.key() << " " << item.value() << "\n";
+
+    /*
+    43, 42, 12
+    41, 40, 11
+
+    32, 33, 14
+    34, 35, 15
+
+    19, 20, 38, 39
+    17, 18, 36, 37
+    */
+}
+
+string convertBusterLabel(
+    const string& label)
+{
+    string newLabel;
+    size_t pos = label.find('.');
+    if (pos == string::npos)
+        newLabel = label;
+    else
+    {
+        string dotChar = label.substr(pos, 2);
+        newLabel = label.substr(0, pos) + label.substr(pos + 2) + dotChar;
+    }
+    return newLabel;
+}
+
+void test()
+{
+    
+    cout<< convertBusterLabel("H2.B   1    A    H105    Z N      1    A X CA     1    A") << "\n";
+    cout << convertBusterLabel("H2   1    A    H105    Z N      1    A X CA     1    A") << "\n";
+}
+
 int main(int argc, char* argv[])
 {
     try {
-        check_args(argc, argv, 3, { "structure file", "fragments file or -ordered", "bank file" });
-        string arg2 = argv[2];
-        if (arg2 == "-ordered")
-            type_assign_order(argv[1], argv[3]);
-        else
-            type_assign_disorder(argv[1], argv[2], argv[3]);
+        test();
         return 0;
 
         string commandLineArgsInfo =
@@ -2253,6 +2295,17 @@ int main(int argc, char* argv[])
             jsonFile_taam_disordered,
             jsonFile_taam_regular,
             aspherFiles);
+        return 0;
+
+        test_json();
+        return 0;
+
+        check_args(argc, argv, 3, { "structure file", "fragments file or -ordered", "bank file" });
+        string arg2 = argv[2];
+        if (arg2 == "-ordered")
+            type_assign_order(argv[1], argv[3]);
+        else
+            type_assign_disorder(argv[1], argv[2], argv[3]);
         return 0;
 
         vector<string> arguments, options;
