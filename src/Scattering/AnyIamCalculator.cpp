@@ -154,7 +154,7 @@ std::shared_ptr < AnyScattererStructureFactorCalculator2> mCalculator2;
     }
 
     AnyIamCalculator::~AnyIamCalculator() {
-        //delete mCalculator;
+        delete mCalculator;
         delete mCalculator2;
     }
 
@@ -208,7 +208,7 @@ std::shared_ptr < AnyScattererStructureFactorCalculator2> mCalculator2;
         //mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, fake_dTarget_df, countAtomContribution);
         if (mUseLineAlgorithm)
         {
-            cout << "use line algorithm\n";
+            // cout << "use line algorithm\n";
             mCalculator2->update(atoms);
             mCalculator2->calculateStructureFactors(hkl, f, countAtomContribution);
         }
