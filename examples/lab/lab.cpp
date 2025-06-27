@@ -2258,8 +2258,8 @@ void test()
 int main(int argc, char* argv[])
 {
     try {
-        test();
-        return 0;
+        //test();
+        //return 0;
 
         string commandLineArgsInfo =
             "(1) structure file\n" 

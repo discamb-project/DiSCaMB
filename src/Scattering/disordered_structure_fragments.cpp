@@ -12,6 +12,22 @@ namespace discamb{
 namespace disordered_structure_fragments{
 
     namespace {
+
+        string convert_buster_label(
+            const string& label)
+        {
+            string newLabel;
+            size_t pos = label.find('.');
+            if (pos == string::npos)
+                newLabel = label;
+            else
+            {
+                string dotChar = label.substr(pos, 2);
+                newLabel = label.substr(0, pos) + label.substr(pos + 2) + dotChar;
+            }
+            return newLabel;
+        }
+
         void correct_zero_weights_for_ordered(
             int nAtoms,
             const vector<int> &orderedAtoms,
@@ -182,20 +198,22 @@ namespace disordered_structure_fragments{
         
     }
 
-    void split_with_labels_buster(
+    void split_with_labels_internal_altloc(
         const Crystal& _crystal,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts)
     {
         Crystal crystal = _crystal;
         map<string, string> new_2_old_label;
         for (auto& atom : crystal.atoms)
-        {
-            vector<string> words, words2;
-            string_utilities::split(atom.label, words);
-            string_utilities::split(words[0], words2, '.');
-            if (words2.size() == 2)
-                ;
+        {   
+            string new_label = convert_buster_label(atom.label);
+            new_2_old_label[new_label] = atom.label;
         }
+        split_with_labels(crystal, ordered_parts);
+        for (auto& ordered_part : ordered_parts)
+            for (auto& atom : ordered_part)
+                atom.first = new_2_old_label[atom.first];
+
     }
 
 
@@ -299,6 +317,9 @@ namespace disordered_structure_fragments{
             for (int i = 0; i < nOrdered; i++)
             {
                 double weight = 1.0;
+                //bool sameDisorderedPart = false;
+                //bool neighbourDisorderedPart = false;
+                //set<int> 
                 for (int j = 0; j < connectivity[i].size(); j++)
                     if (connectivity[i][j].first >= nOrdered)
                     {

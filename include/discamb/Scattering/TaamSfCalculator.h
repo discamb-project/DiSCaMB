@@ -38,6 +38,8 @@ namespace discamb {
         bool iamElectronScattering = false;
         bool frozen_lcs = false;
         bool splitWithLabels = false;
+        //works with labels like (altloc=B): "H2.B   1    A    H105    Z N      1    A X CA     1    A"
+        bool splitWithInternalAltlocLabels = false;
         std::string algorithm = "standard";
         std::vector < std::vector <std::pair<std::string, double> > > orderedSubcrystalAtoms;
         std::vector<disordered_structure_fragments::Fragment> taamFragments;

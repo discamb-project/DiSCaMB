@@ -36,8 +36,8 @@ namespace disordered_structure_fragments{
     void split_with_labels(
         const Crystal& crystal,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
-
-    void split_with_labels_buster(
+    // "H2.B   1    A    H105    Z N      1    A X CA     1    A"
+    void split_with_labels_internal_altloc(
         const Crystal& crystal,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
 
