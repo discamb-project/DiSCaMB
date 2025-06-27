@@ -1980,6 +1980,10 @@ void sf_taam_disorder(
         structure_io::read_structure(substructureFiles[substructureIdx], substructures[substructureIdx]);
     structure_io::read_structure(strucureFile, crystal);
 
+    Crystal crystal_buster = crystal;
+    for (auto& atom : crystal_buster.atoms)
+        atom.label += "   1    A    H105    Z N      1    A X CA     1    A";
+
     TaamSfCalculatorMultiOrderedImpl tamm_mo_calc(crystal, jsonFile_taam_multiordered);
     HcAtomBankStructureFactorCalculator2 taam_disordered_calc(crystal, jsonFile_taam_disordered);
 
@@ -1995,6 +1999,7 @@ void sf_taam_disorder(
         taam_regular_calc[substructureIdx] = make_shared<HcAtomBankStructureFactorCalculator2>(substructures[substructureIdx], json_data);
 
     vector<shared_ptr<SfCalculator> > aspherSfCalculators;
+    int aspherFileIdx = 1;
     for (auto const& aspherFile : aspherFiles)
     {
         cout << "reading " << aspherFile << "\n";
@@ -2003,7 +2008,14 @@ void sf_taam_disorder(
         if (aspherJsonFileStream.good())
             aspherJsonFileStream >> aspherJson;
         aspherJsonFileStream.close();
-        aspherSfCalculators.push_back(shared_ptr<SfCalculator>(SfCalculator::create(crystal, aspherJson)));
+        if(aspherFileIdx !=3)
+            aspherSfCalculators.push_back(shared_ptr<SfCalculator>(SfCalculator::create(crystal, aspherJson)));
+        else
+        {
+            cout << "buster tyoe labels used with " << aspherFile << "\n";
+            aspherSfCalculators.push_back(shared_ptr<SfCalculator>(SfCalculator::create(crystal_buster, aspherJson)));
+        }
+        aspherFileIdx++;
     }
 
     int nAdditionalCalculators = aspherSfCalculators.size();

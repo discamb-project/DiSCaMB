@@ -13,7 +13,7 @@ namespace disordered_structure_fragments{
 
     namespace {
 
-        string convert_buster_label(
+        string convert_internal_altloc_label(
             const string& label)
         {
             string newLabel;
@@ -206,8 +206,9 @@ namespace disordered_structure_fragments{
         map<string, string> new_2_old_label;
         for (auto& atom : crystal.atoms)
         {   
-            string new_label = convert_buster_label(atom.label);
+            string new_label = convert_internal_altloc_label(atom.label);
             new_2_old_label[new_label] = atom.label;
+            atom.label = new_label;
         }
         split_with_labels(crystal, ordered_parts);
         for (auto& ordered_part : ordered_parts)
