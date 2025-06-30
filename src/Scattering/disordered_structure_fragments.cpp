@@ -222,6 +222,9 @@ namespace disordered_structure_fragments{
         const Crystal& crystal,
         std::vector < std::vector<std::pair<std::string, double> > >& _ordered_parts)
     {
+        split_with_labels_new_impl(crystal, _ordered_parts);
+        return;
+
         _ordered_parts.clear();
         vector < vector<pair<int, double> > > ordered_parts;
 
@@ -359,11 +362,6 @@ namespace disordered_structure_fragments{
         _ordered_parts.clear();
         vector < vector<pair<int, double> > > ordered_parts;
 
-        map<string, int> label2idx;
-        for (int i = 0; i < crystal.atoms.size(); i++)
-            label2idx[crystal.atoms[i].label] = i;
-
-
         map<char, int> disorderGroupIdxMap;
         for (int i = 65; i <= 90; i++)
             disorderGroupIdxMap[char(i)] = i - 65;
@@ -371,12 +369,15 @@ namespace disordered_structure_fragments{
         set<string> unique_disorder_part_labels;
         vector<string> words;
         vector<int> atom_disorder_part;
-        //aletrnativeAtomGroups[i].first - disorder group 
-        //aletrnativeAtomGroups[i].second - atom index
+        //aletrnativeAtomGroups[label][i].first - disorder group 
+        //aletrnativeAtomGroups[label][i].second - atom index
         map<string, vector<pair<int, int> > > aletrnativeAtomGroups;
         vector<int> orderedAtoms;
-
-        for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+        int nAtoms = crystal.atoms.size();
+        // set only for disordered atoms,
+        // needed for weights calculatino
+        vector<int> nContatiningConfigurations(nAtoms, 0);
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
             auto const& atom = crystal.atoms[atomIdx];
 
@@ -412,17 +413,8 @@ namespace disordered_structure_fragments{
         }
 
         for (auto& group : aletrnativeAtomGroups)
-        {
             sort(group.second.begin(), group.second.end());
-            //validate
-            for (int i = 0; i < group.second.size(); i++)
-                if (group.second[i].first != i)
-                {
-                    string message = "inconsistent labeling of alternative configurations for atoms " + group.first +
-                        " e.g. A, B, D (C is missing)";
-                    on_error::throwException(message, __FILE__, __LINE__);
-                }
-        }
+
 
         int max_disorder_part = *max_element(atom_disorder_part.begin(), atom_disorder_part.end());
         if (max_disorder_part <= 0)
@@ -431,9 +423,13 @@ namespace disordered_structure_fragments{
         int nParts = max_disorder_part + 1;
 
         ordered_parts.resize(nParts);
+        //[ordered atom idx][part idx][nerighbour idx]
+        int nOrdered = orderedAtoms.size();
+        vector<vector<vector<int> > > orderedPartAtomDisorderedNeighbours(nOrdered, vector<vector<int> >(nParts));
+        
         for (int partIdx = 0; partIdx < nParts; partIdx++)
         {
-
+            
             Crystal c = crystal;
             c.atoms.clear();
 
@@ -447,50 +443,130 @@ namespace disordered_structure_fragments{
             for (auto& group : aletrnativeAtomGroups)
             {
                 int group_size = group.second.size();
-                int idx_in_group = partIdx;
-                if (group_size < partIdx + 1)
-                    idx_in_group = group_size - 1;
+                int idx_in_group = 0;
+                for (int groupElementIdx = 0; groupElementIdx < group_size; groupElementIdx++)
+                    if (group.second[groupElementIdx].first == partIdx)
+                        idx_in_group = groupElementIdx;
                 int atomIdx = group.second[idx_in_group].second;
+                nContatiningConfigurations[atomIdx]++;
                 c.atoms.push_back(crystal.atoms[atomIdx]);
                 ordered_parts[partIdx].push_back({ atomIdx, 1.0 });
             }
             // find connectivity and use in weight calculations
             vector<vector<pair<int, string> > > connectivity;
             structural_properties::asymmetricUnitConnectivity(c, connectivity, 0.4);
-            int nOrdered = orderedAtoms.size();
+           
+
             for (int i = 0; i < nOrdered; i++)
-            {
-                double weight = 1.0;
                 for (int j = 0; j < connectivity[i].size(); j++)
                     if (connectivity[i][j].first >= nOrdered)
                     {
                         int neighbourIdxInOriginalCrystal = ordered_parts[partIdx][connectivity[i][j].first].first;
-                        weight *= crystal.atoms[neighbourIdxInOriginalCrystal].occupancy;
+                        orderedPartAtomDisorderedNeighbours[i][partIdx].push_back(neighbourIdxInOriginalCrystal);
                     }
+        }
+        
+        // when ordered atom disordered neighbours in each ordered subsystem have the same altloc (e.g. only A, in another only B)
+        // in such a case weight for ordered atom is an average crystal.atoms[neighbourIdxInOriginalCrystal].occupancy
+        // otherwise it is a product of such terms
+
+        vector<bool> allDiorderedNeighboursFromTheSameGroup(nOrdered);
+        
+        for (int i = 0; i < nOrdered; i++)
+        {
+            bool sameGroup = true;
+            for (int partIdx = 0; partIdx < nParts; partIdx++)
+                if (!orderedPartAtomDisorderedNeighbours[i][partIdx].empty())
+                {
+                    int disorderGroup = atom_disorder_part[orderedPartAtomDisorderedNeighbours[i][partIdx][0]];
+                    for (int j = 1; j < orderedPartAtomDisorderedNeighbours[i][partIdx].size(); j++)
+                        if (disorderGroup != atom_disorder_part[orderedPartAtomDisorderedNeighbours[i][partIdx][j]])
+                            sameGroup = false;
+                }
+            allDiorderedNeighboursFromTheSameGroup[i] = sameGroup;
+        }
+
+        for (int partIdx = 0; partIdx < nParts; partIdx++)
+            for (int i = 0; i < nOrdered; i++)
+            {
+                double weight = 1.0;
+                if (allDiorderedNeighboursFromTheSameGroup[i])
+                {
+                    weight = 0.0;
+                    for (int j = 0; j < orderedPartAtomDisorderedNeighbours[i][partIdx].size(); j++)
+                    {
+                        int neighbourIdxInOriginalCrystal = orderedPartAtomDisorderedNeighbours[i][partIdx][j];
+                        weight += crystal.atoms[neighbourIdxInOriginalCrystal].occupancy / nContatiningConfigurations[neighbourIdxInOriginalCrystal];
+                    }
+                    if (weight == 0.0)
+                        weight = 1.0;
+                }
+                else
+                    for (int j = 0; j < orderedPartAtomDisorderedNeighbours[i][partIdx].size(); j++)
+                    {
+                        int neighbourIdxInOriginalCrystal = orderedPartAtomDisorderedNeighbours[i][partIdx][j]; 
+                        weight *= crystal.atoms[neighbourIdxInOriginalCrystal].occupancy;
+                        if (nContatiningConfigurations[neighbourIdxInOriginalCrystal] > 0)
+                            weight /= nContatiningConfigurations[neighbourIdxInOriginalCrystal];
+                    }
+
                 ordered_parts[partIdx][i].second = weight;
             }
 
+        correct_zero_weights_for_ordered(nAtoms, orderedAtoms, ordered_parts);
+
+        int nOrderedParts = ordered_parts.size();
+        _ordered_parts.resize(nOrderedParts);
+        for (int partIdx = 0; partIdx < nOrderedParts; partIdx++)
+        {
+            _ordered_parts[partIdx].resize(ordered_parts[partIdx].size());
+            for (int atomIdx = 0; atomIdx < ordered_parts[partIdx].size(); atomIdx++)
+            {
+                int idxInCrystal = ordered_parts[partIdx][atomIdx].first;
+                double weight = ordered_parts[partIdx][atomIdx].second;
+                _ordered_parts[partIdx][atomIdx] = { crystal.atoms[idxInCrystal].label, weight };
+            }
         }
-        // if there is zero weights for some ordered atom set it to 1.0
-        int nAtoms = crystal.atoms.size();
-        vector<bool> isOrdered(nAtoms, false);
-        vector<double> totalWeight(nAtoms, 0.0);
-        for (int i = 0; i < orderedAtoms.size(); i++)
-            isOrdered[orderedAtoms[i]] = true;
-
-        for (auto& part : ordered_parts)
-            for (auto& atom : part)
-                totalWeight[atom.first] += atom.second;
-
-        for (auto& part : ordered_parts)
-            for (auto& atom : part)
-                if (isOrdered[atom.first] && totalWeight[atom.first] == 0.0)
-                    atom.second = 1.0;
-
-        //
-        convert_ordered_parts_list(crystal, ordered_parts, _ordered_parts);
 
     }
+
+    void fragments_from_json(
+        const Crystal& crystal,
+        const nlohmann::json& fragments_json,
+        std::vector<Fragment>& fragments)
+    {
+        fragments.clear();
+
+        if (!fragments_json.is_array())
+            on_error::throwException("expected array when processing information on ordered fragmnets from json data",
+                __FILE__, __LINE__);
+
+        map<string, int> label2idx;
+        for (int i = 0; i < crystal.atoms.size(); i++)
+            label2idx[crystal.atoms[i].label] = i;
+
+        for (auto const& fragmentJson : fragments_json)
+        {
+            Fragment fragment;
+            for (auto const& weight_atom_symmOp : fragmentJson)
+            {
+                string atomLabel = weight_atom_symmOp[1];
+                double weight = weight_atom_symmOp[0];
+                string symmOp = "x,y,z";
+                if(weight_atom_symmOp.size()==3)
+                    string symmOp = weight_atom_symmOp[2]; 
+                
+                int atomIdx = 0;
+                if (label2idx.count(atomLabel) == 0)
+                    on_error::throwException("unknown atom label '" + atomLabel + "' when processing information on ordered fragmnets from json data", __FILE__, __LINE__);
+                fragment.atomList.push_back({ label2idx[atomLabel], symmOp });
+                fragment.atomRelativeWeights.push_back(weight);
+            }
+            fragments.push_back(fragment);
+        }
+
+    }
+
 
     void substructures_from_json(
         //const Crystal& crystal,
@@ -587,10 +663,14 @@ void split_structure(
             // add disordered part
             for (auto const& alternative_disorder_groups : disorder_groups)
             {
-                // number of configurations at given site
-                int max_group_idx = alternative_disorder_groups.size();
-                int groupIdx = min(partIdx, max_group_idx);
+                //number of configurations at given site
+                //int max_group_idx = alternative_disorder_groups.size();
+                //int groupIdx = min(partIdx, max_group_idx);
       
+                int groupIdx = partIdx;
+                if (groupIdx >= alternative_disorder_groups.size())
+                    groupIdx = 0;
+
                 for (int atomIdx : alternative_disorder_groups[groupIdx])
                 {
                     c.atoms.push_back(crystal.atoms[atomIdx]);

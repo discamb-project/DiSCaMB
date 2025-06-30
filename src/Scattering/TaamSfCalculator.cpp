@@ -7,7 +7,7 @@
 #include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
 
 #include <fstream>
-#include <iostream>
+
 
 using namespace std;
 
@@ -85,7 +85,7 @@ namespace discamb {
         splitWithInternalAltlocLabels = data.value("split with internal altloc labels", false);
 
         if (data.find("substructures file") != data.end())
-            disordered_structure_fragments::from_file(data["substructures  file"].get<string>(), orderedSubcrystalAtoms);
+            disordered_structure_fragments::from_file(data["substructures file"].get<string>(), orderedSubcrystalAtoms);
         // to fix for gcc
         if (data.find("substructures") != data.end())
         {
@@ -101,6 +101,11 @@ namespace discamb {
         }
 
         //vector<disordered_structure_fragments::Fragment> taamFragments;
+
+        if (data.find("ordered fragments") != data.end())
+            disordered_structure_fragments::fragments_from_json(crystal, data["ordered fragments"], taamFragments);
+
+
         string fragmentsFile = data.value("fragments file", string());
         if (!fragmentsFile.empty())
             disordered_structure_fragments::from_file(crystal, fragmentsFile, taamFragments);

@@ -3,7 +3,7 @@
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 
-#include <iostream>
+
 #include <complex>
 #include <map>
 

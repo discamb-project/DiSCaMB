@@ -7,7 +7,7 @@
 #include "discamb/MathUtilities/radial_grid.h"
 
 #include <cmath>
-#include <iostream>
+
 #include <fstream>
 #include <iomanip>
 #include <algorithm>

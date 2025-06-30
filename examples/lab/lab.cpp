@@ -2219,6 +2219,20 @@ void sf_taam_disorder(
     cout << "max agreement factor for atoms (reglar vs. disordered)\n"
         << " " << *it << " for " << crystal.atoms[idx].label << "\n";
 
+    for (int i = 0; i < nAdditionalCalculators; i++)
+    {
+        vector < vector<complex<double> > > additional_ff;
+        aspherSfCalculators[i]->calculateFormFactors(hkl, additional_ff, vector<bool>(crystal.atoms.size(), true));
+
+        agreement_factors::for_atomic_form_factors(regular_ff, additional_ff, atomic_agreement_factors);
+        it = max_element(atomic_agreement_factors.begin(), atomic_agreement_factors.end());
+        idx = distance(atomic_agreement_factors.begin(), it);
+        cout << "max agreement factor for atoms (reglar vs. model" << i+1 << ")\n"
+            << " " << *it << " for " << crystal.atoms[idx].label << "\n";
+
+    }
+
+
 }
 
 void test_json()

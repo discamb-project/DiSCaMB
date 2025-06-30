@@ -3,6 +3,7 @@
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/BasicUtilities/Timer.h"
 #include "discamb/CrystalStructure/UnitCellContent.h"
+#include "discamb/IO/xyz_io.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/AtomTyping/atom_typing_utilities.h"
@@ -243,6 +244,12 @@ namespace discamb {
                 fragmentAtomsIds.push_back({ atom.first, SpaceGroupOperation(atom.second)});
             }
 
+            //_DEBUG
+
+            //xyz_io::writeXyz("fragment_" + to_string(fragmentIdx + 1) + ".xyz", atomicNumbers, positions);
+            
+            // END DEBUG
+            
             StructureWithDescriptors structureWithDescriptors;
             structureWithDescriptors.set(atomicNumbers, positions);
             vector<LocalCoordinateSystem<int> > lcsFragment;
@@ -326,7 +333,9 @@ namespace discamb {
             // --
             atomicNumbers.push_back(atomicNumbersASU[atomIndexInAsymmetricUnit]);
         }
-
+        //_DEBUG
+        //xyz_io::writeXyz("asignment_struct.xyz", atomicNumbers, positions);
+        //END DEBUG
 
 
         vector<LocalCoordinateSystem<int> > lcsMolecule;

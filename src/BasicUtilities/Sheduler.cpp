@@ -1,7 +1,7 @@
 #include "discamb/BasicUtilities/Sheduler.h"
 
 #include <thread>
-#include <iostream>
+
 
 using namespace std;
 
@@ -39,7 +39,7 @@ namespace discamb {
                     get<3>(item)->n = get<0>(item);
                     get<3>(item)->name = get<1>(item);
                     get<3>(item)->scheduler = this;
-                    cout << get<1>(item) << endl;
+                    //cout << get<1>(item) << endl;
                     thread t(&Task::operator(), get<3>(item));
                     t.detach();
                     run = true;

@@ -10,7 +10,7 @@
 
 #include <cmath>
 #include <algorithm>
-#include <iostream>
+
 #include <cassert>
 #include <iomanip>
 
@@ -1277,9 +1277,9 @@ void HansenCoppens_SF_Engine::calculateSF_SerialSymmetryCenterNotAtOrigin(
     complex<REAL> transformedAtomContribWithoutWeight, xyzDerivativesMultiplier, inversionTranslationPhaseFactor;
     // set dTarget_dparam to zero ..
 
-    //DEBUG
+    //_DEBUG
 
-    vector<vector<complex<double> > > sf(atomic_positions.size(),vector<complex<double> >(nSymmOps));
+    // vector<vector<complex<double> > > sf(atomic_positions.size(),vector<complex<double> >(nSymmOps));
 
     //END DEBUG
 
@@ -1390,8 +1390,8 @@ void HansenCoppens_SF_Engine::calculateSF_SerialSymmetryCenterNotAtOrigin(
 
                 atomicFContribWithoutWeight += transformedAtomF;
 
-                if(hklIndex==5)
-                    sf[atomIdx][symOpIdx] = transformedAtomF;
+                //if(hklIndex==5)
+                  //  sf[atomIdx][symOpIdx] = transformedAtomF;
 
                 xyzDerivativesMultiplier = temperature_factor*(term1 - term2)*two_pi_i;
 

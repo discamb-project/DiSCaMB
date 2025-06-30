@@ -3,7 +3,7 @@
 #include "discamb/StructuralProperties/structural_properties.h"
 
 #include <set>
-#include <iostream>
+
 #include <algorithm>
 
 using namespace std;

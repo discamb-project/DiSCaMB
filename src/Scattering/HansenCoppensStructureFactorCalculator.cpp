@@ -22,7 +22,7 @@
 #include "discamb/Scattering/HansenCoppens_SF_Engine2.h"
 #include "discamb/Scattering/HansenCoppens_SF_Engine3.h"
 #include <fstream>
-#include <iostream>
+
 #include <exception>
 #include <iomanip>
 

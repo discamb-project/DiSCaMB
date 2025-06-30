@@ -72,6 +72,11 @@ namespace disordered_structure_fragments{
         const nlohmann::json& disorder_parts,
         std::vector< std::vector<std::pair<std::string, double> > >& substructures);
 
+    void fragments_from_json(
+        const Crystal& crystal,
+        const nlohmann::json& fragments_json,
+        std::vector<Fragment>& fragments);
+
     void convert_ordered_parts_list(
         const Crystal &crystal,
         const std::vector< std::vector<std::pair<int, double> > >& ordered_parts_int,

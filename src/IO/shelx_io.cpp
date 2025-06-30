@@ -259,7 +259,7 @@ namespace discamb {
                     {
                         if(lastKeywordIsTitle)
                             continue;
-                        error_message = string("invalid shelix file line, it should start with space character, the line is: '") +
+                        error_message = string("invalid line in shelix file '") + fName + string("', it should start with space character, the line is : '") +
                             line + string("'");
                         on_error::throwException(error_message, __FILE__, __LINE__);
                     }
@@ -272,7 +272,7 @@ namespace discamb {
                     if (lastKeywordIsTitle)
                         continue;
 
-                    error_message = string("invalid shelix file line, it should not start with space character, the line is: '") +
+                    error_message = string("invalid line in shelix file '") + fName + string("', it should start with space character, the line is : '") +
                         line + string("'");
                     on_error::throwException(error_message, __FILE__, __LINE__);
                 }

@@ -102,13 +102,19 @@ namespace discamb {
                 mReconstructionData[idxInCrystal].weights.push_back(weight);
             }
         }
+        //_DEBUG
+        //for (int subcrystalIdx = 0; subcrystalIdx < nSubcrystals; subcrystalIdx++)
+        //{
+        //    cif_io::saveCif("substrystal_mo_" + to_string(subcrystalIdx + 1) + ".cif", mSubcrystals[subcrystalIdx]);
+        //}
+        //END DEBUG
         // normalize weights
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
             double sum = 0;
             int nInstances = mReconstructionData[atomIdx].weights.size();
             if (nInstances == 0)
-                on_error::throwException("atom " + crystal.atoms[atomIdx].label + " is absent in TAAM subcrystals ", __FILE__, __LINE__);
+                on_error::throwException("atom " + crystal.atoms[atomIdx].label + " is absent in TAAM subcrystals ", __FILE__, __LINE__);   
             for (int instanceIdx = 0; instanceIdx < nInstances; instanceIdx++)
                 sum += mReconstructionData[atomIdx].weights[instanceIdx];
             if (sum != 0)
@@ -311,6 +317,19 @@ namespace discamb {
         const std::string &algorithm
         /*bool generateAssignmentInfo*/ )
     {
+        //_DEBUG
+
+        // ofstream out("atom_list_debug");
+        // for (int i = 0; i < atomList.size(); i++)
+        // {
+        //     out << "ordered part " << i + 1 << "\n";
+        //     for (auto const& atom_wght : atomList[i])
+        //         out << atom_wght.first << " " << atom_wght.second << "\n";
+        // }
+        // out.close();
+
+        //END DEBUG
+
         mCrystal = crystal;
         mReciprocalLatticeUnitCell.set(crystal.unitCell);
         setReconstructionData(crystal, atomList);

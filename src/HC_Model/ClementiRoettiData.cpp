@@ -3,7 +3,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 
-#include <iostream>
+
 
 using namespace std;
 
@@ -5381,10 +5381,11 @@ void stringToConfiguration(
                     if (words[i][1] == 'D')
                         subshell = 2;
                     else
-                    {
-                        cout << "ERROR" << endl;
-                        exit(1);
-                    }
+                        discamb::on_error::throwException("error in Clementi-Roetti data code", __FILE__, __LINE__);
+                    //{
+                    //    cout << "ERROR" << endl;
+                    //    exit(1);
+                    //}
                 }
 
             }
