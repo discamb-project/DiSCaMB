@@ -66,10 +66,11 @@ namespace discamb {
         const string& iamTable,
         bool iamElectronScattering,
         bool frozen_lcs,
-        const std::string& algorithm)
+        const std::string& algorithm,
+        bool def_val_symm)
     {
         set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, def_val_symm);
 
     }
 
@@ -307,7 +308,8 @@ namespace discamb {
         const string& iamTable,
         bool iamElectronScattering,
         bool frozen_lcs,
-        const std::string &algorithm//,
+        const std::string &algorithm,
+        bool def_val_symm//,
         /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
@@ -428,10 +430,10 @@ namespace discamb {
                 types);
         if(mAlgorithm == "standard")
             mHcCalculator = shared_ptr<SfCalculator>(
-                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs));
+                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs, def_val_symm));
         else
             mHcCalculator = shared_ptr<SfCalculator>(
-                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs));
+                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs, def_val_symm));
         mIamCalculator = shared_ptr<SfCalculator>(
             new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };

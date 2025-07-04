@@ -1,5 +1,7 @@
 #include "discamb/Scattering/deformation_valence_calc.h"
-#include "discamb/Scattering/HansenCoppens_SF_Engine4.h"
+#include "discamb/BasicUtilities/on_error.h"
+#include "discamb/MathUtilities/math_utilities.h"
+
 
 namespace discamb {
     namespace deformation_valence_calc {
@@ -22,10 +24,12 @@ namespace discamb {
             const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
             std::vector<std::complex<double> >& defVal)
         {
-            int nSymmetryOps = sphericalHarmonics.size();
-            for (int i = 0; i < nSymmetryOps; i++)
-                defVal[i] = HansenCoppens_SF_Engine4::calculateDeformationValence(
-                    p_lm, g_functions_and_slater_normalization, maxL, sphericalHarmonics[i]);
+            on_error::not_implemented(__FILE__, __LINE__);
+
+            //int nSymmetryOps = sphericalHarmonics.size();
+            //for (int i = 0; i < nSymmetryOps; i++)
+            //    defVal[i] = HansenCoppens_SF_Engine4::calculateDeformationValence(
+            //        p_lm, g_functions_and_slater_normalization, maxL, sphericalHarmonics[i]);
         }
 
         void calculateDefVal_pg_1(
@@ -35,8 +39,9 @@ namespace discamb {
             const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
             std::vector<std::complex<double> >& defVal)
         { 
-            defVal[0] = HansenCoppens_SF_Engine4::calculateDeformationValence(
-                p_lm, g_functions_and_slater_normalization, maxL, sphericalHarmonics[0]);
+            on_error::not_implemented(__FILE__, __LINE__);
+            //defVal[0] = HansenCoppens_SF_Engine4::calculateDeformationValence(
+              //  p_lm, g_functions_and_slater_normalization, maxL, sphericalHarmonics[0]);
         }
 
         void calculateDefVal_pg_2(

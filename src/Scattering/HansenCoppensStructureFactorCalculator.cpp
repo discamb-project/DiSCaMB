@@ -21,6 +21,7 @@
 
 #include "discamb/Scattering/HansenCoppens_SF_Engine2.h"
 #include "discamb/Scattering/HansenCoppens_SF_Engine3.h"
+#include "discamb/Scattering/HansenCoppens_SF_EngineSymm.h"
 #include <fstream>
 
 #include <exception>
@@ -124,9 +125,17 @@ void HansenCoppensStructureFactorCalculator::setEngineSpecificSpaceGroupRepresen
         else
             mSymmetryOperations.resize( nSymmOp );
     }
+    
 
+    mPointGroupOperations.resize(nSymmOp);
     for (symmOpIndex = 0; symmOpIndex < nSymmOp; symmOpIndex++)
     {
+        // symm
+        Vector3<CrystallographicRational> translation;
+        mSpaceGroup.getSpaceGroupOperation(0, 0, symmOpIndex).get(mPointGroupOperations[symmOpIndex], translation);
+
+        //
+
         mSpaceGroup.getSpaceGroupOperation(0, 0, symmOpIndex).get(rotationFractional, translationFractional);
         mSymmetryOperations[ symmOpIndex ].rotation = frac2cart * rotationFractional * cart2frac;
         mSymmetryOperations[ symmOpIndex ].translation = frac2cart * translationFractional;
@@ -309,7 +318,7 @@ const std::vector<bool> &countAtomContribution)
     derivativesSelector.d_anom = false;
     derivativesSelector.d_occ = false;
     derivativesSelector.d_xyz = false;
-
+    
     vector<TargetFunctionAtomicParamDerivatives> dTarget_dparam;
     calculateStructureFactorsAndDerivatives(atoms, localCoordinateSystems,hkl,f,dTarget_dparam,fake_dTarget_df,countAtomContribution, derivativesSelector);
     mWithGradients = true;
@@ -409,13 +418,26 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
     }
     case CPU:
     {
-        HansenCoppens_SF_Engine3 engine;
+        if (!mDefValSymm)
+        {
+            HansenCoppens_SF_Engine3 engine;
 
-        engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
-            mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
-            localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
-            mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector, 
-            mElectronScattering, mAtomicNumbers);
+            engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+                mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+                localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+                mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
+                mElectronScattering, mAtomicNumbers);
+        }
+        else
+        {
+            HansenCoppens_SF_EngineSymm engine;
+
+            engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+                mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+                localCoordinateSystems, mSymmetryOperations, mPointGroupOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+                mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
+                mElectronScattering, mAtomicNumbers);
+        }
 
         //HansenCoppens_SF_Engine2 engine;
 

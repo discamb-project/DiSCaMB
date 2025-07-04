@@ -1,6 +1,4 @@
-#ifndef _DISCAMB_SCATTERING_HansenCoppens_SF_Engine4_H_
-#define _DISCAMB_SCATTERING_HansenCoppens_SF_Engine4_H_
-
+#pragma once
 
 #include "Real.h"
 #include "SF_Engine_DataTypes.h"
@@ -31,11 +29,11 @@ namespace discamb{
 
 */
 
-class HansenCoppens_SF_Engine4
+class HansenCoppens_SF_EngineSymm
 {
 public:
-    HansenCoppens_SF_Engine4();
-    ~HansenCoppens_SF_Engine4();
+    HansenCoppens_SF_EngineSymm();
+    ~HansenCoppens_SF_EngineSymm();
 
 
 /**
@@ -327,6 +325,12 @@ static std::complex<double> calculateDeformationValence(
     int maxL,
     const std::vector<std::vector<double> >& sphericalHarmonics);
 
+static std::complex<double> calculateDeformationValence_(
+    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    const std::vector<REAL>& g_functions_and_slater_normalization,
+    int maxL,
+    const std::vector<std::vector<double> >& sphericalHarmonics);
+
 
 private:
     /*
@@ -367,6 +371,7 @@ private:
         const std::vector<REAL> &atomic_multiplicity_weight,
         const std::vector<Matrix3<REAL> > &local_coordinate_systems,
         const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
+        const std::string point_grouop,
         //const std::vector<Vector3<REAL> > &h_vectors,
         const std::vector<std::vector<Vector3<REAL> > > & h_vector_lines,
         const std::vector< std::vector< Vector3i > > & h_vector_lines_int,
@@ -584,29 +589,37 @@ private:
         const std::vector<int> &symmetryOperationsOrder,
         std::vector<std::complex<double> > &defVal);
 
-    void calculateDefVal_general(
-        const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
-        const std::vector<REAL>& g_functions_and_slater_normalization,
-        int maxL,
-        const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
-        const std::vector<int>& symmetryOperationsOrder,
-        std::vector<std::complex<double> >& defVal);
+    //void calculateDefVal_general(
+    //    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    //    const std::vector<REAL>& g_functions_and_slater_normalization,
+    //    int maxL,
+    //    const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
+    //    const std::vector<int>& symmetryOperationsOrder,
+    //    std::vector<std::complex<double> >& defVal);
 
-    void calculateDefVal_pg_1(
-        const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
-        const std::vector<REAL>& g_functions_and_slater_normalization,
-        int maxL,
-        const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
-        const std::vector<int>& symmetryOperationsOrder,
-        std::vector<std::complex<double> >& defVal);
+    //void calculateDefVal_pg_1(
+    //    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    //    const std::vector<REAL>& g_functions_and_slater_normalization,
+    //    int maxL,
+    //    const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
+    //    const std::vector<int>& symmetryOperationsOrder,
+    //    std::vector<std::complex<double> >& defVal);
 
-    void calculateDefVal_pg_222(
-        const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
-        const std::vector<REAL>& g_functions_and_slater_normalization,
-        int maxL,
-        const std::vector< std::vector <std::vector<double> > >& sphericalHarmonics,
-        const std::vector<int>& symmetryOperationsOrder,
-        std::vector<std::complex<double> >& defVal);
+    //void calculateDefVal_pg_222(
+    //    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    //    const std::vector<REAL>& g_functions_and_slater_normalization,
+    //    int maxL,
+    //    const std::vector <std::vector<double> > & sphericalHarmonics,
+    //    //const std::vector<int>& symmetryOperationsOrder,
+    //    std::vector<std::complex<double> >& defVal);
+
+    //void calculateDefVal_pg_222_lmax4(
+    //    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    //    const std::vector<REAL>& g_functions_and_slater_normalization,
+    //    int maxL,
+    //    const std::vector <std::vector<double> >& sphericalHarmonics,
+    //    //const std::vector<int>& symmetryOperationsOrder,
+    //    std::vector<std::complex<double> >& defVal);
 
 
     void pre_atom_loop_sf_calc(
@@ -691,7 +704,7 @@ private:
 //#############################################################################
 
 template<typename T>
-void HansenCoppens_SF_Engine4::calculateSF(
+void HansenCoppens_SF_EngineSymm::calculateSF(
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParameters,
     const std::vector<sf_engine_data_types::HC_TypeParam> &typeParameters,
     const std::vector<int> &atom_to_wfn_map,
@@ -709,7 +722,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
     const std::vector<bool> &include_atom_contribution,
     T &singleHklResultsProcessor)
 {
-    //cout << "calls HansenCoppens_SF_Engine4_6::calculateSF" << endl;
+    //cout << "calls HansenCoppens_SF_EngineSymm_6::calculateSF" << endl;
 
     std::complex<REAL> structureFactor, inversionTranslationPhaseFactor;
     SfDerivativesAtHkl derivatives;
@@ -965,7 +978,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
 }
 
 template<typename T>
-void HansenCoppens_SF_Engine4::calculateSF_IAM(
+void HansenCoppens_SF_EngineSymm::calculateSF_IAM(
     const std::vector<std::string> &atomicType,
     const std::vector<std::complex<REAL> > &atomTypeAnomalousScattering,
     const std::vector<int> &atom_to_type_map,
@@ -1018,7 +1031,7 @@ void HansenCoppens_SF_Engine4::calculateSF_IAM(
 
 
 template<int l_max>
-std::complex<REAL> HansenCoppens_SF_Engine4::combine_multipolar_terms(
+std::complex<REAL> HansenCoppens_SF_EngineSymm::combine_multipolar_terms(
     const std::vector<std::vector<REAL> > &p_lm,
     const std::vector<REAL> &radial,
     const std::vector<std::vector<REAL> > &sphericalHarmonics)
@@ -1109,4 +1122,4 @@ std::complex<REAL> HansenCoppens_SF_Engine4::combine_multipolar_terms(
 /** @}*/
 } // namespace discamb
 
-#endif /*_DISCAMB_SCATTERING_HansenCoppens_SF_Engine4_H_*/
+

@@ -10,12 +10,12 @@ namespace discamb {
     namespace {
     
         map<string, vector<string> > point_groups = {
-            {"1", {"x,y,x"}},
-            {"-1", {"x,y,x", "-x,-y,-z"}},
-            {"2", {"x,y,x", "-x,y,-z"}},
-            {"m", {"x,y,x", "x,-y,z"}},
-            {"2/m", {"x,y,x", "-x,y,-z", "x,-y,z", "-x,-y,-z"}},
-            {"222", {"x,y,x", "-x,-y,z", "-x,y,-z", "x,-y,-z"}}
+            {"1", {"x,y,z"}},
+            {"-1", {"x,y,z", "-x,-y,-z"}},
+            {"2", {"x,y,z", "-x,y,-z"}},
+            {"m", {"x,y,z", "x,-y,z"}},
+            {"2/m", {"x,y,z", "-x,y,-z", "x,-y,z", "-x,-y,-z"}},
+            {"222", {"x,y,z", "-x,-y,z", "-x,y,-z", "x,-y,-z"}}
             
         };
     
@@ -54,6 +54,70 @@ namespace discamb {
                 }
             }
             return "";
+        }
+
+        std::string findPointGroup(
+            const vector<Matrix3i>& symmOps,
+            vector<int>& canonicalOrder)
+        {
+            int nSymmOps = symmOps.size();
+            canonicalOrder.assign(nSymmOps, -1);
+
+            for (const auto& point_group : point_groups) {
+                if (point_group.second.size() == nSymmOps)
+                {
+                    vector<Matrix3i> pg_operations(nSymmOps);
+                    for(int i=0;i<nSymmOps;i++)
+                    {
+                        SpaceGroupOperation spaceGroupOp(point_group.second[i]);
+                        Matrix3i rotationMatrix;
+                        Vector3<CrystallographicRational> translationVector;
+                        spaceGroupOp.get(rotationMatrix, translationVector);
+                        pg_operations[i] = rotationMatrix;
+                    }
+
+                    vector<bool> symmOpFound(nSymmOps, false);
+                    bool foundPointGroup = true;
+                    for (int idxInTable = 0; idxInTable < nSymmOps; idxInTable++)
+                    {
+                        SpaceGroupOperation spaceGroupOp(point_group.second[idxInTable]);
+                        Matrix3i rotationMatrix;
+                        Vector3<CrystallographicRational> translationVector;
+                        spaceGroupOp.get(rotationMatrix, translationVector);
+                        Matrix3i pg_operation_table = rotationMatrix;
+
+                        bool foundOperation = false;
+                        for (int idxInArg = 0; idxInArg < nSymmOps; idxInArg++)
+                            if (symmOps[idxInArg] == pg_operation_table)
+                            {
+                                foundOperation = true;
+                                canonicalOrder[idxInArg] = idxInTable;
+                            }
+                        
+                        if (!foundOperation)
+                            foundPointGroup = false;
+                    }
+                    if (foundPointGroup)
+                        return point_group.first;
+                }
+            }
+            return string();
+        }
+
+        std::string findPointGroup(
+            const std::vector<std::string>& symmetryOperations,
+            std::vector<int>& canonicalOrder)
+        {
+            vector<Matrix3i> symmOps;
+            for (auto const& op : symmetryOperations) {
+                SpaceGroupOperation spaceGroupOp(op);
+                Matrix3i rotationMatrix;
+                Vector3<CrystallographicRational> translationVector;
+                spaceGroupOp.get(rotationMatrix, translationVector);
+                symmOps.push_back(rotationMatrix);
+            }
+            return findPointGroup(symmOps, canonicalOrder);
+
         }
 
         std::string findPointGroup(const std::vector <std::string> &symmetryOperation)

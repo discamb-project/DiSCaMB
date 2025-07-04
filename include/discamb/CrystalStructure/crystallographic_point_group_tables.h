@@ -53,7 +53,11 @@ namespace discamb {
          */
         std::string findPointGroup(const std::vector <std::string> &symmOps);
         std::string findPointGroup(const std::vector<Matrix3i>& symmOps);
-
+        /**
+        canonicalOrder[i] - the index symmOps[i] have on the discamb internal list for this point grouop
+        */
+        std::string findPointGroup(const std::vector<Matrix3i>& symmOps, std::vector<int> &canonicalOrder);
+        std::string findPointGroup(const std::vector<std::string>& symmOps, std::vector<int>& canonicalOrder);
         
     }
 

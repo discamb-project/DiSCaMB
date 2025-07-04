@@ -33,6 +33,7 @@ namespace discamb {
         iamElectronScattering = data.value("iam electron scattering", false); 
         frozen_lcs = data.value("frozen lcs", false);
         algorithm = data.value("algorithm", "standard");
+        def_val_symm = data.value("def-val symmetry", false);
         
         MATTS_BankReader bankReader;
         //vector<AtomType> types;
@@ -244,7 +245,8 @@ namespace discamb {
                 settings.iamTable,
                 settings.iamElectronScattering,
                 settings.frozen_lcs,
-                settings.algorithm);
+                settings.algorithm,
+                settings.def_val_symm);
         }
     }
 

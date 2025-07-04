@@ -1,4 +1,4 @@
-#include "discamb/Scattering/HansenCoppens_SF_Engine4.h"
+#include "discamb/Scattering/HansenCoppens_SF_EngineSymm.h"
 
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
@@ -30,20 +30,511 @@
 
 using namespace std;
 
+namespace {
+    void calculate_def_val_pg_222(
+        const std::vector<std::vector<double> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+        const std::vector<double>& radial,
+        int l_max,
+        const std::vector <std::vector<double> >& sphericalHarmonics,
+        //const std::vector<int>& symmetryOperationsOrder,
+        std::vector<std::complex<double> >& defVal)
+    {
+        assert(defVal.size() == 4);
+
+
+        if (l_max < 0)
+        {
+            defVal[0] = 0.0;
+            defVal[1] = 0.0;
+            defVal[2] = 0.0;
+            defVal[3] = 0.0;
+            return;
+        }
+
+        /*
+        X,Y,Z
+        -X,-Y,Z
+        -X,Y,-Z
+        X,-Y,-Z
+        */
+
+        double v1_real = 0;
+        double v2_real = 0;
+        double v3_real = 0;
+        double v4_real = 0;
+        double v1_imag = 0;
+        double v2_imag = 0;
+        double v3_imag = 0;
+        double v4_imag = 0;
+
+
+        /*
+                                     1      C2(z)      C2(y)      C2(x)
+                                   x,y,z   -x,-y,z    -x,y,-z    x,-y,-z
+
+         0  0                        1       1          1          1
+         1 -1   y                    1      -1          1         -1
+         1  0   z                    1       1         -1         -1
+         1  1   x                    1      -1         -1          0
+         2 -2   xy                   1       1         -1         -1
+         2 -1   yz                   1      -1         -1          1
+         2  0   3zz-rr               1       1          1          1
+         2  1   xz                   1      -1          1         -1
+         2  2   xx-yy                1       1          1          1
+         3 -3   y(3xx-yy)            1       1          1          1
+         3 -2   xyz                  1       1          1          1
+         3 -1   y(5zz-yy)            1      -1          1         -1
+         3  0   z(5zz-3rr)           1       1         -1         -1
+         3  1   x(5zz-rr)            1      -1         -1          1
+         3  2   z(xx-yy)             1       1         -1         -1
+         3  3   x(xx-3yy)            1      -1         -1          1
+         4 -4   xy(xx-yy)            1       1         -1         -1
+         4 -3   yz(3xx-yy)           1      -1         -1          1
+         4 -2   xy(7zz-rr)           1       1         -1         -1
+         4 -1   yz(7zz-3rr)          1      -1         -1          1
+         4  0   35z4-30zzrr+3r4      1       1          1          1
+         4  1   xz(7zz-3rr)          1      -1          1         -1
+         4  2   (xx-yy)(7zz-rr)      1       1          1          1
+         4  3   xz(xx-3yy)           1      -1          1         -1
+         4  4   x4-6xxyy+y4          1       1          1          1
+
+        sorted
+                                   x,y,z   -x,-y,z    -x,y,-z    x,-y,-z
+    v1
+         0  0                        1       1          1          1
+         2  0   3zz-rr               1       1          1          1
+         2  2   xx-yy                1       1          1          1
+         3 -2   xyz                  1       1          1          1
+         4  0   35z4-30zzrr+3r4      1       1          1          1
+         4  2   (xx-yy)(7zz-rr)      1       1          1          1
+         4  4   x4-6xxyy+y4          1       1          1          1
+    v2
+         1  0   z                    1       1         -1         -1
+         2 -2   xy                   1       1         -1         -1
+         3  0   z(5zz-3rr)           1       1         -1         -1
+         3  2   z(xx-yy)             1       1         -1         -1
+         4 -4   xy(xx-yy)            1       1         -1         -1
+         4 -2   xy(7zz-rr)           1       1         -1         -1
+    v3
+         2  1   xz                   1      -1          1         -1
+         1 -1   y                    1      -1          1         -1
+         3 -3   y(3xx-yy)            1      -1          1         -1
+         3 -1   y(5zz-yy)            1      -1          1         -1
+         4  1   xz(7zz-3rr)          1      -1          1         -1
+         4  3   xz(xx-3yy)           1      -1          1         -1
+    v4
+         1  1   x                    1      -1         -1          1
+         2 -1   yz                   1      -1         -1          1
+         3  1   x(5zz-rr)            1      -1         -1          1
+         3  3   x(xx-3yy)            1      -1         -1          1
+         4 -3   yz(3xx-yy)           1      -1         -1          1
+         4 -1   yz(7zz-3rr)          1      -1         -1          1
+
+
+        */
+
+        v1_real += radial[0] * p_lm[0][0] * sphericalHarmonics[0][0];
+        double angular;
+
+
+
+        if (l_max > 0)
+        {
+
+            const int l1 = 1;
+            v2_imag += radial[1] * p_lm[1][0 + l1] * sphericalHarmonics[1][0 + l1];
+            v3_imag += radial[1] * p_lm[1][-1 + l1] * sphericalHarmonics[1][-1 + l1];
+            v4_imag += radial[1] * p_lm[1][1 + l1] * sphericalHarmonics[1][1 + l1];
+
+            if (l_max > 1)
+            {
+                const int l2 = 2;
+
+                v1_real -= radial[2] * (p_lm[2][0 + l2] * sphericalHarmonics[2][0 + l2] + p_lm[2][2 + l2] * sphericalHarmonics[2][2 + l2]);
+                v2_real -= radial[2] * p_lm[2][-2 + l2] * sphericalHarmonics[2][-2 + l2];
+                v3_real -= radial[2] * p_lm[2][1 + l2] * sphericalHarmonics[2][1 + l2];
+                v4_real -= radial[2] * p_lm[2][-1 + l2] * sphericalHarmonics[2][-1 + l2];
+
+                if (l_max > 2)
+                {
+                    {
+                        const int l3 = 3;
+                        v1_imag -= radial[3] * p_lm[3][-2 + l3] * sphericalHarmonics[3][-2 + l3];
+                        v2_imag -= radial[3] * (p_lm[3][0 + l3] * sphericalHarmonics[3][0 + l3] + p_lm[3][2 + l3] * sphericalHarmonics[3][2 + l3]);
+                        v3_imag -= radial[3] * (p_lm[3][-3 + l3] * sphericalHarmonics[3][-3 + l3] + p_lm[3][-1 + l3] * sphericalHarmonics[3][-1 + l3]);
+                        v4_imag -= radial[3] * (p_lm[3][1 + l3] * sphericalHarmonics[3][1 + l3] + p_lm[3][3 + l3] * sphericalHarmonics[3][3 + l3]);
+                    }
+
+                    if (l_max > 3)
+                    {
+                        /*
+            v1
+                 4  0   35z4-30zzrr+3r4      1       1          1          1
+                 4  2   (xx-yy)(7zz-rr)      1       1          1          1
+                 4  4   x4-6xxyy+y4          1       1          1          1
+            v2
+                 4 -4   xy(xx-yy)            1       1         -1         -1
+                 4 -2   xy(7zz-rr)           1       1         -1         -1
+            v3
+                 4  1   xz(7zz-3rr)          1      -1          1         -1
+                 4  3   xz(xx-3yy)           1      -1          1         -1
+            v4
+                 4 -3   yz(3xx-yy)           1      -1         -1          1
+                 4 -1   yz(7zz-3rr)          1      -1         -1          1
+
+                        */
+                        {
+                            const int l4 = 4;
+                            v1_real += radial[4] * (p_lm[4][0 + l4] * sphericalHarmonics[4][0 + l4] + p_lm[4][2 + l4] * sphericalHarmonics[4][2 + l4] +
+                                p_lm[4][4 + l4] * sphericalHarmonics[4][4 + l4]);
+                            v2_real += radial[4] * (p_lm[4][-4 + l4] * sphericalHarmonics[4][-4 + l4] + p_lm[4][-2 + l4] * sphericalHarmonics[4][-2 + l4]);
+                            v3_real += radial[4] * (p_lm[4][1 + l4] * sphericalHarmonics[4][1 + l4] + p_lm[4][3 + l4] * sphericalHarmonics[4][3 + l4]);
+                            v4_real += radial[4] * (p_lm[4][-1 + l4] * sphericalHarmonics[4][-1 + l4] + p_lm[4][-3 + l4] * sphericalHarmonics[4][-3 + l4]);
+
+                        }
+                    } // l_max>3
+                } // l_max>2
+            } // l_max>1
+        } // l_max>0
+
+        /*
+                                   x,y,z   -x,-y,z    -x,y,-z    x,-y,-z
+    v1
+                                     1       1          1          1
+    v2
+                                     1       1         -1         -1
+    v3
+                                     1      -1          1         -1
+    v4
+                                     1      -1         -1          1
+        */
+
+        defVal[0] = 4 * M_PI * std::complex<double>(v1_real + v2_real + v3_real + v4_real, v1_imag + v2_imag + v3_imag + v4_imag);
+        defVal[1] = 4 * M_PI * std::complex<double>(v1_real + v2_real - v3_real - v4_real, v1_imag + v2_imag - v3_imag - v4_imag);
+        defVal[2] = 4 * M_PI * std::complex<double>(v1_real - v2_real + v3_real - v4_real, v1_imag - v2_imag + v3_imag - v4_imag);
+        defVal[3] = 4 * M_PI * std::complex<double>(v1_real - v2_real - v3_real + v4_real, v1_imag - v2_imag - v3_imag + v4_imag);
+
+    }
+
+    void calculate_def_val_pg_222_l4(
+        const std::vector<std::vector<double> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+        const std::vector<double>& radial,
+        int l_max,
+        const std::vector <std::vector<double> >& sphericalHarmonics,
+        //const std::vector<int>& symmetryOperationsOrder,
+        std::vector<std::complex<double> >& defVal)
+    {
+        assert(defVal.size() == 4);
+
+
+        if (l_max < 0)
+        {
+            defVal[0] = 0.0;
+            defVal[1] = 0.0;
+            defVal[2] = 0.0;
+            defVal[3] = 0.0;
+            return;
+        }
+
+        const int l1 = 1;
+        const int l2 = 2;
+        const int l3 = 3;
+        const int l4 = 4;
+
+        double v1_real = radial[0] * p_lm[0][0] * sphericalHarmonics[0][0] - radial[2] * (p_lm[2][0 + l2] * sphericalHarmonics[2][0 + l2] + p_lm[2][2 + l2] * sphericalHarmonics[2][2 + l2]) +
+            radial[4] * (p_lm[4][0 + l4] * sphericalHarmonics[4][0 + l4] + p_lm[4][2 + l4] * sphericalHarmonics[4][2 + l4] +
+                p_lm[4][4 + l4] * sphericalHarmonics[4][4 + l4]);;
+                      
+        double v2_real =  -radial[2] * p_lm[2][-2 + l2] * sphericalHarmonics[2][-2 + l2] + radial[4] * (p_lm[4][-4 + l4] * sphericalHarmonics[4][-4 + l4] + p_lm[4][-2 + l4] * sphericalHarmonics[4][-2 + l4]);
+        double v3_real =  -radial[2] * p_lm[2][1 + l2] * sphericalHarmonics[2][1 + l2] + radial[4] * (p_lm[4][1 + l4] * sphericalHarmonics[4][1 + l4] + p_lm[4][3 + l4] * sphericalHarmonics[4][3 + l4]);
+        double v4_real =  -radial[2] * p_lm[2][-1 + l2] * sphericalHarmonics[2][-1 + l2] + radial[4] * (p_lm[4][-1 + l4] * sphericalHarmonics[4][-1 + l4] + p_lm[4][-3 + l4] * sphericalHarmonics[4][-3 + l4]);
+
+        double v1_imag =  -radial[3] * p_lm[3][-2 + l3] * sphericalHarmonics[3][-2 + l3];
+        double v2_imag =   radial[1] * p_lm[1][0 + l1] * sphericalHarmonics[1][0 + l1] - radial[3] * (p_lm[3][0 + l3] * sphericalHarmonics[3][0 + l3] + p_lm[3][2 + l3] * sphericalHarmonics[3][2 + l3]);
+        double v3_imag =   radial[1] * p_lm[1][-1 + l1] * sphericalHarmonics[1][-1 + l1] - radial[3] * (p_lm[3][-3 + l3] * sphericalHarmonics[3][-3 + l3] + p_lm[3][-1 + l3] * sphericalHarmonics[3][-1 + l3]);
+        double v4_imag =   radial[1] * p_lm[1][1 + l1] * sphericalHarmonics[1][1 + l1] - radial[3] * (p_lm[3][1 + l3] * sphericalHarmonics[3][1 + l3] + p_lm[3][3 + l3] * sphericalHarmonics[3][3 + l3]);
+
+        defVal[0] = 4 * M_PI * std::complex<double>(v1_real + v2_real + v3_real + v4_real, v1_imag + v2_imag + v3_imag + v4_imag);
+        defVal[1] = 4 * M_PI * std::complex<double>(v1_real + v2_real - v3_real - v4_real, v1_imag + v2_imag - v3_imag - v4_imag);
+        defVal[2] = 4 * M_PI * std::complex<double>(v1_real - v2_real + v3_real - v4_real, v1_imag - v2_imag + v3_imag - v4_imag);
+        defVal[3] = 4 * M_PI * std::complex<double>(v1_real - v2_real - v3_real + v4_real, v1_imag - v2_imag - v3_imag + v4_imag);
+
+    }
+
+
+    void calculate_def_val_pg_222_nosymm(
+        const std::vector<std::vector<double> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+        const std::vector<double>& radial,
+        int l_max,
+        const vector<vector <vector<double> > > & sphericalHarmonics,
+        //const std::vector<int>& symmetryOperationsOrder,
+        std::vector<std::complex<double> >& defVal)
+    {
+        assert(defVal.size() == 4);
+
+
+        if (l_max < 0)
+        {
+            defVal[0] = 0.0;
+            defVal[1] = 0.0;
+            defVal[2] = 0.0;
+            defVal[3] = 0.0;
+            return;
+        }
+
+        /*
+        X,Y,Z
+        -X,-Y,Z
+        -X,Y,-Z
+        X,-Y,-Z
+        */
+
+        double v1_real = radial[0] * p_lm[0][0] * sphericalHarmonics[0][0][0];
+        double v2_real = v1_real;
+        double v3_real = v1_real;
+        double v4_real = v1_real;
+        double v1_imag = 0;
+        double v2_imag = 0;
+        double v3_imag = 0;
+        double v4_imag = 0;
+
+        double angular;
+
+
+
+        if (l_max > 0)
+        {
+            v1_imag += radial[1] * (p_lm[1][0] * sphericalHarmonics[0][1][0] + p_lm[1][1] * sphericalHarmonics[0][1][1] + p_lm[1][2] * sphericalHarmonics[0][1][2]);
+            v2_imag += radial[1] * (p_lm[1][0] * sphericalHarmonics[1][1][0] + p_lm[1][1] * sphericalHarmonics[1][1][1] + p_lm[1][2] * sphericalHarmonics[1][1][2]);
+            v3_imag += radial[1] * (p_lm[1][0] * sphericalHarmonics[2][1][0] + p_lm[1][1] * sphericalHarmonics[2][1][1] + p_lm[1][2] * sphericalHarmonics[2][1][2]);
+            v4_imag += radial[1] * (p_lm[1][0] * sphericalHarmonics[3][1][0] + p_lm[1][1] * sphericalHarmonics[3][1][1] + p_lm[1][2] * sphericalHarmonics[3][1][2]);
+
+            if (l_max > 1)
+            {
+                const int l2 = 2;
+
+                v1_real -= radial[2] * (p_lm[2][0] * sphericalHarmonics[0][2][0] + p_lm[2][1] * sphericalHarmonics[0][2][1] + p_lm[2][2] * sphericalHarmonics[0][2][2] +
+                                        p_lm[2][3] * sphericalHarmonics[0][2][3] + p_lm[2][4] * sphericalHarmonics[0][2][4]);
+                v2_real -= radial[2] * (p_lm[2][0] * sphericalHarmonics[1][2][0] + p_lm[2][1] * sphericalHarmonics[1][2][1] + p_lm[2][2] * sphericalHarmonics[1][2][2] +
+                                        p_lm[2][3] * sphericalHarmonics[1][2][3] + p_lm[2][4] * sphericalHarmonics[1][2][4]);
+                v3_real -= radial[2] * (p_lm[2][0] * sphericalHarmonics[2][2][0] + p_lm[2][1] * sphericalHarmonics[2][2][1] + p_lm[2][2] * sphericalHarmonics[2][2][2] +
+                                        p_lm[2][3] * sphericalHarmonics[2][2][3] + p_lm[2][4] * sphericalHarmonics[2][2][4]);
+                v4_real -= radial[2] * (p_lm[2][0] * sphericalHarmonics[3][2][0] + p_lm[2][1] * sphericalHarmonics[3][2][1] + p_lm[2][2] * sphericalHarmonics[3][2][2] +
+                                        p_lm[2][3] * sphericalHarmonics[3][2][3] + p_lm[2][4] * sphericalHarmonics[3][2][4]);
+
+                if (l_max > 2)
+                {
+                    {
+                        v1_imag -= radial[3] * ( p_lm[3][0] * sphericalHarmonics[0][3][0] + p_lm[3][1] * sphericalHarmonics[0][3][1] + p_lm[3][2] * sphericalHarmonics[0][3][2] +
+                                                 p_lm[3][3] * sphericalHarmonics[0][3][3] + p_lm[3][4] * sphericalHarmonics[0][3][4] + p_lm[3][5] * sphericalHarmonics[0][3][5] +
+                                                 p_lm[3][6] * sphericalHarmonics[0][3][6]);
+                        v2_imag -= radial[3] * ( p_lm[3][0] * sphericalHarmonics[1][3][0] + p_lm[3][1] * sphericalHarmonics[1][3][1] + p_lm[3][2] * sphericalHarmonics[1][3][2] +
+                                                 p_lm[3][3] * sphericalHarmonics[1][3][3] + p_lm[3][4] * sphericalHarmonics[1][3][4] + p_lm[3][5] * sphericalHarmonics[1][3][5] +
+                                                 p_lm[3][6] * sphericalHarmonics[1][3][6]);
+                        v3_imag -= radial[3] * ( p_lm[3][0] * sphericalHarmonics[2][3][0] + p_lm[3][1] * sphericalHarmonics[2][3][1] + p_lm[3][2] * sphericalHarmonics[2][3][2] +
+                                                 p_lm[3][3] * sphericalHarmonics[2][3][3] + p_lm[3][4] * sphericalHarmonics[2][3][4] + p_lm[3][5] * sphericalHarmonics[2][3][5] +
+                                                 p_lm[3][6] * sphericalHarmonics[2][3][6]);
+                        v4_imag -= radial[3] * ( p_lm[3][0] * sphericalHarmonics[3][3][0] + p_lm[3][1] * sphericalHarmonics[3][3][1] + p_lm[3][2] * sphericalHarmonics[3][3][2] +
+                                                 p_lm[3][3] * sphericalHarmonics[3][3][3] + p_lm[3][4] * sphericalHarmonics[3][3][4] + p_lm[3][5] * sphericalHarmonics[3][3][5] +
+                                                 p_lm[3][6] * sphericalHarmonics[3][3][6]);
+
+                    }
+
+                    if (l_max > 3)
+                    {
+
+                        v1_real += radial[4] * (p_lm[4][0] * sphericalHarmonics[0][4][0] + p_lm[4][1] * sphericalHarmonics[0][4][1] + p_lm[4][2] * sphericalHarmonics[0][4][2] +
+                                                p_lm[4][3] * sphericalHarmonics[0][4][3] + p_lm[4][4] * sphericalHarmonics[0][4][4] + p_lm[4][5] * sphericalHarmonics[0][4][5] +
+                                                p_lm[4][6] * sphericalHarmonics[0][4][6] + p_lm[4][7] * sphericalHarmonics[0][4][7] + p_lm[4][8] * sphericalHarmonics[0][4][8]);
+                        
+                        v2_real += radial[4] * (p_lm[4][0] * sphericalHarmonics[1][4][0] + p_lm[4][1] * sphericalHarmonics[1][4][1] + p_lm[4][2] * sphericalHarmonics[1][4][2] +
+                                                p_lm[4][3] * sphericalHarmonics[1][4][3] + p_lm[4][4] * sphericalHarmonics[1][4][4] + p_lm[4][5] * sphericalHarmonics[1][4][5] +
+                                                p_lm[4][6] * sphericalHarmonics[1][4][6] + p_lm[4][7] * sphericalHarmonics[1][4][7] + p_lm[4][8] * sphericalHarmonics[1][4][8]);
+                        
+                        v3_real += radial[4] * (p_lm[4][0] * sphericalHarmonics[2][4][0] + p_lm[4][1] * sphericalHarmonics[2][4][1] + p_lm[4][2] * sphericalHarmonics[2][4][2] +
+                                                p_lm[4][3] * sphericalHarmonics[2][4][3] + p_lm[4][4] * sphericalHarmonics[2][4][4] + p_lm[4][5] * sphericalHarmonics[2][4][5] +
+                                                p_lm[4][6] * sphericalHarmonics[2][4][6] + p_lm[4][7] * sphericalHarmonics[2][4][7] + p_lm[4][8] * sphericalHarmonics[2][4][8]);
+                        
+                        v4_real += radial[4] * (p_lm[4][0] * sphericalHarmonics[3][4][0] + p_lm[4][1] * sphericalHarmonics[3][4][1] + p_lm[4][2] * sphericalHarmonics[3][4][2] +
+                                                p_lm[4][3] * sphericalHarmonics[3][4][3] + p_lm[4][4] * sphericalHarmonics[3][4][4] + p_lm[4][5] * sphericalHarmonics[3][4][5] +
+                                                p_lm[4][6] * sphericalHarmonics[3][4][6] + p_lm[4][7] * sphericalHarmonics[3][4][7] + p_lm[4][8] * sphericalHarmonics[3][4][8]);
+
+
+                    } // l_max>3
+                } // l_max>2
+            } // l_max>1
+        } // l_max>0
+
+
+        defVal[0] = 4 * M_PI * std::complex<double>(v1_real, v1_imag);
+        defVal[1] = 4 * M_PI * std::complex<double>(v2_real, v2_imag);
+        defVal[2] = 4 * M_PI * std::complex<double>(v3_real, v3_imag);
+        defVal[3] = 4 * M_PI * std::complex<double>(v4_real, v4_imag);
+
+    }
+
+    template <int N>
+    void def_val_calculator_n_symm(
+        const std::vector<std::vector<double> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+        const std::vector<double>& radial,
+        int l_max,
+        const vector<vector <vector<double> > >& sphericalHarmonics,
+        //const std::vector<int>& symmetryOperationsOrder,
+        std::vector<std::complex<double> >& defVal)
+    {
+
+        int symmOpIdx;
+
+        assert(defVal.size() == N);
+        assert(N > 0);
+
+
+        vector<double> real(N);
+        vector<double> imag(N);
+
+        if (l_max < 0)
+        {
+            for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+                defVal[symmOpIdx] = 0.0;
+            return;
+        }
+
+
+        real[0] = radial[0] * p_lm[0][0] * sphericalHarmonics[0][0][0];
+        for (symmOpIdx = 1; symmOpIdx < N; symmOpIdx++)
+            real[symmOpIdx] = real[0];
+
+        for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+            imag[symmOpIdx] = 0.0;
+
+        double angular;
+
+
+
+        if (l_max > 0)
+        {
+            for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+                imag[symmOpIdx] += radial[1] * (p_lm[1][0] * sphericalHarmonics[symmOpIdx][1][0] + p_lm[1][1] * sphericalHarmonics[symmOpIdx][1][1] +
+                    p_lm[1][2] * sphericalHarmonics[symmOpIdx][1][2]);
+            if (l_max > 1)
+            {
+                for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+                    real[symmOpIdx] -= radial[2] * (p_lm[2][0] * sphericalHarmonics[symmOpIdx][2][0] + p_lm[2][1] * sphericalHarmonics[symmOpIdx][2][1] +
+                        p_lm[2][2] * sphericalHarmonics[symmOpIdx][2][2] + p_lm[2][3] * sphericalHarmonics[symmOpIdx][2][3] +
+                        p_lm[2][4] * sphericalHarmonics[symmOpIdx][2][4]);
+
+                if (l_max > 2)
+                {
+                    for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+                        imag[symmOpIdx] -= radial[3] * (p_lm[3][0] * sphericalHarmonics[symmOpIdx][3][0] + p_lm[3][1] * sphericalHarmonics[symmOpIdx][3][1] + p_lm[3][2] * sphericalHarmonics[symmOpIdx][3][2] +
+                            p_lm[3][3] * sphericalHarmonics[symmOpIdx][3][3] + p_lm[3][4] * sphericalHarmonics[symmOpIdx][3][4] + p_lm[3][5] * sphericalHarmonics[symmOpIdx][3][5] +
+                            p_lm[3][6] * sphericalHarmonics[symmOpIdx][3][6]);
+
+                    if (l_max > 3)
+                    {
+                        for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+                            real[symmOpIdx] += radial[4] * (p_lm[4][0] * sphericalHarmonics[symmOpIdx][4][0] + p_lm[4][1] * sphericalHarmonics[symmOpIdx][4][1] + p_lm[4][2] * sphericalHarmonics[symmOpIdx][4][2] +
+                                p_lm[4][3] * sphericalHarmonics[symmOpIdx][4][3] + p_lm[4][4] * sphericalHarmonics[symmOpIdx][4][4] + p_lm[4][5] * sphericalHarmonics[symmOpIdx][4][5] +
+                                p_lm[4][6] * sphericalHarmonics[symmOpIdx][4][6] + p_lm[4][7] * sphericalHarmonics[symmOpIdx][4][7] + p_lm[4][8] * sphericalHarmonics[symmOpIdx][4][8]);
+                    } // l_max>3
+                } // l_max>2
+            } // l_max>1
+        } // l_max>0
+
+        for (symmOpIdx = 0; symmOpIdx < N; symmOpIdx++)
+            defVal[symmOpIdx] = 4 * M_PI * std::complex<double>(real[symmOpIdx], imag[symmOpIdx]);
+
+    }
+
+    void calculate_def_val_symm_eq(
+        const std::vector<std::vector<double> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+        const std::vector<double>& radial,
+        int l_max,
+        const vector<vector <vector<double> > >& sphericalHarmonics,
+        //const std::vector<int>& symmetryOperationsOrder,
+        std::vector<std::complex<double> >& defVal)
+    {
+
+        int symmOpIdx, nSymmOps = sphericalHarmonics.size();
+
+        assert(defVal.size() == nSymmOps);
+        assert(nSymmOps > 0);
+
+
+        vector<double> real(nSymmOps);
+        vector<double> imag(nSymmOps);
+
+        if (l_max < 0)
+        {
+            for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+                defVal[symmOpIdx] = 0.0;
+            return;
+        }
+
+            
+        real[0] = radial[0] * p_lm[0][0] * sphericalHarmonics[0][0][0];
+        for (symmOpIdx = 1; symmOpIdx < nSymmOps; symmOpIdx++)
+            real[symmOpIdx] = real[0];
+
+        for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+            imag[symmOpIdx] = 0.0;
+
+        double angular;
+
+
+
+        if (l_max > 0)
+        {
+            for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+                imag[symmOpIdx] += radial[1] * (p_lm[1][0] * sphericalHarmonics[symmOpIdx][1][0] + p_lm[1][1] * sphericalHarmonics[symmOpIdx][1][1] +
+                                                p_lm[1][2] * sphericalHarmonics[symmOpIdx][1][2]);
+            if (l_max > 1)
+            {
+                for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+                    real[symmOpIdx] -= radial[2] * (p_lm[2][0] * sphericalHarmonics[symmOpIdx][2][0] + p_lm[2][1] * sphericalHarmonics[symmOpIdx][2][1] + 
+                                                    p_lm[2][2] * sphericalHarmonics[symmOpIdx][2][2] + p_lm[2][3] * sphericalHarmonics[symmOpIdx][2][3] + 
+                                                    p_lm[2][4] * sphericalHarmonics[symmOpIdx][2][4]);
+
+                if (l_max > 2)
+                {
+                    for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+                        imag[symmOpIdx] -= radial[3] * (p_lm[3][0] * sphericalHarmonics[symmOpIdx][3][0] + p_lm[3][1] * sphericalHarmonics[symmOpIdx][3][1] + p_lm[3][2] * sphericalHarmonics[symmOpIdx][3][2] +
+                                                        p_lm[3][3] * sphericalHarmonics[symmOpIdx][3][3] + p_lm[3][4] * sphericalHarmonics[symmOpIdx][3][4] + p_lm[3][5] * sphericalHarmonics[symmOpIdx][3][5] +
+                                                        p_lm[3][6] * sphericalHarmonics[symmOpIdx][3][6]);
+
+                    if (l_max > 3)
+                    {
+                        for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+                            real[symmOpIdx] += radial[4] * (p_lm[4][0] * sphericalHarmonics[symmOpIdx][4][0] + p_lm[4][1] * sphericalHarmonics[symmOpIdx][4][1] + p_lm[4][2] * sphericalHarmonics[symmOpIdx][4][2] +
+                                                            p_lm[4][3] * sphericalHarmonics[symmOpIdx][4][3] + p_lm[4][4] * sphericalHarmonics[symmOpIdx][4][4] + p_lm[4][5] * sphericalHarmonics[symmOpIdx][4][5] +
+                                                            p_lm[4][6] * sphericalHarmonics[symmOpIdx][4][6] + p_lm[4][7] * sphericalHarmonics[symmOpIdx][4][7] + p_lm[4][8] * sphericalHarmonics[symmOpIdx][4][8]);
+                    } // l_max>3
+                } // l_max>2
+            } // l_max>1
+        } // l_max>0
+
+        for (symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
+            defVal[symmOpIdx] = 4 * M_PI * std::complex<double>(real[symmOpIdx], imag[symmOpIdx]);
+
+    }
+
+
+}
+
 namespace discamb {
 
-HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4()
+HansenCoppens_SF_EngineSymm::HansenCoppens_SF_EngineSymm()
 {
     mUseIAM = false;
 }
 
-HansenCoppens_SF_Engine4::~HansenCoppens_SF_Engine4()
+HansenCoppens_SF_EngineSymm::~HansenCoppens_SF_EngineSymm()
 {
 }
 
 
 
-inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
+inline void HansenCoppens_SF_EngineSymm::add_contribution_to_occupancy_derivative(
     REAL &occupancy_derivative,
     const complex<REAL> &dTarget_dF,
     const complex<REAL> &atomic_f_divided_by_occupancy)
@@ -51,7 +542,7 @@ inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
     occupancy_derivative += (dTarget_dF * atomic_f_divided_by_occupancy).real();
 }
 
-inline void HansenCoppens_SF_Engine4::add_contribution_to_position_derivatives(
+inline void HansenCoppens_SF_EngineSymm::add_contribution_to_position_derivatives(
     Vector3<REAL> &position_derivatives,
     const complex<REAL> dTarget_dF,
     const complex<REAL> &atomic_f,
@@ -67,7 +558,7 @@ inline void HansenCoppens_SF_Engine4::add_contribution_to_position_derivatives(
 }
 
 
-inline void HansenCoppens_SF_Engine4::add_contribution_to_adp_derivatives(
+inline void HansenCoppens_SF_EngineSymm::add_contribution_to_adp_derivatives(
     std::vector<std::complex<REAL> > &adp_derivatives,
     const std::complex<REAL> &dTarget_dF,
     const std::complex<REAL> &atomic_f,
@@ -101,7 +592,7 @@ inline void HansenCoppens_SF_Engine4::add_contribution_to_adp_derivatives(
     }
 }
 
-inline void HansenCoppens_SF_Engine4::process_adp_derivatives( std::complex<REAL> *pre_derivatives,
+inline void HansenCoppens_SF_EngineSymm::process_adp_derivatives( std::complex<REAL> *pre_derivatives,
                                      const std::complex<REAL> &atomic_f,
                                      const Vector3<REAL> &h,
                                      REAL h_length,
@@ -123,7 +614,7 @@ inline void HansenCoppens_SF_Engine4::process_adp_derivatives( std::complex<REAL
     pre_derivatives[5] -= 2*h[1]*h[2]*atomic_f;
 }
 
-std::complex<double> HansenCoppens_SF_Engine4::calculateDeformationValence(
+std::complex<double> HansenCoppens_SF_EngineSymm::calculateDeformationValence(
     const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
     const std::vector<REAL>& g_functions_and_slater_normalization,
     //const Matrix3<REAL>& local_coordinates_system,
@@ -154,7 +645,7 @@ std::complex<double> HansenCoppens_SF_Engine4::calculateDeformationValence(
 }
 
 
-std::complex<REAL> HansenCoppens_SF_Engine4::calculateDeformationValence(
+std::complex<REAL> HansenCoppens_SF_EngineSymm::calculateDeformationValence(
     const std::vector<std::vector<REAL> > &p_lm,
     const std::vector<REAL> &g_functions_and_slater_normalization,
     const Matrix3<REAL>  &local_coordinates_system,
@@ -196,7 +687,7 @@ std::complex<REAL> HansenCoppens_SF_Engine4::calculateDeformationValence(
 
 
 
-void HansenCoppens_SF_Engine4::pre_hkl_loop_sf_calc(
+void HansenCoppens_SF_EngineSymm::pre_hkl_loop_sf_calc(
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
     const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
     const std::vector<int> &atom_to_wfn_map,
@@ -260,7 +751,7 @@ void HansenCoppens_SF_Engine4::pre_hkl_loop_sf_calc(
 }
 
 
-void HansenCoppens_SF_Engine4::calculateSF_IAM(
+void HansenCoppens_SF_EngineSymm::calculateSF_IAM(
     const UnitCell& unitCell,
     const std::vector<std::string> &atomicType,
     const std::vector<std::complex<REAL> > &atomTypeAnomalousScattering,
@@ -321,7 +812,7 @@ void HansenCoppens_SF_Engine4::calculateSF_IAM(
 }
 
 
-void HansenCoppens_SF_Engine4::pre_atom_loop_sf_calc(
+void HansenCoppens_SF_EngineSymm::pre_atom_loop_sf_calc(
         //in:
             const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
             const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
@@ -423,7 +914,7 @@ void HansenCoppens_SF_Engine4::pre_atom_loop_sf_calc(
 }
 
 
-void HansenCoppens_SF_Engine4::calculateFormFactors(
+void HansenCoppens_SF_EngineSymm::calculateFormFactors(
     const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
     const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
     const std::vector<double>& f_spherical, // for each type spherical valence + core
@@ -538,7 +1029,7 @@ void HansenCoppens_SF_Engine4::calculateFormFactors(
 
 }
 
-void HansenCoppens_SF_Engine4::calculateSphericalTermsInFormFactors(
+void HansenCoppens_SF_EngineSymm::calculateSphericalTermsInFormFactors(
 	const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
 	const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
 	const std::vector <double> h,
@@ -596,7 +1087,7 @@ void HansenCoppens_SF_Engine4::calculateSphericalTermsInFormFactors(
 
 
 
-void HansenCoppens_SF_Engine4::calculateGlobalCoordinatesPlm(
+void HansenCoppens_SF_EngineSymm::calculateGlobalCoordinatesPlm(
     const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
     const std::vector<int>& atom_to_type_map,
     const std::vector<Matrix3<REAL> >& local_coordinate_systems,// rows are vectors
@@ -680,7 +1171,7 @@ void calculateSF(
     const std::vector<bool> &include_atom_contribution,
     int nThreads);
 */
-void HansenCoppens_SF_Engine4::calculateSF(
+void HansenCoppens_SF_EngineSymm::calculateSF(
     const UnitCell &unitCell,
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
     const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
@@ -691,7 +1182,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
     const std::vector<REAL> &atomic_occupancy,
     const std::vector<REAL> &atomic_multiplicity_factor,
     const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
+    const std::vector<sf_engine_data_types::SymmetryOperation> &_symOps,
     const std::vector<Matrix3i>& symmetry_operations_rotation_matrix,
     bool centrosymmetric,
     const Vector3<REAL> &inversionTranslation,
@@ -723,20 +1214,28 @@ void HansenCoppens_SF_Engine4::calculateSF(
     vector<vector<vector<double> > > atomPlms;
     calculateGlobalCoordinatesPlm(typeParams, atom_to_type_map, local_coordinate_systems, atomPlms);
 
-    int pointGroupIdx;
-    string pointGroup = crystallographic_point_group_tables::findPointGroup(symmetry_operations_rotation_matrix);
-    
-    void (HansenCoppens_SF_Engine4::*def_val_calculator)(
-        const std::vector<std::vector<REAL> >&p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
-        const std::vector<REAL>&g_functions_and_slater_normalization,
-        int maxL,
-        const std::vector< std::vector <std::vector<double> > >&sphericalHarmonics,
-        const std::vector<int>&symmetryOperationsOrder,
-        std::vector<std::complex<double> >&defVal);
+    // symmetry
 
-    if(pointGroup == "1")
-        def_val_calculator = &HansenCoppens_SF_Engine4::calculateDefVal_general;
-    //cout << "calculateGlobalCoordinatesPlm time = " << timer.stop() << "\n";
+    int pointGroupIdx;
+    vector<int> canonical_order;
+    string pointGroupName = crystallographic_point_group_tables::findPointGroup(symmetry_operations_rotation_matrix, canonical_order);
+    //mPointGroupSymmetry = crystallographic_point_group_tables::findPointGroup(rotations, canonicalOrder);
+    auto symOps = _symOps;
+    if (!pointGroupName.empty())
+        for (int i = 0; i < symOps.size(); i++)
+            symOps[canonical_order[i]] = _symOps[i];
+
+    
+    //void (HansenCoppens_SF_EngineSymm::*def_val_calculator)(
+    //    const std::vector<std::vector<REAL> >&p_lm,
+    //    const std::vector<REAL>&g_functions_and_slater_normalization,
+    //    int maxL,
+    //    const std::vector <std::vector<double> > &sphericalHarmonics,
+    //    std::vector<std::complex<double> >&defVal);
+    //def_val_calculator = nullptr;
+    //if (pointGroupName == "222")
+    //    def_val_calculator = &HansenCoppens_SF_EngineSymm::calculateDefVal_pg_222;
+
 #ifndef _OPENMP   
     nThreads = 1;
 #endif
@@ -925,6 +1424,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
                 wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
                 atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy,
                 atomic_multiplicity_factor, local_coordinate_systems, symOps,
+                pointGroupName,
                 perThreadHklVector_lines[threadId], perThreadHklVector_lines_int[threadId], subsetDataHklIdxInOryginalSet[threadId],
                 lineDirection, step, perThreadSF[threadId],
                 perThread_dTarget_dParam[threadId], perThreadTarget_dF_lines[threadId], include_atom_contribution,
@@ -964,11 +1464,11 @@ void HansenCoppens_SF_Engine4::calculateSF(
     }
     scattering_utilities::merge_dTarget_dParameterSets(perThread_dTarget_dParam, dTarget_dparam);
     
-    //cout << "HansenCoppens_SF_Engine4::calculateSF time = " << timer.stop() << "\n";
+    //cout << "HansenCoppens_SF_EngineSymm::calculateSF time = " << timer.stop() << "\n";
 
 } //calculateSF_parallel_2
 
-void HansenCoppens_SF_Engine4::electronScatteringAt000(
+void HansenCoppens_SF_EngineSymm::electronScatteringAt000(
     const std::vector<int>& atomic_numbers,
     std::vector<double>& f)
 {
@@ -1017,7 +1517,7 @@ void calculateSF(
 
 */
 
-void HansenCoppens_SF_Engine4::select_P10P20_atoms(
+void HansenCoppens_SF_EngineSymm::select_P10P20_atoms(
     const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
     const std::vector<int>& atom_to_type_map,
     std::vector<bool>& atom_selection)
@@ -1046,7 +1546,7 @@ void HansenCoppens_SF_Engine4::select_P10P20_atoms(
 }
 
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
+void HansenCoppens_SF_EngineSymm::calculateSF_SerialAcentric(
     const std::vector<sf_engine_data_types::HC_WfnParam>& _wfnParams,
     const std::vector<sf_engine_data_types::HC_TypeParam>& _typeParams,
     const std::vector<int>& _atom_to_wfn_map,
@@ -1058,6 +1558,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
     const std::vector<REAL>& _atomic_multiplicity_weight,
     const std::vector<Matrix3<REAL> >& _local_coordinate_systems,
     const std::vector<sf_engine_data_types::SymmetryOperation>& _symOps,
+    const std::string point_group_name,
     const std::vector<std::vector<Vector3<REAL> > >& _hVector_lines,
     const std::vector< std::vector< Vector3i > >& h_vector_lines_int,
     const std::vector < std::vector <int> >& line_to_orginal_hkl_list_idx,
@@ -1078,6 +1579,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
     const std::vector<int>& atomic_number)
 {
     bool useLineAlgorithm = true;
+    const bool useSymmetryDefVal = true;
     WallClockTimer timer;
     timer.start();
     bool no_derivatives = !(derivativesSwitch.d_adp || derivativesSwitch.d_anom || derivativesSwitch.d_occ || derivativesSwitch.d_xyz);
@@ -1179,6 +1681,65 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
             spherical_harmonics[symmOpIdx][l].resize(2 * l + 1);
 
     //########################
+    //  symmetry
+    //########################
+
+    void (*def_val_calculator)(
+        const std::vector<std::vector<REAL> >&p_lm,
+        const std::vector<REAL>&g_functions_and_slater_normalization,
+        int maxL,
+        const std::vector <std::vector<double> > &sphericalHarmonics,
+        std::vector<std::complex<double> >&defVal);
+    def_val_calculator = nullptr;
+    if (point_group_name == "222")
+        def_val_calculator = calculate_def_val_pg_222_l4;// calculateDefVal_pg_222;
+
+    void (*def_val_calculator_any_symm)(
+        const std::vector<std::vector<REAL> >&p_lm,
+        const std::vector<REAL>&g_functions_and_slater_normalization,
+        int maxL,
+        const std::vector < std::vector <std::vector<double> > > &sphericalHarmonics,
+        std::vector<std::complex<double> >&defVal);
+
+    switch (nSymmOps)
+    {
+        case 1:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<1>;
+            break;
+        case 2:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<2>;
+            break;
+        case 3:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<3>;
+            break;
+        case 4:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<4>;
+            cout << "def_val_calculator_n_symm<4>\n";
+            break;
+        case 6:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<6>;
+            break;
+        case 8:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<8>;
+            break;
+        case 12:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<12>;
+            break;
+        case 16:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<16>;
+            break;
+        case 24:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<24>;
+            break;
+        case 48:
+            def_val_calculator_any_symm = def_val_calculator_n_symm<48>;
+            break;
+        default:
+            def_val_calculator_any_symm = calculate_def_val_symm_eq;
+    }
+
+    //cout << "point group name " << point_group_name << endl;
+    //########################
     // hkl lines
     //########################
 
@@ -1200,50 +1761,16 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
         scattering_utilities::init_line_multipliers(lineStepCart, r_atom_symm, atomic_displacement_parameters, symmOpRotationCart,
                                                     phase_factor_multiplier, temp_factor_multiplier_multiplier);
 
-        //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-        //    {
-        //        double phase_angle = two_pi * r_atom_symm[atomIdx][symOpIdx] * lineStepCart;
-        //        phase_factor_multiplier[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
-        //    }
-
-        ////temp_factor_multiplier_multiplier
-        //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //{
-        //    vector<double>& adp = atomic_displacement_parameters[atomIdx];
-        //    int nADPComponents = atomic_displacement_parameters[atomIdx].size();
-        //    if (nADPComponents == 1)
-        //        temp_factor_multiplier_multiplier[atomIdx][0] = exp(-2.0 * lineStepCart * lineStepCart * adp[0]);
-        //    else if (nADPComponents == 6)
-        //    {
-
-        //        for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-        //        {
-
-        //            Vector3d step_rot = lineStepCart * symOps[symOpIdx].rotation;
-        //            double exponent = step_rot[0] * step_rot[0] * adp[0] +
-        //                step_rot[1] * step_rot[1] * adp[1] +
-        //                step_rot[2] * step_rot[2] * adp[2] +
-        //                2.0 * (step_rot[0] * step_rot[1] * adp[3] +
-        //                    step_rot[0] * step_rot[2] * adp[4] +
-        //                    step_rot[1] * step_rot[2] * adp[5]);
-        //            temp_factor_multiplier_multiplier[atomIdx][symOpIdx] = exp(-2.0 * exponent);
-        //        }
-        //    }
-        //}
     }
-    //########################
-    // eof hkl lines
-    //########################
 
-    vector<complex<double> > atom_def_val_symm(nSymmOps);
+    vector<complex<double> > atom_def_val_symm(nSymmOps), atom_def_val_symm2(nSymmOps);
 
 
     for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
     {
         
         auto& hklLine = _hVector_lines[lineIdx];
-        //auto& mapToOriginalSet = mapToOriginalSetIndices[lineIdx];
+        
         int nHklLine = hklLine.size();
 
         for (int hklIndex = 0; hklIndex < nHklLine; hklIndex++)
@@ -1336,6 +1863,46 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
 
                 unweightedTransformedAtomFF_Sum = 0.0;
 
+                //calculate def val
+                //def_val_calculator = nullptr;
+                if (useSymmetryDefVal)
+                {
+                    if (atom_pz_dz[atomIdx])
+                        for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                        {
+                            double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
+                            atom_def_val_symm[symOpIdx].real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
+                            atom_def_val_symm[symOpIdx].imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
+                        }
+                    else
+                    {
+                        if (def_val_calculator == nullptr)
+                            for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                                atom_def_val_symm[symOpIdx] = calculateDeformationValence(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx],
+                                    typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
+                        else
+                        {
+                            def_val_calculator(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx], typeMaxL[atomTypeIdx],
+                                spherical_harmonics[0], atom_def_val_symm);
+                            //calculate_def_val_symm_eq(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx], typeMaxL[atomTypeIdx],
+                            //        spherical_harmonics, atom_def_val_symm);
+                            //def_val_calculator_any_symm(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx], typeMaxL[atomTypeIdx],
+                            //    spherical_harmonics, atom_def_val_symm);
+                            //calculate_def_val_pg_222_l4(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx], typeMaxL[atomTypeIdx],
+                                //spherical_harmonics[0], atom_def_val_symm);
+                            // atom_def_val_symm[0] = atom_def_val_symm[1] = atom_def_val_symm[2] = atom_def_val_symm[3] = 0.0;
+                            //calculate_def_val_pg_222_nosymm(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx], typeMaxL[atomTypeIdx],
+                            //    spherical_harmonics, atom_def_val_symm);
+                           /* for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                                atom_def_val_symm2[symOpIdx] = calculateDeformationValence(atomPlms[atomIdx], g_functions_and_slater_norm[atomTypeIdx],
+                                    typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
+                            cout << "XD\n";*/
+                        }
+
+                    }
+                }
+                //
+
                 for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
                 {
 
@@ -1382,24 +1949,27 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
                                  //        typeMaxL[atomTypeIdx], sphericalHarmonicsData);
 
                                  //spherical_harmonics
-
-                        atom_f_def_val = 0.0;
-                        if (atom_pz_dz[atomIdx])
-                        {
-                            double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
-                            //4 * M_PI* std::complex<REAL>(resultReal, resultImag)
-                            //atom_f_def_val = typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 *z +
-                              //  typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.7500000000000036 * (3.0*z*z-1.0);
-                            atom_f_def_val.real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
-                            atom_f_def_val.imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
-                        }
+                        if (useSymmetryDefVal)
+                            atom_f_def_val = atom_def_val_symm[symOpIdx];
                         else
-                            atom_f_def_val = 
-                            calculateDeformationValence(
-                                atomPlms[atomIdx],
-                                g_functions_and_slater_norm[atomTypeIdx],
-                                typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
-
+                        {
+                            atom_f_def_val = 0.0;
+                            if (atom_pz_dz[atomIdx])
+                            {
+                                double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
+                                //4 * M_PI* std::complex<REAL>(resultReal, resultImag)
+                                //atom_f_def_val = typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 *z +
+                                  //  typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.7500000000000036 * (3.0*z*z-1.0);
+                                atom_f_def_val.real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
+                                atom_f_def_val.imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
+                            }
+                            else
+                                atom_f_def_val =
+                                calculateDeformationValence(
+                                    atomPlms[atomIdx],
+                                    g_functions_and_slater_norm[atomTypeIdx],
+                                    typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
+                        }
                     }
 
                     complex<double> atomic_ff = fAtomSphericalAndAnomalous + atom_f_def_val;
@@ -1527,7 +2097,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
     executionTime = timer.stop();
 } // calculateSF_SerialAcentric
 
-void  HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl2(
+void  HansenCoppens_SF_EngineSymm::calculateSF_SerialCentrosymmetric_ordered_hkl2(
     const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
     const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
     const std::vector<int>& atom_to_wfn_map,
@@ -1560,7 +2130,7 @@ void  HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl2(
     bool electron,
     const std::vector<int>& atomic_number)
 {
-    //cout << "calling HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl2\n";
+    //cout << "calling HansenCoppens_SF_EngineSymm::calculateSF_SerialCentrosymmetric_ordered_hkl2\n";
     bool useLineAlgorithm = true;
 //WallClockTimer timer;
 //timer.start();
@@ -2006,7 +2576,7 @@ for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
 //executionTime = timer.stop();
 } // 
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl(
+void HansenCoppens_SF_EngineSymm::calculateSF_SerialCentrosymmetric_ordered_hkl(
     const std::vector<sf_engine_data_types::HC_WfnParam>& wfnParams,
     const std::vector<sf_engine_data_types::HC_TypeParam>& typeParams,
     const std::vector<int>& atom_to_wfn_map,
@@ -2037,7 +2607,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl(
     const std::vector< std::vector<std::vector<double> > >& atomPlms,
     const DerivativesSelector& derivativesSwitch)
 {                                                       
-    //cout << "calling HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl\n";
+    //cout << "calling HansenCoppens_SF_EngineSymm::calculateSF_SerialCentrosymmetric_ordered_hkl\n";
     bool no_derivatives = !(derivativesSwitch.d_adp || derivativesSwitch.d_anom || derivativesSwitch.d_occ || derivativesSwitch.d_xyz);
     const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
     complex<REAL> fAtomSphericalAndAnomalous, f0, f_dispersion;
@@ -2445,7 +3015,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl(
 } // calculateSF_SerialCentrosymmetric_ordered_hkl
 
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric(
+void HansenCoppens_SF_EngineSymm::calculateSF_SerialCentrosymmetric(
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
     const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
     const std::vector<int> &atom_to_wfn_map,
@@ -2661,7 +3231,7 @@ void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric(
 
 
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialSymmetryCenterNotAtOrigin(
+void HansenCoppens_SF_EngineSymm::calculateSF_SerialSymmetryCenterNotAtOrigin(
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
     const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
     const std::vector<int> &atom_to_wfn_map,

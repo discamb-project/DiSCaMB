@@ -35,7 +35,8 @@ namespace discamb {
             bool integerChargeSpherical,
 			bool implementationForLargeMolecules,
 			int nThreads,
-            bool frozenLcs);
+            bool frozenLcs,
+            bool symmDefVal);
     public:
         AnyHcCalculator(const Crystal &crystal,
             const HC_ModelParameters &parameters,
@@ -44,7 +45,8 @@ namespace discamb {
             bool neutralSpherical = false,
 			bool implementationForLargeMolecules = false,
 			int nThreads = 1,
-            bool frozenLcs = false);
+            bool frozenLcs = false,
+            bool symmDefVal = false);
         AnyHcCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual ~AnyHcCalculator();
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;

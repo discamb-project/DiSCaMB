@@ -37,6 +37,7 @@ namespace discamb {
         std::string iamTable;
         bool iamElectronScattering = false;
         bool frozen_lcs = false;
+        bool def_val_symm = false;
         bool splitWithLabels = false;
         //works with labels like (altloc=B): "H2.B   1    A    H105    Z N      1    A X CA     1    A"
         bool splitWithInternalAltlocLabels = false;

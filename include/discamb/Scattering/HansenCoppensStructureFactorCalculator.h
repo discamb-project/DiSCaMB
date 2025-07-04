@@ -47,6 +47,10 @@ public:
         does not effect GPU calculation or CPU when compiled with compilers with no openMP support
     */
     void setN_Threads(int n);
+
+    void set_def_val_symm(bool def_val_symm) {
+        mDefValSymm = def_val_symm;
+    };
     
     /** Sets model of the electron density (note that the model is also set in constructor).*/
     void setModel(const Crystal &crystal, const HC_ModelParameters &parameters);
@@ -238,7 +242,10 @@ public:
 
 private:
 
+    //std::string mPointGroupSymmetry;
+    std::vector<Matrix3i> mPointGroupOperations;
     bool mElectronScattering = false;
+    bool mDefValSymm = false;
     std::vector<int> mAtomicNumbers;
 
     enum HC_SF_EngineId

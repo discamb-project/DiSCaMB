@@ -52,7 +52,8 @@ namespace discamb {
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
-            const std::string &algorithm = "standard");
+            const std::string &algorithm = "standard",
+            bool def_val_symm = false);
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
 
@@ -87,7 +88,8 @@ namespace discamb {
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
-            const std::string& algorithm = "standard"/*,
+            const std::string& algorithm = "standard",
+            bool def_val_symm = false/*,
             bool generateAssignmentInfo = false*/);
         
 

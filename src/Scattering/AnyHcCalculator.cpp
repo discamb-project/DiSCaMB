@@ -18,9 +18,10 @@ namespace discamb {
         bool spherical,
 		bool implementationForLargeMolecules,
 		int nThreads,
-        bool frozenLcs)
+        bool frozenLcs,
+        bool symmDefVal)
     {
-        set(crystal, parameters, lcs, electronScattering, spherical, implementationForLargeMolecules, nThreads, frozenLcs);
+        set(crystal, parameters, lcs, electronScattering, spherical, implementationForLargeMolecules, nThreads, frozenLcs, symmDefVal);
     }
 
     void AnyHcCalculator::getModelInformation(
@@ -62,6 +63,8 @@ namespace discamb {
 		if (data.find("use macromolecular implementation") != data.end())
 			useMacromolecularImplementation = data.find("use macromolecular implementation")->get<bool>();
 
+        bool defValSymm = data.value("def-val symmetry", false);
+
 		int nThreads = 1;
 		if (data.find("number of threads") != data.end())
 			nThreads = data.find("number of threads")->get<int>();
@@ -79,7 +82,7 @@ namespace discamb {
 		for (auto &_lcs : localCoordinateSystems)
 			lcs.push_back(shared_ptr<LocalCoordinateSystemInCrystal>(new XdLocalCoordinateSystem(_lcs)));
         
-		set(crystal, hcModelParameters, lcs, electronScattering, hcIam, useMacromolecularImplementation, nThreads, frozenLcs);
+		set(crystal, hcModelParameters, lcs, electronScattering, hcIam, useMacromolecularImplementation, nThreads, frozenLcs, defValSymm);
 
         string multipoleCifFile = data.value("multipole cif", string());
 
@@ -109,7 +112,8 @@ namespace discamb {
         bool integerChargeSpherical,
 		bool implementationForLargeMolecules,
 		int nThreads,
-        bool frozenLcs)
+        bool frozenLcs,
+        bool symmDefVal)
     {
         //AnyScattererStructureFactorCalculator 
         mCrystal = crystal;
@@ -182,6 +186,7 @@ namespace discamb {
 		if (implementationForLargeMolecules)
 		{
 			mHcCalculator = new HansenCoppensStructureFactorCalculator(mCrystal, parameters);
+            mHcCalculator->set_def_val_symm(symmDefVal);
             if (electronScattering)
                 mHcCalculator->setElectronScattering(true);
 			mLcs = lcs;

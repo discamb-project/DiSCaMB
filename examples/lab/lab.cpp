@@ -7,6 +7,7 @@
 #include "discamb/BasicUtilities/file_system_utilities.h"
 #include "discamb/BasicUtilities/parse_cmd.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
+#include "discamb/CrystalStructure/crystallographic_point_group_tables.h"
 #include "discamb/IO/cif_io.h"
 #include "discamb/IO/discamb_io.h"
 #include "discamb/IO/NativeIAM_Reader.h"
@@ -2281,9 +2282,54 @@ void test()
     cout << convertBusterLabel("H2   1    A    H105    Z N      1    A X CA     1    A") << "\n";
 }
 
+void point_group_test()
+{
+    vector<string> pg_222 = { "x,y,x", "-x,-y,z", "-x,y,-z", "x,-y,-z" };
+    vector<string> pg_222_reordered = { "-x,-y,z", "x,y,x", "x,-y,-z", "-x,y,-z" };
+    vector<int> canonical_order;
+    string pg = crystallographic_point_group_tables::findPointGroup(pg_222, canonical_order);
+    cout<< pg << "\n";
+    for (int i : canonical_order)
+        cout << i << "\n";
+    pg = crystallographic_point_group_tables::findPointGroup(pg_222_reordered, canonical_order);
+    cout << pg << "\n";
+    for (int i : canonical_order)
+        cout << i << "\n";
+
+}
+
+template<int N>
+int sum_to_n()
+{
+    int x = 0;
+    for (int i = 1; i < N; i++)
+        x += i;
+    return x;
+}
+
+template<>
+int sum_to_n<3>()
+{
+    return 111;
+}
+
+
 int main(int argc, char* argv[])
 {
     try {
+
+        
+        cout << sum_to_n<0>() << endl;
+        cout << sum_to_n<1>() << endl;
+        cout << sum_to_n<2>() << endl;
+        cout << sum_to_n<3>() << endl;
+        cout << sum_to_n<4>() << endl;
+
+        return 0;
+
+        point_group_test();
+        return 0;
+
         //test();
         //return 0;
 
