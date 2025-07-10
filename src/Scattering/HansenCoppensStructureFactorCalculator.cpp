@@ -360,6 +360,12 @@ void HansenCoppensStructureFactorCalculator::setCalculationMode(
     }
 }
 
+void HansenCoppensStructureFactorCalculator::set_anomalous_dispersion_per_atom(
+    const vector<complex<double> >& anomalous_dispersion)
+{
+    mAnomalousDispersionPerAtom = anomalous_dispersion;
+}
+
 void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivatives(
     const std::vector<AtomInCrystal>& atoms,
     const std::vector<Matrix3d>& localCoordinateSystems,
@@ -423,7 +429,7 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
             HansenCoppens_SF_Engine3 engine;
 
             engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
-                mAtomic_displacement_parameters, mAtomicOccupancy, mAtomicMultiplicityWeights,
+                mAtomic_displacement_parameters, mAtomicOccupancy, mAnomalousDispersionPerAtom, mAtomicMultiplicityWeights,
                 localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
                 mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
                 mElectronScattering, mAtomicNumbers);

@@ -733,11 +733,31 @@ void setAnomaluous(SfCalculator* sfCalculator, const Crystal crystal)
     vector<int> atomic_numbers;
     crystal_structure_utilities::atomicNumbers(crystal, atomic_numbers);
 
-    for(int z: atomic_numbers)
-        anomalous.push_back(df[z]);
+    for (int z : atomic_numbers)
+        if (z < 9)
+            anomalous.push_back(df[z]);
+        else
+            anomalous.push_back(0.0);
     sfCalculator->setAnomalous(anomalous);
 
 }
+
+void setAnomaluous(shared_ptr<SfCalculator> &sfCalculator, const Crystal crystal)
+{
+    vector<complex<double> > df{ {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0.002,0.002}, {0.004,0.003}, {0.008,0.006} };
+    vector<complex<double> > anomalous;
+    vector<int> atomic_numbers;
+    crystal_structure_utilities::atomicNumbers(crystal, atomic_numbers);
+
+    for (int z : atomic_numbers)
+        if (z < 9)
+            anomalous.push_back(df[z]);
+        else
+            anomalous.push_back(0.0);
+    sfCalculator->setAnomalous(anomalous);
+
+}
+
 
 void read_hkl_and_structure_factors(
     const string & inputFile,
@@ -1540,7 +1560,8 @@ void taam_parallel(
     const string& structureFile,
     const string& hklFile,
     bool calcOnlyNew,
-    bool sf_and_sfAndDf)
+    bool sf_and_sfAndDf,
+    bool anomalous)
 {
     
     Crystal crystal;
@@ -1565,10 +1586,15 @@ void taam_parallel(
     json_data["algorithm"] = "macromol";
     shared_ptr<SfCalculator> sfCalculator2 = shared_ptr<SfCalculator>(SfCalculator::create(crystal, json_data));
 
-
+    if (anomalous)
+    {
+        setAnomaluous(sfCalculator, crystal);
+        setAnomaluous(sfCalculator2, crystal);
+    }
+    
 
     vector<bool> countAtom(crystal.atoms.size(), true);
-    vector<complex<double> > sf_new, sf_standard, sf_plus, sf_minus;
+    vector<complex<double> > sf_new, sf_new2, sf_standard, sf_standard2, sf_plus, sf_minus;
     vector<TargetFunctionAtomicParamDerivatives> dT_dp, dT_dp_new;
     vector<complex<double> > dt_df(nHkl, complex<double>(1.0,0.3));
     // x y z U occ
@@ -1596,7 +1622,7 @@ void taam_parallel(
     {
         //auto sfCalculator = SfCalculator::create(crystal, json_data);
         timer.start();
-        sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard, dT_dp, dt_df, countAtom);
+        sfCalculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_standard2, dT_dp, dt_df, countAtom);
         cout << "time = " << timer.stop() << " ms\n";
     }
 
@@ -1605,10 +1631,17 @@ void taam_parallel(
     //derivativesSelector.d_xyz = false;
     timer.start();
 
-    sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_new, dT_dp_new, dt_df, countAtom, derivativesSelector);
+    sfCalculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_new2, dT_dp_new, dt_df, countAtom, derivativesSelector);
     cout << "time = " << timer.stop() << " ms\n";
     if(!calcOnlyNew)
-        cout << "agreement factor " << agreement_factors::value(sf_new, sf_standard) << "\n";
+        cout << "agreement factor " << agreement_factors::value(sf_new2, sf_standard2) << "\n";
+
+    if (sf_and_sfAndDf)
+    {
+        cout << "agreement factor standar sf vs sf_dsf " << agreementFactor(sf_standard, sf_standard2) << "\n";
+        cout << "agreement factor new sf vs sf_dsf " << agreementFactor(sf_new, sf_new2) << "\n";
+    }
+
 
     //return;
 
@@ -2313,10 +2346,147 @@ int sum_to_n<3>()
     return 111;
 }
 
+void three_way_sf_calculation(
+    const Crystal& crystal,
+    shared_ptr<SfCalculator>& calculator,
+    const  vector<Vector3i>& hkl,
+    vector<complex<double> >& sf, 
+    vector<complex<double> >& sf_with_derivatives_1,
+    vector<complex<double> >& sf_with_derivatives_2)
+{
+    vector<bool> countAtom(crystal.atoms.size(), true);
+    vector<complex<double> > dt_df(hkl.size(), complex<double>(1.0, 0.3));
+    vector<TargetFunctionAtomicParamDerivatives> dTarget_dparam;
+    discamb::SfDerivativesAtHkl derivatives;
+
+    calculator->calculateStructureFactors(crystal.atoms, hkl, sf);
+    calculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkl, sf_with_derivatives_1, dTarget_dparam, dt_df, countAtom);
+    sf_with_derivatives_2.resize(hkl.size());
+    for (int i = 0; i < hkl.size(); i++)
+        calculator->calculateStructureFactorsAndDerivatives(hkl[i], sf_with_derivatives_2[i], derivatives, countAtom);
+}
+
+void test_anomalous(
+    const string &modelName,
+    const Crystal &crystal,
+    shared_ptr<SfCalculator> &calculator,
+    const  vector<Vector3i> &hkl,
+    vector<complex<double> > &d_sf)
+{
+    vector<complex<double> > sf, sf_anomalous, sf_with_derivatives_1, sf_with_derivatives_1_anomalous, sf_with_derivatives_2, sf_with_derivatives_2_anomalous;
+
+    calculator->setAnomalous(vector<complex<double> >(crystal.atoms.size(), 0.0));
+
+    three_way_sf_calculation(crystal, calculator, hkl, sf, sf_with_derivatives_1, sf_with_derivatives_2);
+
+    vector<complex<double> > df{ {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0.002,0.002}, {0.004,0.003}, {0.008,0.006} };
+    vector<complex<double> > anomalous;
+    vector<int> atomic_numbers;
+    crystal_structure_utilities::atomicNumbers(crystal, atomic_numbers);
+
+    for (int z : atomic_numbers)
+        if (z < 9)
+            anomalous.push_back(df[z]);
+        else
+            anomalous.push_back(0.0);
+    
+    calculator->setAnomalous(anomalous);
+
+    three_way_sf_calculation(crystal, calculator, hkl, sf_anomalous, sf_with_derivatives_1_anomalous, sf_with_derivatives_2_anomalous);
+
+    cout << "test for " << modelName << "\n";
+    cout << " no anomalous vs anomalous:\n" 
+         << "  " << agreement_factors::value(sf, sf_anomalous) << "\n"
+         << "  " << agreement_factors::value(sf_with_derivatives_1, sf_anomalous) << "\n"
+         << "  " << agreement_factors::value(sf_with_derivatives_2, sf_anomalous) << "\n"
+         << "  " << agreement_factors::value(sf_with_derivatives_2, sf_with_derivatives_1_anomalous) << "\n"
+         << "  " << agreement_factors::value(sf_with_derivatives_2, sf_with_derivatives_2_anomalous) << "\n";
+    int nHkl = hkl.size();
+    d_sf.resize(nHkl);
+    for (int i = 0; i < nHkl; i++)
+        d_sf[i] = sf[i] - sf_anomalous[i];
+}
+
+void test_anomalous(
+    const string& structure_file_name)
+{
+    Crystal crystal;
+    structure_io::read_structure(structure_file_name, crystal);
+
+    auto iam = SfCalculator::create_shared_ptr(crystal, {{ "model", "IAM" }});
+    auto taam_standard = SfCalculator::create_shared_ptr(crystal, { { "model", "TAAM" }, { "algorithm", "standard"}, {"bank path","MATTS2021databank.txt"}});
+    auto taam_macromol = SfCalculator::create_shared_ptr(crystal, { { "model", "TAAM" }, { "algorithm", "macromol"}, {"bank path","MATTS2021databank.txt"} });
+
+    vector<Vector3i> hkl{
+    { 0, 0, 1 }, { 0, 0, 2 }, { 0, 0, 3 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 1, 2 },
+    { 0, 1, 3 }, { 0, 2, 0 }, { 0, 2, 1 }, { 0, 2, 2 }, { 0, 2, 3 }, { 0, 3, 0 },
+    { 0, 3, 1 }, { 0, 3, 2 }, { 0, 3, 3 }, { 1, 0, 0 }, { 1, 0, 1 }, { 1, 0, 2 },
+    { 1, 0, 3 }, { 1, 1, 0 }, { 1, 1, 1 }, { 1, 1, 2 }, { 1, 1, 3 }, { 1, 2, 0 },
+    { 1, 2, 1 }, { 1, 2, 2 }, { 1, 2, 3 }, { 1, 3, 0 }, { 1, 3, 1 }, { 1, 3, 2 },
+    { 1, 3, 3 }, { 2, 0, 0 }, { 2, 0, 1 }, { 2, 0, 2 }, { 2, 0, 3 }, { 2, 1, 0 },
+    { 2, 1, 1 }, { 2, 1, 2 }, { 2, 1, 3 }, { 2, 2, 0 }, { 2, 2, 1 }, { 2, 2, 2 },
+    { 2, 2, 3 }, { 2, 3, 0 }, { 2, 3, 1 }, { 2, 3, 2 }, { 2, 3, 3 }, { 3, 0, 0 },
+    { 3, 0, 1 }, { 3, 0, 2 }, { 3, 0, 3 }, { 3, 1, 0 }, { 3, 1, 1 }, { 3, 1, 2 },
+    { 3, 1, 3 }, { 3, 2, 0 }, { 3, 2, 1 }, { 3, 2, 2 }, { 3, 2, 3 }, { 3, 3, 0 },
+    { 3, 3, 1 }, { 3, 3, 2 }, { 3, 3, 3 }
+    };
+    int nHkl = hkl.size();
+    vector<complex<double> > d_sf_iam, d_sf_taam_standard, d_sf_taam_macromol;
+
+    test_anomalous("IAM", crystal, iam, hkl, d_sf_iam);
+    test_anomalous("TAAM standard", crystal, taam_standard, hkl, d_sf_taam_standard);
+    test_anomalous("TAAM macromol", crystal, taam_macromol, hkl, d_sf_taam_macromol);
+
+    cout << "anomalous diff - IAM vs. TAAM standard " << agreement_factors::value(d_sf_iam, d_sf_taam_standard) << "\n"
+         << "anomalous diff - IAM vs. TAAM macromol " << agreement_factors::value(d_sf_iam, d_sf_taam_macromol) << "\n";
+    // no anomalous
+    
+    //three_way_sf_calculation(crystal, iam, hkl, d_sf_iam);
+    //three_way_sf_calculation(crystal, taam_standard, hkl, sf_taam_standard, sf_taam_standard_with_derivatives, sf_taam_standard_with_derivatives2);
+    //three_way_sf_calculation(crystal, taam_macromol, hkl, sf_taam_macromol, sf_taam_macromol_with_derivatives, sf_taam_macromol_with_derivatives2);
+
+}
 
 int main(int argc, char* argv[])
 {
     try {
+
+        test_anomalous(argv[1]);
+        if (argc != 2)
+            on_error::throwException("expected structure file an an argument\n", __FILE__, __LINE__);
+
+        return 0;
+
+        vector<string> arguments, options;
+        parse_cmd::get_args_and_options(argc, argv, arguments, options);
+        
+        if (arguments.size() != 2)
+            on_error::throwException("expected structure file, hkl indices file and optionally -n - for new version calculation\n", __FILE__, __LINE__);
+        
+        bool onlyNew = parse_cmd::hasOption(options, "-n");
+        bool sf_and_sfAndDf = !parse_cmd::hasOption(options, "-d");
+        bool anomalous = parse_cmd::hasOption(options, "-a");
+        
+        taam_parallel(argv[1], argv[2], onlyNew, sf_and_sfAndDf, anomalous);
+
+#ifdef _MSC_VER
+        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+        _CrtDumpMemoryLeaks();
+#endif
+        return 0;
+
+
+        check_args(argc, argv, 3, { "structure file", "indices file", "json file"});
+        make_hkl(argv[1], argv[2], argc > 3 ? argv[3] : "");
+        return 0;
+
+        check_args(argc, argv, 2, { "fcf file", "structure file" });
+        compare_olex_taam(argv[1], argv[2]);
+        return 0;
+
+        check_args(argc, argv, 2, { "hkl indices", "n sets" });
+        sort_split_hkl(argv[1], atoi(argv[2]));
+        return 0;
 
         
         cout << sum_to_n<0>() << endl;
@@ -2380,38 +2550,6 @@ int main(int argc, char* argv[])
             type_assign_disorder(argv[1], argv[2], argv[3]);
         return 0;
 
-        vector<string> arguments, options;
-        parse_cmd::get_args_and_options(argc, argv, arguments, options);
-        //check_args(argc, argv, 2, { "structure file", "hkl file" });
-        if (arguments.size() != 2)
-            on_error::throwException("expected structure file, hkl indices file and optionally -n - for new version calculation\n", __FILE__, __LINE__);
-        bool onlyNew = false;
-        if (!options.empty())
-            if (options[0] == "-n")
-                onlyNew = true;
-        bool sf_and_sfAndDf = true;
-        if (!options.empty())
-            if (options[0] == "-d")
-                sf_and_sfAndDf = false;
-
-        taam_parallel(argv[1], argv[2], onlyNew, sf_and_sfAndDf);
-#ifdef _MSC_VER
-        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
-        _CrtDumpMemoryLeaks();
-#endif
-        return 0;
-
-        check_args(argc, argv, 3, { "structure file", "indices file", "json file"});
-        make_hkl(argv[1], argv[2], argc > 3 ? argv[3] : "");
-        return 0;
-
-        check_args(argc, argv, 2, { "fcf file", "structure file" });
-        compare_olex_taam(argv[1], argv[2]);
-        return 0;
-
-        check_args(argc, argv, 2, { "hkl indices", "n sets" });
-        sort_split_hkl(argv[1], atoi(argv[2]));
-        return 0;
 
         //convert_sph_harmonics_test();
         //return 0;

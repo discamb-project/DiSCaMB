@@ -32,6 +32,11 @@ namespace discamb {
 
         static SfCalculator* create(const Crystal& crystal, const std::string jsonFileName);
 
+        static std::shared_ptr<SfCalculator> create_shared_ptr(const Crystal& crystal,
+            const nlohmann::json& data = nlohmann::json());
+
+        static std::shared_ptr<SfCalculator> create_shared_ptr(const Crystal& crystal, const std::string jsonFileName);
+
 
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const = 0;
 

@@ -47,13 +47,13 @@ namespace discamb {
                 {"iam",{"iam"}},
                 //          {"legacy_har", {"legacy_har"}},
                 {"gar", { "har", "multi_har", "gar"}},
-                {"har bank",{"har bank"}},
+                {"tham",{"tham"}},
                 {"hc",{"hc"}},
                 {"sab",{"sab"}},
                 {"tsc",{"tsc"}},
                 {"matts",{"matts", "taam", "ubdb"}},
                 {"taam_dis",{"taam_dis"}},
-                {"taam_mo",{"taam_mo"}},
+                {"taam_mo",{"taam_mo"}}, // taam multiple ordered srtuctures
                 {"taam ordered",{"taam ordered"}},
                 {"tham",{"tham"}}
              });
@@ -171,6 +171,21 @@ namespace discamb {
     jsonFileStream.close();
 
     */
+
+    std::shared_ptr<SfCalculator> SfCalculator::create_shared_ptr(
+        const Crystal& crystal,
+        const nlohmann::json& data)
+    {
+        return shared_ptr<SfCalculator>(create(crystal, data));
+    }
+
+    std::shared_ptr<SfCalculator> SfCalculator::create_shared_ptr(
+        const Crystal& crystal,
+        const std::string jsonFileName)
+    {
+        return shared_ptr<SfCalculator>(create(crystal, jsonFileName));
+    }
+
 
     SfCalculator* SfCalculator::create(
         const Crystal& crystal,

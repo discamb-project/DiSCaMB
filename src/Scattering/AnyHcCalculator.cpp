@@ -94,6 +94,8 @@ namespace discamb {
         const std::vector<std::complex<double> > & anomalous)
     {
         mCalculator->setAnoumalous(anomalous);
+        if (mUseImplementationForLargeMolecules)
+            mHcCalculator->set_anomalous_dispersion_per_atom(anomalous);
     }
 
 	void AnyHcCalculator::setN_threads(

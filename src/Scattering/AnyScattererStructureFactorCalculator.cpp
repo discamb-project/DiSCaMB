@@ -523,7 +523,7 @@ namespace discamb{
                         complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
 
 
-                        atom_ff = atomic_ff[symOpIdx][atomIdx];// mManager->calculateCart(atomIdx, rotated_h_ref);
+                        atom_ff = atomic_ff[symOpIdx][atomIdx] + mAnomalous[atomIdx];// mManager->calculateCart(atomIdx, rotated_h_ref);
 
 
                         if (n_adp_components == 6)
@@ -744,7 +744,7 @@ namespace discamb{
                         complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
 
 
-						atom_ff = atomic_ff[symOpIdx][atomIdx];// mManager->calculateCart(atomIdx, rotated_h_ref);
+						atom_ff = atomic_ff[symOpIdx][atomIdx] + mAnomalous[atomIdx];// mManager->calculateCart(atomIdx, rotated_h_ref);
 
 
                         if (n_adp_components == 6)

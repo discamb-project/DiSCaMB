@@ -264,6 +264,7 @@ void HansenCoppens_SF_Engine3::calculateSF_IAM(
     const std::vector<Vector3<REAL> > &atomicPositions,
     const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
     const std::vector<REAL> &atomic_occupancy,
+    const std::vector<std::complex<REAL> >& anomalous_dispersion,
     const std::vector<REAL> &atomic_multiplicity_factor,
     const std::vector<sf_engine_data_types::SymmetryOperation> &symmetryOperations,
     bool centrosymmetric,
@@ -307,7 +308,7 @@ void HansenCoppens_SF_Engine3::calculateSF_IAM(
     
     DerivativesSelector derivativesSwitch;
     calculateSF(unitCell, wfnParams, typeParams, atomToWfnMap, atomToTypeMap, atomicPositions,
-                atomic_displacement_parameters, atomic_occupancy, atomic_multiplicity_factor,
+                atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion, atomic_multiplicity_factor,
                 localCoordinateSystems, symmetryOperations, centrosymmetric, inversionTranslation, 
                 hVectors, hkl_indices, f, dTarget_dparam, dTarget_df, include_atom_contribution, nThreads, derivativesSwitch);
     
@@ -683,6 +684,7 @@ void HansenCoppens_SF_Engine3::calculateSF(
     const std::vector<Vector3<REAL> > &atomicPositions,
     const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
     const std::vector<REAL> &atomic_occupancy,
+    const std::vector<std::complex<REAL> >& anomalous_dispersion,
     const std::vector<REAL> &atomic_multiplicity_factor,
     const std::vector<Matrix3<REAL> > &local_coordinate_systems,
     const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
@@ -874,7 +876,7 @@ void HansenCoppens_SF_Engine3::calculateSF(
             if(inversionTranslation == Vector3<REAL>(0, 0, 0))
                 calculateSF_SerialCentrosymmetric_ordered_hkl2(
                     wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                    atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy,
+                    atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
                     atomic_multiplicity_factor, local_coordinate_systems, symOps,
                     perThreadHklVector_lines[threadId], perThreadHklVector_lines_int[threadId], subsetDataHklIdxInOryginalSet[threadId],
                     lineDirection, step, perThreadSF[threadId],
@@ -891,7 +893,7 @@ void HansenCoppens_SF_Engine3::calculateSF(
             else
                 calculateSF_SerialSymmetryCenterNotAtOrigin(
                     wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                    atomicPositions, atomic_displacement_parameters, atomic_occupancy,
+                    atomicPositions, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
                     atomic_multiplicity_factor, local_coordinate_systems, symOps, inversionTranslation,
                     perThreadHklVectors[threadId], perThreadSF[threadId],
                     perThread_dTarget_dParam[threadId], perThreadTarget_dF[threadId], include_atom_contribution,
@@ -902,7 +904,7 @@ void HansenCoppens_SF_Engine3::calculateSF(
         else
             calculateSF_SerialAcentric(
                 wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy,
+                atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
                 atomic_multiplicity_factor, local_coordinate_systems, symOps,
                 perThreadHklVector_lines[threadId], perThreadHklVector_lines_int[threadId], subsetDataHklIdxInOryginalSet[threadId],
                 lineDirection, step, perThreadSF[threadId],
@@ -1034,6 +1036,7 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialAcentric(
     const std::vector< std::vector<Vector3d> >& r_atom_symm,
     const std::vector<std::vector<REAL> >& _atomic_displacement_parameters,
     const std::vector<REAL>& _atomic_occupancy,
+    const std::vector<std::complex<REAL> >& anomalous_dispersion,
     const std::vector<REAL>& _atomic_multiplicity_weight,
     const std::vector<Matrix3<REAL> >& _local_coordinate_systems,
     const std::vector<sf_engine_data_types::SymmetryOperation>& _symOps,
@@ -1215,6 +1218,7 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialAcentric(
     // eof hkl lines
     //########################
 
+    bool anomalous_per_atom = !anomalous_dispersion.empty();
 
     for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
     {
@@ -1296,7 +1300,7 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialAcentric(
                 atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
                 atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
                 atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-                anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+                anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx]: anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
                 fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
 
                 n_adp_components = atomic_displacement_parameters[atomIdx].size();
@@ -1513,6 +1517,7 @@ void  HansenCoppens_SF_Engine3::calculateSF_SerialCentrosymmetric_ordered_hkl2(
     const std::vector< std::vector<Vector3d> >& r_atom_symm,
     const std::vector<std::vector<REAL> >& atomic_displacement_parameters,
     const std::vector<REAL>& _atomic_occupancy,
+    const std::vector<std::complex<REAL> >& anomalous_dispersion,
     const std::vector<REAL>& _atomic_multiplicity_weight,
     const std::vector<Matrix3<REAL> >& _local_coordinate_systems,
     const std::vector<sf_engine_data_types::SymmetryOperation>& symmetry_operations,
@@ -1537,6 +1542,8 @@ void  HansenCoppens_SF_Engine3::calculateSF_SerialCentrosymmetric_ordered_hkl2(
     bool electron,
     const std::vector<int>& atomic_number)
 {
+    bool anomalous_per_atom = !anomalous_dispersion.empty();
+    
     //cout << "calling HansenCoppens_SF_Engine3::calculateSF_SerialCentrosymmetric_ordered_hkl2\n";
     bool useLineAlgorithm = true;
 //WallClockTimer timer;
@@ -1777,7 +1784,8 @@ for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
             atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
             atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
             atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-            anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+            anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx] : anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+            //anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
             fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
 
             n_adp_components = atomic_displacement_parameters[atomIdx].size();
@@ -2646,6 +2654,7 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialSymmetryCenterNotAtOrigin(
     const std::vector<Vector3<REAL> > &atomic_positions,
     const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
     const std::vector<REAL> &atomic_occupancy,
+    const std::vector<std::complex<REAL> >& anomalous_dispersion,
     const std::vector<REAL> &atomic_multiplicity_weight,
     const std::vector<Matrix3<REAL> > &local_coordinate_systems,
     const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
@@ -2663,6 +2672,8 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialSymmetryCenterNotAtOrigin(
     bool electron,
     const std::vector<int>& atomic_number)
 {
+    bool anomalous_per_atom = !anomalous_dispersion.empty();
+    
     const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
     complex<REAL> fAtomSphericalAndAnomalous, f0, f_dispersion, term1, term2;
     const REAL two_pi = 2 * REAL(M_PI);
@@ -2751,7 +2762,9 @@ void HansenCoppens_SF_Engine3::calculateSF_SerialSymmetryCenterNotAtOrigin(
             REAL atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
             atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
 
-            complex<REAL> anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+            complex<REAL> anomalousScattering;
+            anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx]: anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+            
             fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
 
             // end of h direction independent part of atomic scattering factor calculation

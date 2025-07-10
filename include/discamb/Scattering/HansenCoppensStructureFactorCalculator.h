@@ -43,6 +43,11 @@ public:
     
     ~HansenCoppensStructureFactorCalculator();
 
+    /** Sets anomalous dispersion for each atom individualy, if not used then information from 
+    constructor argument parameters is used*/
+
+    void set_anomalous_dispersion_per_atom(const std::vector<std::complex<double> >& anomalous_dispersion);
+
     /** Sets number of threads to be used in the case of CPU calculations,
         does not effect GPU calculation or CPU when compiled with compilers with no openMP support
     */
@@ -263,6 +268,7 @@ private:
 	std::vector<int> mType2WfnType;
 	std::vector<std::vector<REAL> > mDefValSlaterNormalization;
 	std::vector<int> mTypeMaxL;
+    std::vector < std::complex<double> > mAnomalousDispersionPerAtom;
 
 	/* end of some data used by HansenCoppens_SF_Engine.. */
 
