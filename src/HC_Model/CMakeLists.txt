@@ -6,6 +6,8 @@ SET(TARGET_H
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/HC_ModelParameters.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/hc_model_utilities.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/HC_WfnData.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/SlaterOrbitalWfnData.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/SuCoppensMacchiData.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/HC_Model/XdLocalCoordinateSystem.h")
 
 SET(TARGET_SRC 
@@ -14,7 +16,9 @@ SET(TARGET_SRC
     "DeformationValenceParameters.cpp"
     "hc_model_utilities.cpp"
     "HC_WfnData.cpp"
-    "XdLocalCoordinateSystem.cpp" )
+    "SlaterOrbitalWfnData.cpp"
+    "SuCoppensMacchiData.cpp"
+    "XdLocalCoordinateSystem.cpp")
 
 SETUP_OBJ_LIB(HC_Model)
 
