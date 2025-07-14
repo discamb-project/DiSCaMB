@@ -189,7 +189,7 @@ namespace discamb
 
 using namespace wfndata;
 
-SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string configuration_data[])
+SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string *configuration_data, const int max_atomic_number)
 {
 	int entryIdx;
 	HC_WfnBankEntry entry;
@@ -210,9 +210,8 @@ SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string configura
     int stoIdx, nSTO;
     double angstrom = 1.0 / 0.52917721092;
     double normalizationFactor;
-    static const int localDef_N_Entries = sizeof(configuration_data) / sizeof(configuration_data[0]);
 
-	for (entryIdx = 0; entryIdx < localDef_N_Entries; entryIdx++)
+	for (entryIdx = 0; entryIdx < max_atomic_number; entryIdx++)
 	{
         HC_WfnBankEntry entry;
         entry.atomic_number = wfns[entryIdx].atomicNumber;

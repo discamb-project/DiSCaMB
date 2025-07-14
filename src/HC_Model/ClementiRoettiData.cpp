@@ -9,6 +9,8 @@ using namespace std;
 
 namespace crwfndata {
 
+static const int localDef_N_Entries = 68;
+
 string cr_configuration_data[68] = {
     " H   1S(1)",
     "He   1S(2)",
@@ -5324,7 +5326,7 @@ namespace discamb{
 
 using namespace crwfndata;
 
-ClementiRoettiData::ClementiRoettiData(): SlaterOrbitalWfnData(wfns, cr_configuration_data)
+ClementiRoettiData::ClementiRoettiData(): SlaterOrbitalWfnData(wfns, cr_configuration_data, localDef_N_Entries)
 {
 }
 

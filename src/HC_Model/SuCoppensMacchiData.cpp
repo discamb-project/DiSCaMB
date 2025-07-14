@@ -11749,7 +11749,7 @@ namespace discamb{
 
 using namespace scmwfndata;
 
-SuCoppensMacchiData::SuCoppensMacchiData(): SlaterOrbitalWfnData(wfns, scm_configuration_data)
+SuCoppensMacchiData::SuCoppensMacchiData(): SlaterOrbitalWfnData(wfns, scm_configuration_data, localDef_N_Entries)
 {
 }
 

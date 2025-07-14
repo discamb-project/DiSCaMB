@@ -44,7 +44,7 @@ namespace discamb {
     class SlaterOrbitalWfnData
     {
     public:
-        SlaterOrbitalWfnData(LocalDef_Wfn[], std::string[]);
+        SlaterOrbitalWfnData(LocalDef_Wfn[], std::string[], int);
         virtual ~SlaterOrbitalWfnData();
         /** \brief Get all wavefunction data entries.*/
         void getEntries(std::vector<discamb::HC_WfnBankEntry> &entries);
