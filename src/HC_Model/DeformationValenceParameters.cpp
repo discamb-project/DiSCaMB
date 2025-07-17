@@ -4,6 +4,7 @@
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/HC_Model/ClementiRoettiData.h"
+#include "discamb/HC_Model/SuCoppensMacchiData.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 
 #include <fstream>
@@ -195,7 +196,10 @@ DeformationValenceParameters::~DeformationValenceParameters()
 void DeformationValenceParameters::set(
     ParametersType type)
 {
-    type == ParametersType::STANDARD ? setStandardParameterization() : setUbdbParameterization();
+    if (type == ParametersType::SCM)
+        setSCMParameterization();
+    else
+        type == ParametersType::STANDARD ? setStandardParameterization() : setUbdbParameterization();
 }
 
 void DeformationValenceParameters::setParameters(
@@ -346,6 +350,37 @@ void DeformationValenceParameters::setStandardParameterization()
     ClementiRoettiData cr_data;
     int entryIdx, nEntries;
     cr_data.getEntries(entries);
+    Type type;
+    vector<int> powers;
+    double exponent;
+    //double exponent2;
+    vector<vector<double> > exponents;
+    vector<vector<int> > configuration;
+    vector<pair<int, int> > valence;
+    
+    nEntries = entries.size();
+    
+
+    for ( entryIdx = 0; entryIdx < nEntries; entryIdx++)
+    {
+        HC_WfnBankEntry &entry = entries[entryIdx];
+        type.set(entry.wfnAtomTypeName);
+        assignPowers(powers, type);
+        getConfigurationAndValenceOrbitals(entry, configuration, valence);
+        clementi_raimondi::getExponents(entry.atomic_number, exponents);
+        exponent = calcExponent(type, exponents, configuration, valence);
+        
+        mParameters[entry.wfnAtomTypeName] = make_pair(exponent, powers);
+        
+    }
+}
+
+void DeformationValenceParameters::setSCMParameterization()
+{
+    vector<HC_WfnBankEntry> entries;
+    SuCoppensMacchiData scm_data;
+    int entryIdx, nEntries;
+    scm_data.getEntries(entries);
     Type type;
     vector<int> powers;
     double exponent;

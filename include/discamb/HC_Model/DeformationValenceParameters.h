@@ -35,7 +35,11 @@ public:
         Parameters used in UBDB (University Bufallo Data Bank) - the same as for STANDARD except for
         P (powers 4, 6, 6, 6, 6) and S (powers 1, 2, 4, 6, 8).
         */
-        UBDB};
+        UBDB,
+        /**
+        Setting for Su, Coppens & Macchi wavefunction parameters for atoms and ions up to Cs+.
+        */
+        SCM};
     DeformationValenceParameters();
     /**
     \brief Constructs one of two buil in parameter sets.
@@ -115,6 +119,7 @@ private:
     std::map<std::string, std::pair<double, std::vector<int> > > mParameters;
     void setUbdbParameterization();
     void setStandardParameterization();
+    void setSCMParameterization();
 };
 
 } // namespace discamb

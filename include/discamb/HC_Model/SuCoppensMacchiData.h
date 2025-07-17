@@ -1,5 +1,5 @@
-#ifndef _DISCAMB_HC_MODEL_CLEMENTIROETTIDATA_H_
-#define _DISCAMB_HC_MODEL_CLEMENTIROETTIDATA_H_
+#ifndef _DISCAMB_HC_MODEL_SUCOPPENSMACCHIDATA_H_
+#define _DISCAMB_HC_MODEL_SUCOPPENSMACCHIDATA_H_
 
 
 #include "discamb/HC_Model/HC_WfnData.h"
@@ -12,25 +12,25 @@
 
 
 namespace discamb {
-     
+
     /** \ingroup HC_Model 
 
-        \brief Selected atomic wavefunctions data from Clementi & Roetti (1974).
+        \brief Selected atomic wavefunctions data from Su & Coppens (1998) and Macchi & Coppens (2001).
 
         Class providing atomic wavefunction data (discamb::HC_WfnBankEntry) based on 
-        Clementi and roetti publication \cite Clementi_roetti_1974 .
+        Su & Coppens \cite Su_Coppens_1998 and Macchi & Coppens publications \cite Macchi_Coppens_2001 .
         The data include also info on assignment of the orbital to valence and core 
         (for detail on the alassignment algorithm see \ref algorithms_for_parameterization "algorithms section" )
     */
 
-    class ClementiRoettiData: public SlaterOrbitalWfnData
+    class SuCoppensMacchiData : public SlaterOrbitalWfnData
     {
     public:
-        ClementiRoettiData();
+        SuCoppensMacchiData();
     };
 
 }
 
-#endif /*_DISCAMB_HC_MODEL_CLEMENTIROETTIDATA_H_*/
+#endif /*_DISCAMB_HC_MODEL_SUCOPPENSMACCHIDATA_H_*/
 
 
