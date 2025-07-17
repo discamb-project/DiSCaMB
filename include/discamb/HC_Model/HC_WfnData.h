@@ -105,7 +105,7 @@ being a combination of slater type functions:
 
 struct SlaterTypeAtomicOrbitalRdf
 {
-    /** Principal number of the orbital (e.g. 1 for 1S or 1P orbital)*/
+    /** Principal number of the orbital (e.g. 2 for 2S or 2P orbital)*/
     int principal_number = 1; 
     /** Azimuthal number of the orbital (e.g. 0 for s type orbitals, 1 for p type orbitals)*/
     int azimuthal_number = 0;

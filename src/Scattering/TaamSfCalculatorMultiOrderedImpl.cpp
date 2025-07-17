@@ -361,8 +361,8 @@ namespace discamb {
     void TaamSfCalculatorMultiOrderedImpl::setAnomalous(
         const std::vector<std::complex<double> > & anomalous) 
     {
-        on_error::not_implemented(__FILE__, __LINE__);
-        //mCalculator->setAnomalous(anomalous);
+        for (auto calculator : mCalculators)
+            calculator->setAnomalous(anomalous);
     }
  
 
