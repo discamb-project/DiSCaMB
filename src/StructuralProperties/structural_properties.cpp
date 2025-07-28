@@ -1,3 +1,5 @@
+#include "discamb/StructuralProperties/structural_properties.h"
+
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicChemistry/chemical_element_data.h"
 
@@ -13,7 +15,6 @@
 #include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/MathUtilities/geometry3d.h"
 
-#include "discamb/StructuralProperties/structural_properties.h"
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
 #include "discamb/StructuralProperties/GenericConnectivityAlgorithm.h"
 
@@ -932,6 +933,216 @@ namespace
 			}
 		}
 	}
+
+    void makeCluster000(
+        const UnitCellContent& ucContent,
+        const std::vector<UnitCellContent::AtomID>& centralMolecule,
+        const std::vector<std::vector<UnitCellContent::AtomID> >& molecules,
+        std::vector<UnitCellContent::AtomID>& clusterAtoms,
+        double threshold, bool vdwThreshold)
+    {
+        clusterAtoms.clear();
+
+        // [molecule ndex][atom in molecule index]
+        vector<vector<Vector3d> > coordinates;
+        vector<Vector3d> centralMoleculeAtomicCoordinates;
+        vector<Vector3d> latticeVec(3);
+        Vector3d fractionalCoordinates, cartesianCoordinates;;
+
+        auto& crystal = ucContent.getCrystal();
+        crystal.unitCell.fractionalToCartesian({ 1,0,0 }, latticeVec[0]);
+        crystal.unitCell.fractionalToCartesian({ 0,1,0 }, latticeVec[1]);
+        crystal.unitCell.fractionalToCartesian({ 0,0,1 }, latticeVec[2]);
+
+        //------- central molecule --------------
+        // set coordinates and atomic numbers
+
+        vector<int> centralMolZ;
+        vector<int> atomicNumbers;
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        for (auto const& atom : centralMolecule)
+        {
+            fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
+            crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
+            centralMoleculeAtomicCoordinates.push_back(cartesianCoordinates);
+            centralMolZ.push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+        }
+
+        //------- unit cell molecules --------
+        // set coordinates and atomic numbers
+        vector<vector<int> > moleculesZ;
+        int nMolecules = molecules.size();
+        coordinates.resize(nMolecules);
+        moleculesZ.resize(nMolecules);
+        for (int i = 0; i < nMolecules; i++)
+            for (auto const& atom : molecules[i])
+            {
+                fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
+                crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
+                coordinates[i].push_back(cartesianCoordinates);
+                moleculesZ[i].push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+            }
+
+        //-----------------
+
+
+        vector<vector<Vector3i> > moleculesIntersectingUnitCell(molecules.size());
+
+
+        set<Vector3i> uniqueUnitCells;
+        Vector3i vectorZero(0, 0, 0);
+        for (int molIdx = 0; molIdx < molecules.size(); molIdx++)
+        {
+            auto& molecule = molecules[molIdx];
+            uniqueUnitCells.clear();
+            for (auto& atom : molecule)
+                uniqueUnitCells.insert(atom.unitCellPosition);
+            for (auto& cell : uniqueUnitCells)
+                moleculesIntersectingUnitCell[molIdx].push_back(-cell);
+
+        }
+
+        set<pair<int, Vector3i> > shellMolecules, cluster, clusterExtension;
+
+        bool clusterWasExtended = true;
+        int shell = 0;
+
+        while (clusterWasExtended)
+        {
+            calculateShellMolecules(shell, moleculesIntersectingUnitCell, set<pair<int, Vector3i> >(), shellMolecules);
+            findClusterExtendingMolecules(centralMoleculeAtomicCoordinates, centralMolZ, coordinates, moleculesZ, latticeVec,
+                shellMolecules, clusterExtension, threshold, vdwThreshold);
+            clusterWasExtended = !clusterExtension.empty();
+            shell++;
+            cluster.insert(clusterExtension.begin(), clusterExtension.end());
+        }
+
+        for (auto& molecule : cluster)
+        {
+            auto const& mol = molecules[molecule.first];
+
+            for (int i = 0; i < mol.size(); i++)
+                clusterAtoms.push_back({ mol[i].atomIndex, mol[i].unitCellPosition + molecule.second });
+        }
+
+    }
+
+
+    void makeCluster000(
+        const UnitCellContent& ucContent,
+        const std::vector<UnitCellContent::AtomID>& centralMolecule,
+        std::vector<UnitCellContent::AtomID>& clusterAtoms,
+        double threshold,
+        bool vdwThreshold)
+    {
+        clusterAtoms.clear();
+
+        vector<vector<UnitCellContent::AtomID> > molecules;
+        vector<UnitCellContent::AtomID> uc;
+        vector< vector< pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > networkBonds;
+
+        discamb::structural_properties::splitUnitCellIntoMolecules(ucContent, molecules, networkBonds, 0.4);
+
+        //
+        // [molecule ndex][atom in molecule index]
+        vector<vector<Vector3d> > coordinates;
+        vector<Vector3d> centralMoleculeAtomicCoordinates;
+        vector<Vector3d> latticeVec(3);
+        Vector3d fractionalCoordinates, cartesianCoordinates;;
+
+        auto& crystal = ucContent.getCrystal();
+        crystal.unitCell.fractionalToCartesian({ 1,0,0 }, latticeVec[0]);
+        crystal.unitCell.fractionalToCartesian({ 0,1,0 }, latticeVec[1]);
+        crystal.unitCell.fractionalToCartesian({ 0,0,1 }, latticeVec[2]);
+
+        //------- central molecule --------------
+        // set coordinates and atomic numbers
+
+        vector<int> centralMolZ;
+        vector<int> atomicNumbers;
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        for (auto const& atom : centralMolecule)
+        {
+            fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
+            crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
+            centralMoleculeAtomicCoordinates.push_back(cartesianCoordinates);
+            centralMolZ.push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+        }
+
+        //------- unit cell molecules --------
+        // set coordinates and atomic numbers
+        vector<vector<int> > moleculesZ;
+        int nMolecules = molecules.size();
+        coordinates.resize(nMolecules);
+        moleculesZ.resize(nMolecules);
+        for (int i = 0; i < nMolecules; i++)
+            for (auto const& atom : molecules[i])
+            {
+                fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
+                crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
+                coordinates[i].push_back(cartesianCoordinates);
+                moleculesZ[i].push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+            }
+
+        //-----------------
+
+
+        vector<vector<Vector3i> > moleculesIntersectingUnitCell(molecules.size());
+
+
+        set<Vector3i> uniqueUnitCells;
+        Vector3i vectorZero(0, 0, 0);
+        for (int molIdx = 0; molIdx < molecules.size(); molIdx++)
+        {
+            auto& molecule = molecules[molIdx];
+            uniqueUnitCells.clear();
+            for (auto& atom : molecule)
+                uniqueUnitCells.insert(atom.unitCellPosition);
+            for (auto& cell : uniqueUnitCells)
+                moleculesIntersectingUnitCell[molIdx].push_back(-cell);
+
+        }
+
+        set<pair<int, Vector3i> > shellMolecules, cluster, clusterExtension;
+
+        bool clusterWasExtended = true;
+        int shell = 0;
+        /*
+                const vector<Vector3d>& centralMolAtomicCoords,
+        const vector<int> &centralMolZ, // central molecule atomic numbers
+        const vector<vector<Vector3d> >& moleculesAtomicCoords,
+        const vector < vector <int> > &moleculesZ, // atomic numbers
+        const vector<Vector3d>& latticeVec,
+        const set<pair<int, Vector3i> >& shellMolecules,
+        set<pair<int, Vector3i> >& shellMoleculesclusterExtension,
+        double threshold,
+        bool useVdW)
+        */
+        //cout << "calculate cluster atoms\n";
+        while (clusterWasExtended)
+        {
+            //cout << "shell " << shell << "\n";
+            //cout << "calculating shell molecules\n";
+            calculateShellMolecules(shell, moleculesIntersectingUnitCell, set<pair<int, Vector3i> >(), shellMolecules);
+            //cout << "finding extending molecules\n";
+            findClusterExtendingMolecules(centralMoleculeAtomicCoordinates, centralMolZ, coordinates, moleculesZ, latticeVec,
+                shellMolecules, clusterExtension, threshold, vdwThreshold);
+            //cout << "done\n";
+            clusterWasExtended = !clusterExtension.empty();
+            shell++;
+            cluster.insert(clusterExtension.begin(), clusterExtension.end());
+        }
+
+        for (auto& molecule : cluster)
+        {
+            auto const& mol = molecules[molecule.first];
+
+            for (int i = 0; i < mol.size(); i++)
+                clusterAtoms.push_back({ mol[i].atomIndex, mol[i].unitCellPosition + molecule.second });
+        }
+
+    }
+
 
     /*
     calculates distance between plane span by vectors
@@ -2445,204 +2656,61 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         std::vector<UnitCellContent::AtomID>& clusterAtoms,
         double threshold, bool vdwThreshold)
     {
-        // [molecule ndex][atom in molecule index]
-        vector<vector<Vector3d> > coordinates;
-        vector<Vector3d> centralMoleculeAtomicCoordinates;
-        vector<Vector3d> latticeVec(3);
-        Vector3d fractionalCoordinates, cartesianCoordinates;;
+        clusterAtoms.clear();
 
-        auto& crystal = ucContent.getCrystal();
-        crystal.unitCell.fractionalToCartesian({ 1,0,0 }, latticeVec[0]);
-        crystal.unitCell.fractionalToCartesian({ 0,1,0 }, latticeVec[1]);
-        crystal.unitCell.fractionalToCartesian({ 0,0,1 }, latticeVec[2]);
-
-        //------- central molecule --------------
-        // set coordinates and atomic numbers
-
-        vector<int> centralMolZ;
-        vector<int> atomicNumbers;
-        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        map<Vector3i, vector< UnitCellContent::AtomID> > centralMoleculeSplitByUnitCell;
         for (auto const& atom : centralMolecule)
+            centralMoleculeSplitByUnitCell[atom.unitCellPosition].push_back(atom);
+        set<UnitCellContent::AtomID> clusterAtomsSet;
+        vector<UnitCellContent::AtomID> subsetClusterAtoms;
+
+        for (auto& part : centralMoleculeSplitByUnitCell)
         {
-            fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
-            crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
-            centralMoleculeAtomicCoordinates.push_back(cartesianCoordinates);
-            centralMolZ.push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+            Vector3i shift = part.first;
+            vector<UnitCellContent::AtomID> shiftedPart;
+            for (auto& atom : part.second)
+                shiftedPart.push_back(UnitCellContent::AtomID(atom.atomIndex));
+            makeCluster000(ucContent, shiftedPart, molecules, subsetClusterAtoms, threshold, vdwThreshold);
+            for (auto& atom : subsetClusterAtoms)
+                atom.unitCellPosition += shift;
+            clusterAtomsSet.insert(subsetClusterAtoms.begin(), subsetClusterAtoms.end());
         }
-
-        //------- unit cell molecules --------
-        // set coordinates and atomic numbers
-        vector<vector<int> > moleculesZ;
-        int nMolecules = molecules.size();
-        coordinates.resize(nMolecules);
-        moleculesZ.resize(nMolecules);
-        for (int i = 0; i < nMolecules; i++)
-            for (auto const& atom : molecules[i])
-            {
-                fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
-                crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
-                coordinates[i].push_back(cartesianCoordinates);
-                moleculesZ[i].push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
-            }
-
-        //-----------------
-
-
-        vector<vector<Vector3i> > moleculesIntersectingUnitCell(molecules.size());
-
-
-        set<Vector3i> uniqueUnitCells;
-        Vector3i vectorZero(0, 0, 0);
-        for (int molIdx = 0; molIdx < molecules.size(); molIdx++)
-        {
-            auto& molecule = molecules[molIdx];
-            uniqueUnitCells.clear();
-            for (auto& atom : molecule)
-                uniqueUnitCells.insert(atom.unitCellPosition);
-            for (auto& cell : uniqueUnitCells)
-                moleculesIntersectingUnitCell[molIdx].push_back(-cell);
-
-        }
-
-        set<pair<int, Vector3i> > shellMolecules, cluster, clusterExtension;
-
-        bool clusterWasExtended = true;
-        int shell = 0;
-
-        while (clusterWasExtended)
-        {
-            calculateShellMolecules(shell, moleculesIntersectingUnitCell, set<pair<int, Vector3i> >(), shellMolecules);
-            findClusterExtendingMolecules(centralMoleculeAtomicCoordinates, centralMolZ, coordinates, moleculesZ, latticeVec,
-                shellMolecules, clusterExtension, threshold, vdwThreshold);
-            clusterWasExtended = !clusterExtension.empty();
-            shell++;
-            cluster.insert(clusterExtension.begin(), clusterExtension.end());
-        }
-
-        for (auto& molecule : cluster)
-        {
-            auto const& mol = molecules[molecule.first];
-
-            for (int i = 0; i < mol.size(); i++)
-                clusterAtoms.push_back({ mol[i].atomIndex, mol[i].unitCellPosition + molecule.second });
-        }
-
+        clusterAtoms.insert(clusterAtoms.end(), clusterAtomsSet.begin(), clusterAtomsSet.end());
     }
 
 
 
-	void makeCluster(
-		const UnitCellContent& ucContent,
-		const std::vector<UnitCellContent::AtomID>& centralMolecule,
-		std::vector<UnitCellContent::AtomID>& clusterAtoms,
-		double threshold, 
-        bool vdwThreshold)
-	{
-		vector<vector<UnitCellContent::AtomID> > molecules;
-		vector<UnitCellContent::AtomID> uc;
-		vector< vector< pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > networkBonds;
-
-		discamb::structural_properties::splitUnitCellIntoMolecules(ucContent, molecules, networkBonds, 0.4);
-
-		//
-		// [molecule ndex][atom in molecule index]
-		vector<vector<Vector3d> > coordinates;
-		vector<Vector3d> centralMoleculeAtomicCoordinates;
-		vector<Vector3d> latticeVec(3);
-		Vector3d fractionalCoordinates, cartesianCoordinates;;
-
-		auto &crystal = ucContent.getCrystal();
-		crystal.unitCell.fractionalToCartesian({ 1,0,0 }, latticeVec[0]);
-		crystal.unitCell.fractionalToCartesian({ 0,1,0 }, latticeVec[1]);
-		crystal.unitCell.fractionalToCartesian({ 0,0,1 }, latticeVec[2]);
-
-        //------- central molecule --------------
-        // set coordinates and atomic numbers
-
-        vector<int> centralMolZ;
-        vector<int> atomicNumbers;
-        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
-		for (auto const& atom : centralMolecule)
-		{
-			fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
-			crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
-			centralMoleculeAtomicCoordinates.push_back(cartesianCoordinates);
-            centralMolZ.push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
-		}
-
-        //------- unit cell molecules --------
-        // set coordinates and atomic numbers
-        vector<vector<int> > moleculesZ;
-		int nMolecules = molecules.size();
-		coordinates.resize(nMolecules);
-        moleculesZ.resize(nMolecules);
-		for (int i = 0; i < nMolecules; i++)
-			for (auto const& atom : molecules[i])
-			{
-				fractionalCoordinates = ucContent.getAtom(atom.atomIndex).coordinates + Vector3d(atom.unitCellPosition);
-				crystal.unitCell.fractionalToCartesian(fractionalCoordinates, cartesianCoordinates);
-				coordinates[i].push_back(cartesianCoordinates);
-                moleculesZ[i].push_back(atomicNumbers[ucContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
-			}
-
-		//-----------------
-
-
-		vector<vector<Vector3i> > moleculesIntersectingUnitCell(molecules.size());
-
-
-		set<Vector3i> uniqueUnitCells;
-		Vector3i vectorZero(0, 0, 0);
-		for (int molIdx = 0; molIdx < molecules.size(); molIdx++)
-		{
-			auto& molecule = molecules[molIdx];
-			uniqueUnitCells.clear();
-			for (auto& atom : molecule)
-				uniqueUnitCells.insert(atom.unitCellPosition);
-			for (auto& cell : uniqueUnitCells)
-				moleculesIntersectingUnitCell[molIdx].push_back(-cell);
-
-		}
-
-		set<pair<int, Vector3i> > shellMolecules, cluster, clusterExtension;
-
-		bool clusterWasExtended = true;
-		int shell = 0;
-        /*
-                const vector<Vector3d>& centralMolAtomicCoords,
-        const vector<int> &centralMolZ, // central molecule atomic numbers
-        const vector<vector<Vector3d> >& moleculesAtomicCoords,
-        const vector < vector <int> > &moleculesZ, // atomic numbers
-        const vector<Vector3d>& latticeVec,
-        const set<pair<int, Vector3i> >& shellMolecules,
-        set<pair<int, Vector3i> >& shellMoleculesclusterExtension,
+    void makeCluster(
+        const UnitCellContent& ucContent,
+        const std::vector<UnitCellContent::AtomID>& centralMolecule,
+        std::vector<UnitCellContent::AtomID>& clusterAtoms,
         double threshold,
-        bool useVdW)
-        */
-        //cout << "calculate cluster atoms\n";
-		while (clusterWasExtended)
-		{
-            //cout << "shell " << shell << "\n";
-            //cout << "calculating shell molecules\n";
-			calculateShellMolecules(shell, moleculesIntersectingUnitCell, set<pair<int, Vector3i> >(), shellMolecules);
-            //cout << "finding extending molecules\n";
-			findClusterExtendingMolecules(centralMoleculeAtomicCoordinates, centralMolZ, coordinates, moleculesZ, latticeVec,
-				                          shellMolecules, clusterExtension, threshold, vdwThreshold);
-            //cout << "done\n";
-			clusterWasExtended = !clusterExtension.empty();
-			shell++;
-			cluster.insert(clusterExtension.begin(), clusterExtension.end());
-		}
+        bool vdwThreshold)
+    {
+        clusterAtoms.clear();
 
-		for (auto& molecule : cluster)
-		{
-			auto const& mol = molecules[molecule.first];
+        map<Vector3i, vector< UnitCellContent::AtomID> > centralMoleculeSplitByUnitCell;
+        for (auto const& atom : centralMolecule)
+            centralMoleculeSplitByUnitCell[atom.unitCellPosition].push_back(atom);
+        set<UnitCellContent::AtomID> clusterAtomsSet;
+        vector<UnitCellContent::AtomID> subsetClusterAtoms;
 
-			for (int i = 0; i < mol.size(); i++)
-				clusterAtoms.push_back({ mol[i].atomIndex, mol[i].unitCellPosition + molecule.second });
-		}
+        for (auto& part : centralMoleculeSplitByUnitCell)
+        {
+            Vector3i shift = part.first;
+            vector<UnitCellContent::AtomID> shiftedPart;
+            for (auto& atom : part.second)
+                shiftedPart.push_back(UnitCellContent::AtomID(atom.atomIndex));
+            makeCluster000(ucContent, shiftedPart, subsetClusterAtoms, threshold, vdwThreshold);
+            for (auto& atom : subsetClusterAtoms)
+                atom.unitCellPosition += shift;
+            clusterAtomsSet.insert(subsetClusterAtoms.begin(), subsetClusterAtoms.end());
+        }
+        clusterAtoms.insert(clusterAtoms.end(), clusterAtomsSet.begin(), clusterAtomsSet.end());
 
-	}
+    }
+
+
 
 
     double interatomicDistance(

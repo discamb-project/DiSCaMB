@@ -2448,10 +2448,28 @@ void test_anomalous(
 
 }
 
+void test_neighbour()
+{
+    Crystal crystal;
+    structure_io::read_structure("urea.res", crystal);
+    UnitCellContent unitCellContent(crystal);
+    UnitCellContent::AtomID atomId(4, Vector3i(0, 0, -2));
+    vector<UnitCellContent::AtomID> centralPart{ atomId };
+    vector< vector< pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > networkBonds;
+    std::vector< std::vector<discamb::UnitCellContent::AtomID> > molecules;
+    structural_properties::splitUnitCellIntoMolecules(unitCellContent, molecules, networkBonds);
+    vector<UnitCellContent::AtomID> clusterAtoms;
+    structural_properties::makeCluster(unitCellContent, centralPart, molecules, clusterAtoms, 2.1, false);
+    for (auto& atom : clusterAtoms)
+        cout << atom.atomIndex << " " << atom.unitCellPosition << "n";
+}
 
 int main(int argc, char* argv[])
 {
     try {
+
+        test_neighbour();
+        return 0;
 
         test_anomalous(argv[1]);
         if (argc != 2)

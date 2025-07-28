@@ -203,6 +203,12 @@ namespace discamb {
 			std::vector<UnitCellContent::AtomID> &clusterAtoms,
 			double threshold, bool vdwThreshold);
 
+        //void makeCluster2(
+        //    const UnitCellContent& uc,
+        //    const std::vector<UnitCellContent::AtomID>& centralPart,
+        //    std::vector<UnitCellContent::AtomID>& clusterAtoms,
+        //    double threshold, bool vdwThreshold);
+
         void makeCluster(
             const UnitCellContent& uc,
             const std::vector<UnitCellContent::AtomID>& centralPart,
@@ -210,7 +216,13 @@ namespace discamb {
             std::vector<UnitCellContent::AtomID>& clusterAtoms,
             double threshold, bool vdwThreshold);
 
-        
+        //void makeCluster2(
+        //    const UnitCellContent& uc,
+        //    const std::vector<UnitCellContent::AtomID>& centralPart,
+        //    const std::vector<std::vector<UnitCellContent::AtomID> >& unitCellMolecules,
+        //    std::vector<UnitCellContent::AtomID>& clusterAtoms,
+        //    double threshold, bool vdwThreshold);
+
 
         double interatomicDistance(
             const Crystal &crystal,
