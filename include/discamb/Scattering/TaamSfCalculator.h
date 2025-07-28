@@ -5,6 +5,7 @@
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
 #include "discamb/Scattering/disordered_structure_fragments.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
@@ -25,6 +26,7 @@ namespace discamb {
 
         std::vector<AtomType> atomTypes;
         std::vector<AtomTypeHC_Parameters> parameters;
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::WfnDataBank::CR;
         bool electronScattering = false;
         DescriptorsSettings descriptorsSettings;
         std::string assignmentInfoFile;

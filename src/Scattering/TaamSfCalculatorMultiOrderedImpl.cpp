@@ -40,6 +40,7 @@ namespace discamb {
         const std::vector < std::vector <std::pair<std::string, double> > >& atomList,
         const std::vector<AtomType> &atomTypes,
         const std::vector<AtomTypeHC_Parameters> &parameters,
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &assignemntInfoFile,
@@ -54,7 +55,7 @@ namespace discamb {
         bool frozen_lcs,
         const std::string& algorithm)
     {
-        set(crystal, atomList, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
+        set(crystal, atomList, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm);
 
     }
@@ -204,6 +205,9 @@ namespace discamb {
         bool frozen_lcs = data.value("frozen lcs", false);
         string algorithm = data.value("algorithm", "standard");
 
+        string wfnDataBank = data.value("wavefunction bank", "CR");
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
+
         MATTS_BankReader bankReader;
         vector<AtomType> types;
         vector<AtomTypeHC_Parameters> hcParameters;
@@ -254,7 +258,7 @@ namespace discamb {
         }
 
 
-        set(crystal, atomList, types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
+        set(crystal, atomList, types, hcParameters, slaterWavefunctionsDatabankId, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, frozen_lcs, algorithm);
 
     }
@@ -302,6 +306,7 @@ namespace discamb {
         const std::vector < std::vector <std::pair<std::string, double> > >& atomList,
         const std::vector<AtomType> &atomTypes,
         const std::vector<AtomTypeHC_Parameters> &bankParameters,
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &_assignemntInfoFile,
@@ -352,7 +357,7 @@ namespace discamb {
                 multipolarCif += idxStr;
 
             mCalculators.push_back(make_shared<HcAtomBankStructureFactorCalculator>(
-                subcrystal, atomTypes, bankParameters, electronScattering, settings, assignemntInfoFile,
+                subcrystal, atomTypes, bankParameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile,
                 assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable,
                 iamElectronScattering, frozen_lcs, algorithm));
         }

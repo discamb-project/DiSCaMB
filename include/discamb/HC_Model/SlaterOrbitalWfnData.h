@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 
 struct LocalDef_SlaterTerm
 {
@@ -44,7 +45,11 @@ namespace discamb {
     class SlaterOrbitalWfnData
     {
     public:
+        enum class WfnDataBank { CR, SCM };
+        static WfnDataBank databankIdFromString(const std::string &id);
+        static std::string databankIdToString(WfnDataBank);
         SlaterOrbitalWfnData(LocalDef_Wfn[], std::string[], int);
+        //SlaterOrbitalWfnData(const std::vector<LocalDef_Wfn>& data, const std::vector<std::string> &, int);
         virtual ~SlaterOrbitalWfnData();
         /** \brief Get all wavefunction data entries.*/
         void getEntries(std::vector<discamb::HC_WfnBankEntry> &entries);
@@ -59,6 +64,8 @@ namespace discamb {
             The specified with label \p atomType, 
             if it is not available then discamb::Exception is thrown.*/
         const discamb::HC_WfnBankEntry &getEntry(const std::string &atomType) const;
+
+        static std::shared_ptr<SlaterOrbitalWfnData> create_shared_ptr(WfnDataBank);
 
     private:
         std::map<std::string, discamb::HC_WfnBankEntry> mEntries;

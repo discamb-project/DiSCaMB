@@ -1,6 +1,8 @@
 #ifndef _DISCAMB_HC_MODEL_DEFORMATIONVALENCEPARAMETERS_H_
 #define _DISCAMB_HC_MODEL_DEFORMATIONVALENCEPARAMETERS_H_
 
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
+
 #include <string>
 #include <vector>
 #include <map>
@@ -30,16 +32,18 @@ public:
         Default parameterization based on algorithms described in \ref algorithms_for_parameterization "Algorithms for parameters assignment section". See also 
         \ref xd "comparison with XD2006" parameters.
         */
-        STANDARD, 
+        STANDARD_CR, 
         /**
         Parameters used in UBDB (University Bufallo Data Bank) - the same as for STANDARD except for
         P (powers 4, 6, 6, 6, 6) and S (powers 1, 2, 4, 6, 8).
         */
-        UBDB,
+        UBDB_CR,
         /**
         Setting for Su, Coppens & Macchi wavefunction parameters for atoms and ions up to Cs+.
         */
-        SCM};
+        STANDARD_SCM,
+        UBDB_SCM
+    };
     DeformationValenceParameters();
     /**
     \brief Constructs one of two buil in parameter sets.
@@ -117,9 +121,18 @@ public:
 private:
     // mParameters[label].first - zeta, mParameters[label].second - powers of r 
     std::map<std::string, std::pair<double, std::vector<int> > > mParameters;
-    void setUbdbParameterization();
-    void setStandardParameterization();
-    void setSCMParameterization();
+    //void setUbdbParameterization();
+    //void setStandardParameterization();
+    //void setSCMParameterization();
+
+    //void setUbdbParameterizationCR();
+    //void setUbdbParameterizationSCM();
+    //void setStandardParameterizationCR();
+    //void setStandardParameterizationSCM();
+    void setStandardParameterization(std::shared_ptr<SlaterOrbitalWfnData> slaterOrbitalData);
+    void convertParamterizationToUbdb();
+    
+
 };
 
 } // namespace discamb

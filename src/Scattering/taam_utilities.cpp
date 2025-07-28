@@ -15,15 +15,20 @@ namespace {
 
     void checkIfAtomicNumbersRepresentedInWfnBank(
         const vector<int> &atomicNumbers,
+        discamb::SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
         set<int> &presentZ,
         set<int> &missingZ)
     {
-        discamb::ClementiRoettiData clementiRoettiData;
+        auto wfnData = discamb::SlaterOrbitalWfnData::create_shared_ptr(slaterWavefunctionBank);       
+
+        //discamb::ClementiRoettiData clementiRoettiData;
         discamb::HC_WfnBankEntry wfnEntry;
         bool hasType;
         for (auto z : atomicNumbers)
         {
-            wfnEntry = clementiRoettiData.getEntry(discamb::periodic_table::symbol(z), hasType);
+            //wfnEntry = clementiRoettiData.getEntry(discamb::periodic_table::symbol(z), hasType);
+            wfnEntry = wfnData->getEntry(discamb::periodic_table::symbol(z), hasType);
+            
             if (!hasType)
                 missingZ.insert(z);
             else
@@ -40,6 +45,7 @@ namespace discamb {
             const vector<AtomTypeHC_Parameters> &bankMultipoleParameters,
             const vector<int> &atomTypeAssignment,
             const vector<int> &atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             HC_ModelParameters &parameters,
             bool notAssignedRepresentedWithSlaters,
             vector<int> &nonMultipolarAtoms)
@@ -51,7 +57,7 @@ namespace discamb {
 
             set<int> atomicNumbersInWfnBank, atomicNumbersNotInWfnBank;
             map<int, int> zToWfnIdx;
-            checkIfAtomicNumbersRepresentedInWfnBank(atomicNumbers, atomicNumbersInWfnBank, atomicNumbersNotInWfnBank);
+            checkIfAtomicNumbersRepresentedInWfnBank(atomicNumbers, slaterWavefunctionBank, atomicNumbersInWfnBank, atomicNumbersNotInWfnBank);
             // chceck if there are some atoms for which there are no slater wfn
             // make a void wfn type for them
             bool hasVoidType = !(atomicNumbersNotInWfnBank.empty());
@@ -74,13 +80,24 @@ namespace discamb {
             int nVoidTypes = hasVoidType ? 1 : 0;
             parameters.wfn_parameters.resize(atomicNumbersInWfnBank.size() + nVoidTypes);
             int counter = nVoidTypes;
-            discamb::ClementiRoettiData clementiRoettiData;
-            DeformationValenceParameters def_val(DeformationValenceParameters::ParametersType::UBDB);
+            
+            //!!!!
+            //discamb::ClementiRoettiData clementiRoettiData;
+            shared_ptr<SlaterOrbitalWfnData> slaterWfnData = SlaterOrbitalWfnData::create_shared_ptr(slaterWavefunctionBank);
+            DeformationValenceParameters def_val;
+            if (slaterWavefunctionBank == SlaterOrbitalWfnData::WfnDataBank::CR)
+                def_val.set(DeformationValenceParameters::ParametersType::UBDB_CR);
+            if (slaterWavefunctionBank == SlaterOrbitalWfnData::WfnDataBank::SCM)
+                def_val.set(DeformationValenceParameters::ParametersType::UBDB_SCM);
+
+            //DeformationValenceParameters def_val(DeformationValenceParameters::ParametersType::UBDB);
 
             for (auto z : atomicNumbersInWfnBank)
             {
                 zToWfnIdx[z] = counter;
-                parameters.wfn_parameters[counter] = clementiRoettiData.getEntry(periodic_table::symbol(z));
+                //parameters.wfn_parameters[counter] = clementiRoettiData.getEntry(periodic_table::symbol(z));
+                //slaterWfnData
+                parameters.wfn_parameters[counter] = slaterWfnData->getEntry(periodic_table::symbol(z));
                 def_val.getParameters(periodic_table::symbol(z), parameters.wfn_parameters[counter].deformation_valence_exponent,
                     parameters.wfn_parameters[counter].deformation_valence_power);
                 counter++;
@@ -186,6 +203,7 @@ namespace discamb {
             const vector<int>& atomTypeAssignment,
             const std::vector<double>& multiplicityTimesOccupancy,
             const vector<int>& atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             double targetCharge,
             HC_ModelParameters& parameters,
             bool notAssignedRepresentedWithSlaters,
@@ -197,6 +215,7 @@ namespace discamb {
                 atomTypeAssignment,
                 multiplicityTimesOccupancy,
                 atomicNumbers,
+                slaterWavefunctionBank,
                 targetCharge,
                 parameters,
                 notAssignedRepresentedWithSlaters,
@@ -354,6 +373,7 @@ namespace discamb {
             const vector<int>& atomTypeAssignment,
             const std::vector<double>& multiplicityTimesOccupancy,
             const vector<int>& atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             double targetCharge,
             HC_ModelParameters& parameters,
             bool notAssignedRepresentedWithSlaters,
@@ -367,7 +387,7 @@ namespace discamb {
 
             set<int> atomicNumbersInWfnBank, atomicNumbersNotInWfnBank;
             map<int, int> zToWfnIdx;
-            checkIfAtomicNumbersRepresentedInWfnBank(atomicNumbers, atomicNumbersInWfnBank, atomicNumbersNotInWfnBank);
+            checkIfAtomicNumbersRepresentedInWfnBank(atomicNumbers, slaterWavefunctionBank, atomicNumbersInWfnBank, atomicNumbersNotInWfnBank);
             // chceck if there are some atoms for which there are no slater wfn
             // make a void wfn type for them
             bool hasVoidType = !(atomicNumbersNotInWfnBank.empty());
@@ -390,13 +410,23 @@ namespace discamb {
             int nVoidTypes = hasVoidType ? 1 : 0;
             parameters.wfn_parameters.resize(atomicNumbersInWfnBank.size() + nVoidTypes);
             int counter = nVoidTypes;
-            discamb::ClementiRoettiData clementiRoettiData;
-            DeformationValenceParameters def_val(DeformationValenceParameters::ParametersType::UBDB);
+            //discamb::ClementiRoettiData clementiRoettiData;
+            //DeformationValenceParameters def_val(DeformationValenceParameters::ParametersType::UBDB);
+
+            //!!!!
+            //discamb::ClementiRoettiData clementiRoettiData;
+            shared_ptr<SlaterOrbitalWfnData> slaterWfnData = SlaterOrbitalWfnData::create_shared_ptr(slaterWavefunctionBank);
+            DeformationValenceParameters def_val;
+            if (slaterWavefunctionBank == SlaterOrbitalWfnData::WfnDataBank::CR)
+                def_val.set(DeformationValenceParameters::ParametersType::UBDB_CR);
+            if (slaterWavefunctionBank == SlaterOrbitalWfnData::WfnDataBank::SCM)
+                def_val.set(DeformationValenceParameters::ParametersType::UBDB_SCM);
+
 
             for (auto z : atomicNumbersInWfnBank)
             {
                 zToWfnIdx[z] = counter;
-                parameters.wfn_parameters[counter] = clementiRoettiData.getEntry(periodic_table::symbol(z));
+                parameters.wfn_parameters[counter] = slaterWfnData->getEntry(periodic_table::symbol(z));
                 def_val.getParameters(periodic_table::symbol(z), parameters.wfn_parameters[counter].deformation_valence_exponent,
                     parameters.wfn_parameters[counter].deformation_valence_power);
                 counter++;

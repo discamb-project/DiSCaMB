@@ -1,6 +1,8 @@
 #pragma once
 
 #include "discamb/HC_Model/HC_ModelParameters.h"
+#include "discamb/HC_Model/DeformationValenceParameters.h"
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/AtomTyping/AtomType.h"
 
@@ -14,10 +16,11 @@ namespace discamb {
 
     namespace taam_utilities {
        
-       void type_assignment_to_unscaled_HC_parameters(
-            const std::vector<AtomTypeHC_Parameters> &bankMultipoleParameters,
-            const std::vector<int> &atomTypeAssignment,
-            const std::vector<int> &atomicNumbers,
+        void type_assignment_to_unscaled_HC_parameters(
+            const std::vector<AtomTypeHC_Parameters>& bankMultipoleParameters,
+            const std::vector<int>& atomTypeAssignment,
+            const std::vector<int>& atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             HC_ModelParameters &parameters,
             bool notAssignedRepresentedWithSlaters,
             std::vector<int> &nonMultipolarAtoms);
@@ -27,6 +30,7 @@ namespace discamb {
             const std::vector<int>& atomTypeAssignment,
             const std::vector<double> & multiplicityTimesOccupancy, 
             const std::vector<int>& atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             double totalCharge,
             HC_ModelParameters& parameters,
             bool notAssignedRepresentedWithSlaters,
@@ -42,6 +46,7 @@ namespace discamb {
             const std::vector<int>& atomTypeAssignment,
             const std::vector<double>& multiplicityTimesOccupancy,
             const std::vector<int>& atomicNumbers,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionBank,
             double totalCharge,
             HC_ModelParameters& parameters,
             bool notAssignedRepresentedWithSlaters,

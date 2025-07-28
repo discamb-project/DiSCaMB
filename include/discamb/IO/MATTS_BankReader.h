@@ -4,6 +4,7 @@
 #include "discamb/AtomTyping/AtomType.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
 
 
 
@@ -22,6 +23,7 @@ namespace discamb {
         double min_plm = 0.002;
         double nSigma = 1.0;
         int min_n_instaces = 3;
+        SlaterOrbitalWfnData::WfnDataBank wfn_databank = SlaterOrbitalWfnData::WfnDataBank::CR;
     };
 
     class MATTS_BankReader

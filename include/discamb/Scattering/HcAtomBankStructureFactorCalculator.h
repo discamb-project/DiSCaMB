@@ -4,6 +4,7 @@
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
 #include "discamb/AtomTyping/LocalCoordinateSystem.h"
@@ -40,6 +41,7 @@ namespace discamb {
             const Crystal &crystal,
             const std::vector<AtomType> &atomTypes,
             const std::vector<AtomTypeHC_Parameters> &parameters,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
             bool electronScattering = false,
             const DescriptorsSettings &settings= DescriptorsSettings(),
             const std::string &assignemntInfoFile = std::string(),
@@ -76,6 +78,7 @@ namespace discamb {
             const Crystal &crystal,
             const std::vector<AtomType> &atomTypes,
             const std::vector<AtomTypeHC_Parameters> &parameters,
+            SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
             bool electronScattering = false,
             const DescriptorsSettings &settings = DescriptorsSettings(),
             const std::string &assignemntInfoFile = std::string(),

@@ -81,7 +81,8 @@ string cr_configuration_data[68] = {
     "Se-  K(2)L(8)M(18)4S(2)4P(5)",
     "Br-  K(2)L(8)M(18)4S(2)4P(6)" };
 
-LocalDef_Wfn wfns[] =
+//std::vector<LocalDef_Wfn> wfns
+LocalDef_Wfn wfns[]=
 {
 	{
 		"H", 1, 0,

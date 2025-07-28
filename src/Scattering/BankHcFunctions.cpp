@@ -46,6 +46,7 @@ namespace discamb {
 
     void BankHcFunctions::setHC_ModelParameters(
         const std::vector<AtomTypeHC_Parameters>& bankMultipoleParameters,
+        SlaterOrbitalWfnData::WfnDataBank slaterWfnDatabankId,
         int atomType,
         int atomicNumber,
         HC_ModelParameters& parameters)
@@ -56,12 +57,20 @@ namespace discamb {
         // set wfn types
 
         parameters.wfn_parameters.resize(1);
-        discamb::ClementiRoettiData clementiRoettiData;
-        discamb::DeformationValenceParameters def_val(discamb::DeformationValenceParameters::ParametersType::UBDB);
+        //discamb::ClementiRoettiData clementiRoettiData;
+        shared_ptr<SlaterOrbitalWfnData> wfnDatabank = SlaterOrbitalWfnData::create_shared_ptr(slaterWfnDatabankId);
+        //discamb::DeformationValenceParameters def_val(discamb::DeformationValenceParameters::ParametersType::UBDB);
+
+        DeformationValenceParameters def_val;
+        if (slaterWfnDatabankId == SlaterOrbitalWfnData::WfnDataBank::CR)
+            def_val.set(DeformationValenceParameters::ParametersType::UBDB_CR);
+        if (slaterWfnDatabankId == SlaterOrbitalWfnData::WfnDataBank::SCM)
+            def_val.set(DeformationValenceParameters::ParametersType::UBDB_SCM);
+
 
         string chemicalElementSymbol = periodic_table::symbol(atomicNumber);
 
-        parameters.wfn_parameters[0] = clementiRoettiData.getEntry(chemicalElementSymbol);
+        parameters.wfn_parameters[0] = wfnDatabank->getEntry(chemicalElementSymbol);
         def_val.getParameters(chemicalElementSymbol, parameters.wfn_parameters[0].deformation_valence_exponent,
             parameters.wfn_parameters[0].deformation_valence_power);
 
@@ -118,7 +127,7 @@ namespace discamb {
         for (typeIdx = 0; typeIdx < nTypes; typeIdx++)
         {
             int z = *types[typeIdx].atoms[0].atomic_number_range.begin();
-            setHC_ModelParameters(bankMultipoleParameters, typeIdx, z, mTypeParameters[typeIdx]);
+            setHC_ModelParameters(bankMultipoleParameters, bankSettings.wfn_databank, typeIdx, z, mTypeParameters[typeIdx]);
             mTypeIdx[types[typeIdx].id] = typeIdx;
             mTypeLabel.push_back(types[typeIdx].id);
         }

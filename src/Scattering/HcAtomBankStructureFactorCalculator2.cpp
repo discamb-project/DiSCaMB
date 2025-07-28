@@ -54,6 +54,7 @@ namespace discamb {
         const Crystal &crystal,
         const std::vector<AtomType> &atomTypes,
         const std::vector<AtomTypeHC_Parameters> &parameters,
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &assignemntInfoFile,
@@ -69,7 +70,7 @@ namespace discamb {
         const std::string& algorithm,
         const std::vector<disordered_structure_fragments::Fragment>& taamFragments)
     {
-        set(crystal, atomTypes, parameters, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
+        set(crystal, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, taamFragments);
 
     }
@@ -140,6 +141,11 @@ namespace discamb {
         bool frozen_lcs = data.value("frozen lcs", false);
         string algorithm = data.value("algorithm", "standard");
 
+        string wfnDataBank = data.value("wavefunction bank", "CR");
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
+
+
+
         MATTS_BankReader bankReader;
         vector<AtomType> types;
         vector<AtomTypeHC_Parameters> hcParameters;
@@ -184,7 +190,7 @@ namespace discamb {
         if (!fragmentsFile.empty())
             disordered_structure_fragments::from_file(crystal, fragmentsFile, taamFragments);
 
-        set(crystal, types, hcParameters, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
+        set(crystal, types, hcParameters, slaterWavefunctionsDatabankId, electronScattering, DescriptorsSettings(), assignmentInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nCores, unitCellCharge, scaleHcParameters, iamTable, iamElectronScattering, 
             frozen_lcs, algorithm, taamFragments);
 
@@ -501,6 +507,7 @@ namespace discamb {
         const Crystal &crystal,
         const std::vector<AtomType> &atomTypes,
         const std::vector<AtomTypeHC_Parameters> &bankParameters,
+        SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId,
         bool electronScattering,
         const DescriptorsSettings &settings,
         const std::string &assignemntInfoFile,
@@ -547,10 +554,10 @@ namespace discamb {
 
         if (scaleToMatchCharge)
             taam_utilities::type_assignment_to_HC_parameters(
-                bankParameters, types, multiplicityTimesOccupancy, atomicNumbers, unitCellCharge,
+                bankParameters, types, multiplicityTimesOccupancy, atomicNumbers, slaterWavefunctionsDatabankId, unitCellCharge,
                 multipoleModelPalameters, true, nonMultipolarAtoms);
         else
-            taam_utilities::type_assignment_to_unscaled_HC_parameters(bankParameters, types, atomicNumbers,
+            taam_utilities::type_assignment_to_unscaled_HC_parameters(bankParameters, types, atomicNumbers, slaterWavefunctionsDatabankId,
                 multipoleModelPalameters, true, nonMultipolarAtoms);
 
         if (!multipolarCif.empty())

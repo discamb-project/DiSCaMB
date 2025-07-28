@@ -34,12 +34,15 @@ namespace discamb {
         frozen_lcs = data.value("frozen lcs", false);
         algorithm = data.value("algorithm", "standard");
         def_val_symm = data.value("def-val symmetry", false);
+
+        //string wfnDataBank = data.value("wavefunction bank", "CR");
+        //SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
         
         MATTS_BankReader bankReader;
         //vector<AtomType> types;
         //vector<AtomTypeHC_Parameters> hcParameters;
         BankSettings bankSettings;
-
+        
 
 
         if (bankFilePath.empty())
@@ -50,6 +53,7 @@ namespace discamb {
                 bankStream << bankText;
                 bankReader.read(bankStream, atomTypes, parameters, bankSettings, true);
                 descriptorsSettings = bankSettings.descriptorsSettings;
+                slaterWavefunctionsDatabankId = bankSettings.wfn_databank;
             }
             else
             {
@@ -71,6 +75,7 @@ namespace discamb {
                 {
                     bankReader.read(*bnkFiles.begin(), atomTypes, parameters, bankSettings, true);
                     descriptorsSettings = bankSettings.descriptorsSettings;
+                    slaterWavefunctionsDatabankId = bankSettings.wfn_databank;
                 }
 
             }
@@ -79,7 +84,11 @@ namespace discamb {
         {
             bankReader.read(bankFilePath, atomTypes, parameters, bankSettings, true);
             descriptorsSettings = bankSettings.descriptorsSettings;
+            slaterWavefunctionsDatabankId = bankSettings.wfn_databank;
         }
+
+        string wfnDataBank = data.value("wavefunction bank", SlaterOrbitalWfnData::databankIdToString(slaterWavefunctionsDatabankId));
+        slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
 
         
         splitWithLabels = data.value("split with labels", false);
@@ -188,6 +197,7 @@ namespace discamb {
                 orderedSubcrystalAtoms,
                 settings.atomTypes,
                 settings.parameters,
+                settings.slaterWavefunctionsDatabankId,
                 settings.electronScattering,
                 settings.descriptorsSettings,
                 settings.assignmentInfoFile,
@@ -211,6 +221,7 @@ namespace discamb {
                 crystal,
                 settings.atomTypes,
                 settings.parameters,
+                settings.slaterWavefunctionsDatabankId,
                 settings.electronScattering,
                 settings.descriptorsSettings,
                 settings.assignmentInfoFile,
@@ -233,6 +244,7 @@ namespace discamb {
                 crystal,
                 settings.atomTypes,
                 settings.parameters,
+                settings.slaterWavefunctionsDatabankId,
                 settings.electronScattering,
                 settings.descriptorsSettings,
                 settings.assignmentInfoFile,

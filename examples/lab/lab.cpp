@@ -334,6 +334,7 @@ void TAAM_types(
         typeIds,
         multiplicityTimesOccupancy,
         atomicNumbers,
+        bankSettings.wfn_databank,
         unitCellCharge,
         multipoleModelPalameters,
         true,
@@ -2446,6 +2447,7 @@ void test_anomalous(
     //three_way_sf_calculation(crystal, taam_macromol, hkl, sf_taam_macromol, sf_taam_macromol_with_derivatives, sf_taam_macromol_with_derivatives2);
 
 }
+
 
 int main(int argc, char* argv[])
 {

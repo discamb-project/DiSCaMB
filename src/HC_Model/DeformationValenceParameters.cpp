@@ -179,7 +179,8 @@ namespace discamb {
 
 DeformationValenceParameters::DeformationValenceParameters()
 { 
-    setStandardParameterization();
+    //setStandardParameterizationCR();
+    set(DeformationValenceParameters::ParametersType::STANDARD_CR);
 }
 
 DeformationValenceParameters::DeformationValenceParameters(
@@ -196,10 +197,12 @@ DeformationValenceParameters::~DeformationValenceParameters()
 void DeformationValenceParameters::set(
     ParametersType type)
 {
-    if (type == ParametersType::SCM)
-        setSCMParameterization();
-    else
-        type == ParametersType::STANDARD ? setStandardParameterization() : setUbdbParameterization();
+    if (type == ParametersType::STANDARD_CR || type == ParametersType::UBDB_CR)
+        setStandardParameterization(SlaterOrbitalWfnData::create_shared_ptr(SlaterOrbitalWfnData::WfnDataBank::CR));
+    if (type == ParametersType::STANDARD_SCM || type == ParametersType::UBDB_SCM)
+        setStandardParameterization(SlaterOrbitalWfnData::create_shared_ptr(SlaterOrbitalWfnData::WfnDataBank::SCM));
+    if (type == ParametersType::UBDB_CR || type == ParametersType::UBDB_SCM)
+        convertParamterizationToUbdb();
 }
 
 void DeformationValenceParameters::setParameters(
@@ -311,11 +314,8 @@ bool DeformationValenceParameters::getParameters(
     return true;
 }
 
-
-void DeformationValenceParameters::setUbdbParameterization()
+void DeformationValenceParameters::convertParamterizationToUbdb()
 {
-    setStandardParameterization();
-
     std::map<std::string, std::pair<double, std::vector<int> > >::iterator it;
     string symbol;
 
@@ -336,20 +336,33 @@ void DeformationValenceParameters::setUbdbParameterization()
         if (symbol == string("S"))
         {
             it->second.second[0] = 1;
-            for(int i=1; i<5; i++)
-                it->second.second[i] = 2*i;
+            for (int i = 1; i < 5; i++)
+                it->second.second[i] = 2 * i;
         }
     }
 
 }
 
+//void DeformationValenceParameters::setUbdbParameterizationCR()
+//{
+//    setStandardParameterizationCR();
+//    convertParamterizationToUbdb();
+//}
+//
+//void DeformationValenceParameters::setUbdbParameterizationSCM()
+//{
+//    setStandardParameterizationSCM();
+//    convertParamterizationToUbdb();
+//}
 
-void DeformationValenceParameters::setStandardParameterization()
+void DeformationValenceParameters::setStandardParameterization(
+    std::shared_ptr<SlaterOrbitalWfnData> slaterOrbitalData)
 {
     vector<HC_WfnBankEntry> entries;
-    ClementiRoettiData cr_data;
+    //shared_ptr<SlaterOrbitalWfnData> wfn_data = shared_ptr<SlaterOrbitalWfnData>(new ClementiRoettiData);
+    //ClementiRoettiData cr_data;
     int entryIdx, nEntries;
-    cr_data.getEntries(entries);
+    slaterOrbitalData->getEntries(entries);
     Type type;
     vector<int> powers;
     double exponent;
@@ -357,54 +370,88 @@ void DeformationValenceParameters::setStandardParameterization()
     vector<vector<double> > exponents;
     vector<vector<int> > configuration;
     vector<pair<int, int> > valence;
-    
-    nEntries = entries.size();
-    
 
-    for ( entryIdx = 0; entryIdx < nEntries; entryIdx++)
+    nEntries = entries.size();
+
+
+    for (entryIdx = 0; entryIdx < nEntries; entryIdx++)
     {
-        HC_WfnBankEntry &entry = entries[entryIdx];
+        HC_WfnBankEntry& entry = entries[entryIdx];
         type.set(entry.wfnAtomTypeName);
         assignPowers(powers, type);
         getConfigurationAndValenceOrbitals(entry, configuration, valence);
         clementi_raimondi::getExponents(entry.atomic_number, exponents);
         exponent = calcExponent(type, exponents, configuration, valence);
-        
+
         mParameters[entry.wfnAtomTypeName] = make_pair(exponent, powers);
-        
+
     }
+
 }
 
-void DeformationValenceParameters::setSCMParameterization()
-{
-    vector<HC_WfnBankEntry> entries;
-    SuCoppensMacchiData scm_data;
-    int entryIdx, nEntries;
-    scm_data.getEntries(entries);
-    Type type;
-    vector<int> powers;
-    double exponent;
-    //double exponent2;
-    vector<vector<double> > exponents;
-    vector<vector<int> > configuration;
-    vector<pair<int, int> > valence;
-    
-    nEntries = entries.size();
-    
 
-    for ( entryIdx = 0; entryIdx < nEntries; entryIdx++)
-    {
-        HC_WfnBankEntry &entry = entries[entryIdx];
-        type.set(entry.wfnAtomTypeName);
-        assignPowers(powers, type);
-        getConfigurationAndValenceOrbitals(entry, configuration, valence);
-        clementi_raimondi::getExponents(entry.atomic_number, exponents);
-        exponent = calcExponent(type, exponents, configuration, valence);
-        
-        mParameters[entry.wfnAtomTypeName] = make_pair(exponent, powers);
-        
-    }
-}
+//void DeformationValenceParameters::setStandardParameterizationCR()
+//{
+//    vector<HC_WfnBankEntry> entries;
+//    shared_ptr<SlaterOrbitalWfnData> wfn_data = shared_ptr<SlaterOrbitalWfnData>(new ClementiRoettiData);
+//    ClementiRoettiData cr_data;
+//    int entryIdx, nEntries;
+//    cr_data.getEntries(entries);
+//    Type type;
+//    vector<int> powers;
+//    double exponent;
+//    //double exponent2;
+//    vector<vector<double> > exponents;
+//    vector<vector<int> > configuration;
+//    vector<pair<int, int> > valence;
+//    
+//    nEntries = entries.size();
+//    
+//
+//    for ( entryIdx = 0; entryIdx < nEntries; entryIdx++)
+//    {
+//        HC_WfnBankEntry &entry = entries[entryIdx];
+//        type.set(entry.wfnAtomTypeName);
+//        assignPowers(powers, type);
+//        getConfigurationAndValenceOrbitals(entry, configuration, valence);
+//        clementi_raimondi::getExponents(entry.atomic_number, exponents);
+//        exponent = calcExponent(type, exponents, configuration, valence);
+//        
+//        mParameters[entry.wfnAtomTypeName] = make_pair(exponent, powers);
+//        
+//    }
+//}
+
+//void DeformationValenceParameters::setSCMParameterization()
+//{
+//    vector<HC_WfnBankEntry> entries;
+//    SuCoppensMacchiData scm_data;
+//    int entryIdx, nEntries;
+//    scm_data.getEntries(entries);
+//    Type type;
+//    vector<int> powers;
+//    double exponent;
+//    //double exponent2;
+//    vector<vector<double> > exponents;
+//    vector<vector<int> > configuration;
+//    vector<pair<int, int> > valence;
+//    
+//    nEntries = entries.size();
+//    
+//
+//    for ( entryIdx = 0; entryIdx < nEntries; entryIdx++)
+//    {
+//        HC_WfnBankEntry &entry = entries[entryIdx];
+//        type.set(entry.wfnAtomTypeName);
+//        assignPowers(powers, type);
+//        getConfigurationAndValenceOrbitals(entry, configuration, valence);
+//        clementi_raimondi::getExponents(entry.atomic_number, exponents);
+//        exponent = calcExponent(type, exponents, configuration, valence);
+//        
+//        mParameters[entry.wfnAtomTypeName] = make_pair(exponent, powers);
+//        
+//    }
+//}
 
 } // namespace discamb 
 

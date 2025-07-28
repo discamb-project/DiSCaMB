@@ -1,4 +1,6 @@
 #include "discamb/HC_Model/SlaterOrbitalWfnData.h"
+#include "discamb/HC_Model/ClementiRoettiData.h"
+#include "discamb/HC_Model/SuCoppensMacchiData.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicChemistry/periodic_table.h"
@@ -85,7 +87,8 @@ void stringToConfiguration(
 
 void setConfigurationData(
     map<string, vector<vector<int> > > &configurations,
-    string configuration_data[])
+    string configuration_data[],
+    int nEntries)
 {
     int i;
     vector<string> words;
@@ -94,7 +97,7 @@ void setConfigurationData(
 
     //"Mn3+ K(2)L(8)3S(2)3P(6)4S(0)3D(4)"
 
-    for (i = 0; i < 68; i++)
+    for (i = 0; i < nEntries; i++)
     {
         discamb::string_utilities::split(configuration_data[i], words);
         stringToConfiguration(words[1], configuration);
@@ -103,13 +106,13 @@ void setConfigurationData(
 }
 
 void valenceOrbitals(
-    LocalDef_Wfn &wfn,
+    const LocalDef_Wfn &wfn,
     const vector<vector<int> > &configuration,
     vector<pair<int, int> > &val_orb)
 {
 
-    int _no_valence[] = { 0, 2, 10, 18, 36, 54 };
-    vector<int> no_valence(_no_valence, _no_valence + 6);
+    int _no_valence[] = { 0, 2, 10, 18, 36, 54, 86 };
+    vector<int> no_valence(_no_valence, _no_valence + 7);
     int n_electrons;
     int outerShell = 1;
     int period = discamb::periodic_table::period(wfn.atomicNumber);
@@ -189,7 +192,8 @@ namespace discamb
 
 using namespace wfndata;
 
-SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string *configuration_data, const int max_atomic_number)
+SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string *configuration_data, const int nEntries)
+//SlaterOrbitalWfnData::SlaterOrbitalWfnData(const std::vector<LocalDef_Wfn>& wfns, string* configuration_data, int nEntries)
 {
 	int entryIdx;
 	HC_WfnBankEntry entry;
@@ -206,12 +210,12 @@ SlaterOrbitalWfnData::SlaterOrbitalWfnData(LocalDef_Wfn wfns[], string *configur
     map<string, vector<vector<int> > > configurations;
     vector<pair<int, int> > val_orb;
     pair<int, int> orbitalIndex;
-    setConfigurationData(configurations, configuration_data);
+    setConfigurationData(configurations, configuration_data, nEntries);
     int stoIdx, nSTO;
     double angstrom = 1.0 / 0.52917721092;
     double normalizationFactor;
 
-	for (entryIdx = 0; entryIdx < max_atomic_number; entryIdx++)
+	for (entryIdx = 0; entryIdx < nEntries; entryIdx++)
 	{
         HC_WfnBankEntry entry;
         entry.atomic_number = wfns[entryIdx].atomicNumber;
@@ -297,6 +301,39 @@ const
         on_error::throwException("Invalid atomType label when attempting to access Clementi-Roetti wavefunction data",
             __FILE__, __LINE__);
     return mEntries.find(atomType)->second;
+}
+
+std::shared_ptr<SlaterOrbitalWfnData> SlaterOrbitalWfnData::create_shared_ptr(
+    WfnDataBank databank)
+{
+    if (databank == WfnDataBank::CR)
+        return shared_ptr<SlaterOrbitalWfnData>(new ClementiRoettiData());
+    if (databank == WfnDataBank::SCM)
+        return shared_ptr<SlaterOrbitalWfnData>(new SuCoppensMacchiData());
+    return shared_ptr<SlaterOrbitalWfnData>(new ClementiRoettiData());
+}
+
+std::string SlaterOrbitalWfnData::databankIdToString(WfnDataBank id)
+{
+    if (id == WfnDataBank::CR)
+        return string("CR");
+    if (id == WfnDataBank::SCM)
+        return string("SCM"); 
+    return string("CR");
+}
+
+SlaterOrbitalWfnData::WfnDataBank SlaterOrbitalWfnData::databankIdFromString(
+    const std::string& id)
+{
+
+    if ( id != "CR" && id != "SCM")
+        on_error::throwException("unknown wavefunction bank name: '" + id + ", in TAAM databank", __FILE__, __LINE__);
+    if (id == "CR")
+        return SlaterOrbitalWfnData::WfnDataBank::CR;
+    if (id == "SCM")
+        return SlaterOrbitalWfnData::WfnDataBank::SCM;
+
+    return SlaterOrbitalWfnData::WfnDataBank::CR;
 }
 
 }

@@ -2,6 +2,7 @@
 
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
+#include "discamb/HC_Model/SlaterOrbitalWfnData.h"
 
 
 #include <complex>
@@ -42,6 +43,7 @@ class BankHcFunctions {
 
         void setHC_ModelParameters(
             const std::vector<AtomTypeHC_Parameters>& bankMultipoleParameters,
+            SlaterOrbitalWfnData::WfnDataBank slaterWfnDatabankId,
             int atomType,
             int atomicNumber,
             HC_ModelParameters& parameters);

@@ -1242,7 +1242,7 @@ namespace discamb {
         
         while (!words.empty())
         {
-            nSettingsLines++;
+            //nSettingsLines++;
 
             // process last line
 
@@ -1271,6 +1271,9 @@ namespace discamb {
 
                 if (line.find("minimal number of type instances") != string::npos)
                     settings.min_n_instaces = stoi(words.back());
+                
+                if (line.find("wavefunction bank") != string::npos)
+                    settings.wfn_databank = SlaterOrbitalWfnData::databankIdFromString(words.back());
             }
 
             getline(in, line);
@@ -1279,8 +1282,8 @@ namespace discamb {
             string_utilities::split(line, words, CharacterType::WHITE_SPACE);
         }
 
-        if (nSettingsLines != 9)
-            on_error::throwException("invalid specification of SETTINGS entry in multipole model atoms databank - expected 9 lines", __FILE__, __LINE__);
+        //if (nSettingsLines != 9)
+          //  on_error::throwException("invalid specification of SETTINGS entry in multipole model atoms databank - expected 9 lines", __FILE__, __LINE__);
     }
 
 } // namespace discamb
