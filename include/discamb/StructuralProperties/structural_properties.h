@@ -203,11 +203,11 @@ namespace discamb {
 			std::vector<UnitCellContent::AtomID> &clusterAtoms,
 			double threshold, bool vdwThreshold);
 
-        //void makeCluster2(
-        //    const UnitCellContent& uc,
-        //    const std::vector<UnitCellContent::AtomID>& centralPart,
-        //    std::vector<UnitCellContent::AtomID>& clusterAtoms,
-        //    double threshold, bool vdwThreshold);
+        /*
+        make cluster of molecules which have at least one atom within a range given by treshold
+        from any atom of 'centralPart'
+        */
+
 
         void makeCluster(
             const UnitCellContent& uc,
@@ -216,12 +216,15 @@ namespace discamb {
             std::vector<UnitCellContent::AtomID>& clusterAtoms,
             double threshold, bool vdwThreshold);
 
-        //void makeCluster2(
-        //    const UnitCellContent& uc,
-        //    const std::vector<UnitCellContent::AtomID>& centralPart,
-        //    const std::vector<std::vector<UnitCellContent::AtomID> >& unitCellMolecules,
-        //    std::vector<UnitCellContent::AtomID>& clusterAtoms,
-        //    double threshold, bool vdwThreshold);
+        /*
+        make cluster of atoms within given range given by treshold from any atom of 'centralPart'
+        */
+
+        void makeAtomsCluster(
+            const UnitCellContent& uc,
+            const std::vector<UnitCellContent::AtomID>& centralPart,
+            std::vector<UnitCellContent::AtomID>& clusterAtoms,
+            double threshold, bool vdwThreshold);
 
 
         double interatomicDistance(

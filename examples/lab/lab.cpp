@@ -27,6 +27,7 @@
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
+#include "discamb/Scattering/HirshfeldAtomModelSettings.h"
 #include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 #include "discamb/Scattering/IamSfCalculator.h"
 #include "discamb/Scattering/NGaussianFormFactor.h"
@@ -2464,9 +2465,70 @@ void test_neighbour()
         cout << atom.atomIndex << " " << atom.unitCellPosition << "n";
 }
 
+void test_atom_position()
+{
+    Crystal crystal;
+    structure_io::read_structure("urea.res", crystal);
+
+    for (auto& atom : crystal.atoms)
+    {
+        Vector3d xyz;
+        crystal.unitCell.fractionalToCartesian(atom.coordinates, xyz);
+        cout << atom.label << " " << xyz << endl;
+    }
+
+    UnitCellContent unitCellContent(crystal);
+    int nAtoms = crystal.atoms.size();
+    for (int i = 0; i < nAtoms; i++)
+    {
+        UnitCellContent::AtomID atomId;
+        unitCellContent.findAtom(crystal.atoms[i].label, "x,y,z", atomId);
+        cout << crystal.atoms[i].label << " " << atomId.atomIndex << " " << atomId.unitCellPosition << endl;
+    }
+    //UnitCellContent::AtomID atomId(4, Vector3i(0, 0, -2));
+    //vector<UnitCellContent::AtomID> centralPart{ atomId };
+    //vector< vector< pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > networkBonds;
+    //std::vector< std::vector<discamb::UnitCellContent::AtomID> > molecules;
+    //structural_properties::splitUnitCellIntoMolecules(unitCellContent, molecules, networkBonds);
+    //vector<UnitCellContent::AtomID> clusterAtoms;
+    //structural_properties::makeCluster(unitCellContent, centralPart, molecules, clusterAtoms, 2.1, false);
+    //for (auto& atom : clusterAtoms)
+    //    cout << atom.atomIndex << " " << atom.unitCellPosition << "n";
+}
+
+void test_find_neighbour()
+{
+    Crystal crystal;
+    structure_io::read_structure("urea.res", crystal);
+    UnitCellContent unitCellContent(crystal);
+    UnitCellContent::AtomID atomId(4);
+    vector<UnitCellContent::AtomID> centralPart{ atomId }, clusterAtoms;
+    structural_properties::makeAtomsCluster(unitCellContent, centralPart, clusterAtoms, 2.1, false);
+    for (auto& atom : clusterAtoms)
+        cout << atom.atomIndex << " " << atom.unitCellPosition << endl;
+}
+
+void get_representatives()
+{
+    Crystal crystal;
+    structure_io::read_structure("urea.res", crystal);
+    nlohmann::json data;
+    data["model"] = "HAR";
+    std::vector<QmFragmentInCrystal> crystalFragments;
+    ham_settings::setCrystalFragments(data, crystal, crystalFragments);
+    vector<vector<AtomRepresentativeInfo> > repesentatives;
+    ham_settings::setRepresentatives(data, crystal, crystalFragments, repesentatives);
+    UnitCellContent unitCellContent(crystal);
+}
+
 int main(int argc, char* argv[])
 {
     try {
+        get_representatives();
+        return 0;
+
+        test_atom_position();
+        return 0;
 
         test_neighbour();
         return 0;

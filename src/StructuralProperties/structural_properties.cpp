@@ -2711,6 +2711,68 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
     }
 
 
+    void makeAtomsCluster(
+        const UnitCellContent& uc,
+        const std::vector<UnitCellContent::AtomID>& centralPart,
+        std::vector<UnitCellContent::AtomID>& clusterAtoms,
+        double threshold, bool vdwThreshold)
+    {
+        clusterAtoms.clear();
+        vector<UnitCellContent::AtomID> cluster0;
+        makeCluster(uc, centralPart, cluster0, threshold, vdwThreshold);
+        vector<int> z_central_part, z_cluster;
+
+        if (vdwThreshold)
+        {
+            vector<int> z;
+            crystal_structure_utilities::atomicNumbers(uc.getCrystal(), z);
+            for (auto const& atom : centralPart)
+                z_central_part.push_back(z[uc.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+            for (auto &atom: cluster0)
+                z_cluster.push_back(z[uc.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex)]);
+        }
+
+
+        for (int i=0;i<cluster0.size();i++)
+        {
+            auto& atom_in_cluster = cluster0[i];
+            Vector3d r_cluster = uc.getAtomPositionCart(atom_in_cluster);
+            bool addToCluster = false;
+            for (int j = 0; j < centralPart.size(); j++)
+            {
+                auto const& atom_in_central_part = centralPart[j];
+                /*
+                    if (useVdW)
+                    {
+                        double vanDerWaalsRadiiSum = chemical_element_data::vdwRadius(moleculesZ[moleculeIdx][i]) +
+                                                     chemical_element_data::vdwRadius(centralMolZ[j]);
+                        include = threshold * vanDerWaalsRadiiSum >= sqrt(diff * diff);
+                    }
+                    else
+                        include = threshold2 >= diff * diff;
+
+                */
+                Vector3d r_central_part = uc.getAtomPositionCart(atom_in_central_part);
+                Vector3d diff = r_cluster - r_central_part;
+                bool in_threshold = false;
+                if (vdwThreshold)
+                {
+                    double vanDerWaalsRadiiSum = chemical_element_data::vdwRadius(z_cluster[i]) +
+                        chemical_element_data::vdwRadius(z_central_part[j]);
+                    in_threshold = threshold * vanDerWaalsRadiiSum >= sqrt(diff * diff);
+                }
+                else
+                    in_threshold = threshold * threshold >= diff * diff;
+                if (in_threshold)
+                {
+                    addToCluster = true;
+                    break;
+                }
+            }
+            if (addToCluster)
+                clusterAtoms.push_back(cluster0[i]);
+        }
+    }
 
 
     double interatomicDistance(
