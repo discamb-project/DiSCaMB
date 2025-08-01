@@ -24,6 +24,7 @@
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
 #include "discamb/Scattering/ConstFormFactorCalculationsManager.h"
+#include "discamb/Scattering/gar_utilities.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
 #include "discamb/Scattering/HcFormFactorCalculationsManager.h"
@@ -2517,6 +2518,22 @@ void get_representatives()
     std::vector<QmFragmentInCrystal> crystalFragments;
     ham_settings::setCrystalFragments(data, crystal, crystalFragments);
     vector<vector<AtomRepresentativeInfo> > repesentatives;
+    vector<vector<pair<string, string> > > subsystemAtoms(1);
+    subsystemAtoms[0] = {
+        {"C","x,y,z"},
+        {"O","x,y,z"},
+        {"N","x,y,z"},
+        {"N","-x,-y+1,z"},
+        {"Hb","x,y,z"},
+        {"Ha","x,y,z"},
+        {"Hb","-x,-y+1,z"},
+        {"Ha","-x,-y+1,z"}
+    };
+    gar_utilities::findDefaultRepresentatives(
+        crystal, subsystemAtoms, repesentatives);
+
+
+    
     ham_settings::setRepresentatives(data, crystal, crystalFragments, repesentatives);
     UnitCellContent unitCellContent(crystal);
 }
