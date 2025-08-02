@@ -54,22 +54,25 @@ namespace discamb {
             }
         }
 
-        void findDefaultRepresentatives(
+        bool findDefaultRepresentatives(
             const Crystal& crystal,
             const std::vector<std::vector<std::pair<std::string, std::string> > >& subsystemAtoms,
-            std::vector<std::vector<AtomRepresentativeInfo> >& representatives)
+            std::vector<std::vector<AtomRepresentativeInfo> >& representatives,
+            bool throw_if_false)
         {
             vector<vector<pair<string, string> > > representativesPerCluster;
-            findDefaultRepresentatives(crystal, subsystemAtoms, representatives, representativesPerCluster);
+            return findDefaultRepresentatives(crystal, subsystemAtoms, representatives, representativesPerCluster, throw_if_false);
         }
 
 
-        void findDefaultRepresentatives(
+        bool findDefaultRepresentatives(
             const Crystal& crystal,
             const vector<vector<pair<string, string> > >& clusterAtoms,
             vector<vector<AtomRepresentativeInfo> >& representatives,
-            vector<vector<pair<string, string> > >& representativesPerCluster)
+            vector<vector<pair<string, string> > >& representativesPerCluster,
+            bool throw_if_false)
         {
+            bool allHaveRepresentatives = true;
             representatives.clear();
             representativesPerCluster.clear();
             vector<vector<double> > scores;
@@ -101,7 +104,15 @@ namespace discamb {
             for (int atomIdx = 0; atomIdx < nAtomsInAsymmetricUnit; atomIdx++)
             {
                 if (representativesAndScores[atomIdx].empty())
-                    on_error::throwException("no represrentative for atom " + crystal.atoms[atomIdx].label, __FILE__, __LINE__);
+                {
+                    if (throw_if_false)
+                        on_error::throwException("no represrentative for atom " + crystal.atoms[atomIdx].label, __FILE__, __LINE__);
+                    else
+                    {
+                        allHaveRepresentatives = false;
+                        continue;
+                    }
+                }
 
                 auto representative = *max_element(representativesAndScores[atomIdx].begin(), representativesAndScores[atomIdx].end());
 
@@ -135,7 +146,7 @@ namespace discamb {
                 }
             }
 
-
+            return allHaveRepresentatives;
 
         }
 

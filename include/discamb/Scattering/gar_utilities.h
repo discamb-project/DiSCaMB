@@ -26,17 +26,20 @@ namespace discamb {
             std::vector<int>& clustersSpinMultiplicity,
             int spinMultiplicityHint = 0);
 
-
-        void findDefaultRepresentatives(
+        // false if not all atoms in crysta have representatives
+        bool findDefaultRepresentatives(
             const Crystal& crystal,
             const std::vector<std::vector<std::pair<std::string, std::string> > >& subsystemAtoms,
             std::vector<std::vector<AtomRepresentativeInfo> >& representatives,
-            std::vector<std::vector<std::pair<std::string, std::string> > >& representativesPerSubsystem);
+            std::vector<std::vector<std::pair<std::string, std::string> > >& representativesPerSubsystem,
+            bool throw_if_false = true);
 
-        void findDefaultRepresentatives(
+        // false if not all atoms in crysta have representatives
+        bool findDefaultRepresentatives(
             const Crystal& crystal,
             const std::vector<std::vector<std::pair<std::string, std::string> > >& subsystemAtoms,
-            std::vector<std::vector<AtomRepresentativeInfo> >& representatives);
+            std::vector<std::vector<AtomRepresentativeInfo> >& representatives,
+            bool throw_if_false = true);
 
 
         void elementalIntegrationGrids(

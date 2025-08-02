@@ -111,6 +111,12 @@ namespace discamb {
             const std::vector<QmFragmentInCrystal>& subsystems,
             std::vector<std::vector<AtomRepresentativeInfo> > &representatives);
 
+        void setRepresentativesFromJsonArray(
+            const nlohmann::json& json_array,
+            const Crystal& crystal,
+            const std::vector<QmFragmentInCrystal>& subsystems,
+            std::vector<std::vector<AtomRepresentativeInfo> >& representatives);
+
         void setSubsystemsWfnCalculation(
             const nlohmann::json& data,
             const std::vector<QmFragmentInCrystal>& subsystems,

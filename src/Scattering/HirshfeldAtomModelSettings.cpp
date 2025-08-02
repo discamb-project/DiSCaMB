@@ -509,12 +509,99 @@ namespace discamb {
         //    //wfnData.qmSystem.pointChargePosition
         //}
 
+        void setRepresentativesFromJsonArray(
+            const nlohmann::json& json_array,
+            const Crystal& crystal,
+            const std::vector<QmFragmentInCrystal>& subsystems,
+            std::vector<std::vector<AtomRepresentativeInfo> >& representatives)
+        {
+            map<string, int> subsystemLabel2idx, atomLabel2idx;
+            
+            representatives.clear();
+            representatives.resize(crystal.atoms.size());
+            for (int i = 0; subsystems.size(); i++)
+                subsystemLabel2idx[subsystems[i].label] = i;
+            for (int i = 0; i < crystal.atoms.size(); i++)
+                atomLabel2idx[crystal.atoms[i].label] = i;
+
+            for (auto const& item : json_array)
+            {
+                int susbsystem_idx;
+                if(item.find("label")==item.end())
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, missing 'label' field",
+                        __FILE__, __LINE__);
+                if (subsystemLabel2idx.find(item["label"].get<string>()) == subsystemLabel2idx.end())
+                    {
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, unknown subsystem label: " +
+                        item["label"].get<string>(), __FILE__, __LINE__);
+                }
+                
+                susbsystem_idx = subsystemLabel2idx[item["label"].get<string>()];
+                
+                vector<double> weights;
+
+                if (item.find("atom weights") == item.end())
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, missing 'atom weights' field",
+                        __FILE__, __LINE__);
+                if (!item["atom weights"].is_array())
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, expected array for 'atom weights' field",
+                        __FILE__, __LINE__);
+
+                
+                for (auto const& weight_item : item["atom weights"])
+                    if(!weight_item.is_number_float())
+                        on_error::throwException(
+                            "invalid format of atom representatives definition in json data, expected float for 'atom weights' field",
+                            __FILE__, __LINE__);
+                    else
+                        weights.push_back(weight_item.get<double>());
+                if(weights.size() != subsystems[susbsystem_idx].atoms.atomList.size())
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, number of weights does not match number of atoms in subsystem",
+                        __FILE__, __LINE__);
+                for (int idxInSubsystem = 0; idxInSubsystem < weights.size(); idxInSubsystem++)
+                {
+                    AtomRepresentativeInfo atomRepresentativeInfo;
+                    atomRepresentativeInfo.atomLabel = subsystems[susbsystem_idx].atoms.atomList[0].first;
+                    atomRepresentativeInfo.fixedWeightValue = weights[susbsystem_idx];
+                    atomRepresentativeInfo.fragmentIdx = susbsystem_idx;
+                    atomRepresentativeInfo.isWeightFixed = true;
+                    atomRepresentativeInfo.symmetryCode = subsystems[susbsystem_idx].atoms.atomList[0].second;
+                    atomRepresentativeInfo.symmetryCode = "invert";
+                    int atom_idx = atomLabel2idx[atomRepresentativeInfo.atomLabel];
+                    representatives[atom_idx].push_back(atomRepresentativeInfo);
+                }
+            }
+        }
+
+
         void setRepresentatives(
             const nlohmann::json& data,
             const Crystal& crystal,
             const std::vector<QmFragmentInCrystal>& subsystems,
             std::vector<std::vector<AtomRepresentativeInfo> > &representatives)
         {
+            representatives.clear();
+
+            if(data.find("atom representatives") == data.end())
+            {
+                if (data["atom representatives"].is_array())
+                    setRepresentativesFromJsonArray(
+                        data["atom representatives"],
+                        crystal,
+                        subsystems,
+                        representatives);
+                else
+                    on_error::throwException(
+                        "invalid format of atom representatives definition in json data, expected array",
+                        __FILE__, __LINE__);
+                return;
+            }
+
             string atomFile = data.value("qm atoms use", string());
 
             vector<vector<pair<string, string> > > subsystemAtoms;
