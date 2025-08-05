@@ -587,7 +587,7 @@ namespace discamb {
         {
             representatives.clear();
 
-            if(data.find("atom representatives") == data.end())
+            if(data.find("atom representatives") != data.end())
             {
                 if (data["atom representatives"].is_array())
                     setRepresentativesFromJsonArray(

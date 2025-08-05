@@ -1692,7 +1692,8 @@ void HansenCoppens_SF_EngineSymm::calculateSF_SerialAcentric(
         std::vector<std::complex<double> >&defVal);
     def_val_calculator = nullptr;
     if (point_group_name == "222")
-        def_val_calculator = calculate_def_val_pg_222_l4;// calculateDefVal_pg_222;
+        //def_val_calculator = calculate_def_val_pg_222_l4;// calculateDefVal_pg_222;
+        def_val_calculator = calculate_def_val_pg_222;
 
     void (*def_val_calculator_any_symm)(
         const std::vector<std::vector<REAL> >&p_lm,
@@ -1714,7 +1715,7 @@ void HansenCoppens_SF_EngineSymm::calculateSF_SerialAcentric(
             break;
         case 4:
             def_val_calculator_any_symm = def_val_calculator_n_symm<4>;
-            cout << "def_val_calculator_n_symm<4>\n";
+            //cout << "def_val_calculator_n_symm<4>\n";
             break;
         case 6:
             def_val_calculator_any_symm = def_val_calculator_n_symm<6>;

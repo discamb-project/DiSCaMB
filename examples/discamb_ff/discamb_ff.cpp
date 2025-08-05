@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
 
     try {
         try {
+
             WallClockTimer timerAll;
             timerAll.start();
             ofstream logFile("discamb2tsc.log");
@@ -149,6 +150,7 @@ int main(int argc, char *argv[])
 
             makeWholeHklSet(hkls, crystal.spaceGroup, hklAll);
 
+
             WallClockTimer timer;
 
             timer.start();
@@ -162,7 +164,7 @@ int main(int argc, char *argv[])
 
             string stem = filesystem::path(structureFile).stem().string();
             string outputFileName = stem + string(".tsc");
-            ofstream out(outputFileName);
+            //ofstream out(outputFileName);
             
             vector<pair<string, string> > modelInfo;
             calculator->getModelInformation(modelInfo);
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
             vector<string> atomLabels;
             for (auto& atom : crystal.atoms)
                 atomLabels.push_back(atom.label);
+
 
             timer.start();
 
@@ -182,9 +185,11 @@ int main(int argc, char *argv[])
             string tsc_comment = "FORM FACTORS SOURCE:\n";
             for (auto& p : modelInfo)
                 tsc_comment += "   " + p.first + " - " + p.second + "\n";
+
+
             tsc_io::write_tsc(outputFileName, atomLabels, hklAll, formFactors, tsc_comment);
 
-            out.close();
+            //out.close();
 
             clog << "total time: " << timerAll.stop() << " ms\n";
             
