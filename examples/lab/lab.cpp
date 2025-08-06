@@ -2538,9 +2538,95 @@ void get_representatives()
     UnitCellContent unitCellContent(crystal);
 }
 
+void frozen_lcs()
+{
+    
+    nlohmann::json aspher_frozen = nlohmann::json::parse(R"(
+  {
+    "model": "taam",
+    "bank path":"MATTS2021databank.txt",
+    "algorithm": "macromol",
+    "frozen lcs": true
+  }
+)");
+
+    nlohmann::json aspher_no_frozen = nlohmann::json::parse(R"(
+  {
+    "model": "taam",
+    "bank path":"MATTS2021databank.txt",
+    "algorithm": "macromol",
+    "frozen lcs": false
+  }
+)");
+
+    Crystal crystal, crystal_rot;
+    structure_io::read_structure("l_ala.res", crystal);
+    crystal_rot = crystal;
+    Vector3d n, h1, h2, h3, frac, v1, v2, v3, d1, d2, d3;
+    crystal.unitCell.fractionalToCartesian(crystal.atoms[0].coordinates, n);
+    crystal.unitCell.fractionalToCartesian(crystal.atoms[1].coordinates, h1);
+    crystal.unitCell.fractionalToCartesian(crystal.atoms[2].coordinates, h2);
+    crystal.unitCell.fractionalToCartesian(crystal.atoms[3].coordinates, h3);
+    v1 = h1 - n;
+    v2 = h2 - n;
+    v3 = h3 - n;
+    
+    d1 = v1 + v2;
+    d1 = 1.02 * d1 / sqrt(d1 * d1);
+    d2 = v2 + v3;
+    d2 = 1.02 * d2 / sqrt(d2 * d2);
+    d3 = v3 + v1;
+    d3 = 1.02 * d3 / sqrt(d3 * d3);
+
+    h1 = n + d1;
+    h2 = n + d2;
+    h3 = n + d3;
+
+    crystal.unitCell.cartesianToFractional(h1, crystal_rot.atoms[1].coordinates);
+    crystal.unitCell.cartesianToFractional(h2, crystal_rot.atoms[2].coordinates);
+    crystal.unitCell.cartesianToFractional(h3, crystal_rot.atoms[3].coordinates);
+
+    auto fcal_frozen = SfCalculator::create_shared_ptr(crystal, aspher_frozen);
+    auto fcal_no_frozen = SfCalculator::create_shared_ptr(crystal, aspher_no_frozen);
+
+    structure_io::write_structure("l_ala_rot.res", crystal_rot);
+
+    vector<Vector3i> hkl{
+    { 0, 0, 1 }, { 0, 0, 2 }, { 0, 0, 3 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 1, 2 },
+    { 0, 1, 3 }, { 0, 2, 0 }, { 0, 2, 1 }, { 0, 2, 2 }, { 0, 2, 3 }, { 0, 3, 0 },
+    { 0, 3, 1 }, { 0, 3, 2 }, { 0, 3, 3 }, { 1, 0, 0 }, { 1, 0, 1 }, { 1, 0, 2 },
+    { 1, 0, 3 }, { 1, 1, 0 }, { 1, 1, 1 }, { 1, 1, 2 }, { 1, 1, 3 }, { 1, 2, 0 },
+    { 1, 2, 1 }, { 1, 2, 2 }, { 1, 2, 3 }, { 1, 3, 0 }, { 1, 3, 1 }, { 1, 3, 2 },
+    { 1, 3, 3 }, { 2, 0, 0 }, { 2, 0, 1 }, { 2, 0, 2 }, { 2, 0, 3 }, { 2, 1, 0 },
+    { 2, 1, 1 }, { 2, 1, 2 }, { 2, 1, 3 }, { 2, 2, 0 }, { 2, 2, 1 }, { 2, 2, 2 },
+    { 2, 2, 3 }, { 2, 3, 0 }, { 2, 3, 1 }, { 2, 3, 2 }, { 2, 3, 3 }, { 3, 0, 0 },
+    { 3, 0, 1 }, { 3, 0, 2 }, { 3, 0, 3 }, { 3, 1, 0 }, { 3, 1, 1 }, { 3, 1, 2 },
+    { 3, 1, 3 }, { 3, 2, 0 }, { 3, 2, 1 }, { 3, 2, 2 }, { 3, 2, 3 }, { 3, 3, 0 },
+    { 3, 3, 1 }, { 3, 3, 2 }, { 3, 3, 3 }
+    };
+    vector<complex<double> > sf_frozen, sf_not_frozen;
+    fcal_frozen->calculateStructureFactors(crystal_rot.atoms, hkl, sf_frozen);
+    fcal_no_frozen->calculateStructureFactors(crystal_rot.atoms, hkl, sf_not_frozen);
+
+    cout << "r-factor frozen vs no frozen " << agreement_factors::value(sf_frozen, sf_not_frozen) << endl;
+    
+    vector<TargetFunctionAtomicParamDerivatives> dt_dp, dt_dp2;
+    vector<complex<double> > dt_df(hkl.size(),1.0), f1, f2;
+
+    fcal_frozen->calculateStructureFactorsAndDerivatives(crystal_rot.atoms, hkl, f1, dt_dp, dt_df, vector<bool>(crystal.atoms.size(), true));
+    crystal_rot.atoms[0].coordinates += Vector3d(0.000001, 0.0, 0.0);
+    fcal_frozen->calculateStructureFactorsAndDerivatives(crystal_rot.atoms, hkl, f2, dt_dp2, dt_df, vector<bool>(crystal.atoms.size(), true));
+
+    
+}
+
 int main(int argc, char* argv[])
 {
     try {
+
+        frozen_lcs();
+        return 0;
+
         get_representatives();
         return 0;
 
