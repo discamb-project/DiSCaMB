@@ -150,13 +150,17 @@ namespace discamb{
             }
         }
         
+        if(!uniqueSubsystemAtoms.empty())
+            atomList.insert(atomList.end(), uniqueSubsystemAtoms.begin(), uniqueSubsystemAtoms.end());
+
         for (auto& atom : include)
         {
             ucContent.findAtom(atom.first, atom.second, atomId);
-            uniqueSubsystemAtoms.insert(atomId);
+            if (find(atomList.begin(), atomList.end(), atomId) == atomList.end())
+                atomList.push_back(atomId);
         }
         
-        atomList.insert(atomList.end(), uniqueSubsystemAtoms.begin(), uniqueSubsystemAtoms.end());
+        
 
     }
 
@@ -218,6 +222,8 @@ namespace discamb{
 
         *this = FragmentConstructionData();
         this->label = data.value("name", "");
+        this->label = data.value("label", this->label);
+        this->label = data.value("id", this->label);
         this->charge = data.value("charge", 0);
         this->spin_multiplicity = data.value("spin multiplicity", 1);
 
