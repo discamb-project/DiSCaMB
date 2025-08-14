@@ -68,6 +68,8 @@ namespace discamb{
     struct QmFragmentInCrystal {
         std::string label = "system";
         FragmentAtoms atoms;
+        // if defined then the definition of sites based on range/threshold is not applied
+        std::vector < std::pair<std::string, std::string> > customMultipoleSites;
         int charge = 0;
         int spin_multiplicity = 1;
         void toXyzMol(const Crystal& crystal, std::vector<ChemicalElement>& elements, std::vector<Vector3d>& positions) const;

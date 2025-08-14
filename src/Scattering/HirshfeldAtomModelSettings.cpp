@@ -151,14 +151,15 @@ namespace discamb {
             nlohmann::json data = _data;
             
             *this = CrystalFragmentWfnCalculation();
-            if (data.find("multipole sites") != data.end())
+            if (data.find("multipoles") != data.end())
             {
                 //auto const& multipoleSitesData = *data.find("multipole sites");
-                auto multipoleSitesData = *data.find("multipole sites");
-                if (multipoleSitesData.find("threshold") == multipoleSitesData.end())
-                    multipoleSitesData["threshold"] = clusterThreshold;
+                //auto multipoleSitesData = *data.find("multipole sites");
+//                if (multipoleSitesData.find("threshold") == multipoleSitesData.end())
+//                    multipoleSitesData["threshold"] = clusterThreshold;
                 distributedMultipoleCluster = DistributedMultipoleCentersSettings();
-                distributedMultipoleCluster->set(multipoleSitesData);
+                //distributedMultipoleCluster->set(multipoleSitesData);
+                distributedMultipoleCluster->set(data["multipoles"]);
             }
         }
 
@@ -172,7 +173,6 @@ namespace discamb {
                 if (!data["multipoles"].is_boolean())
                 {
                     auto multipolesData = data.find("multipoles");
-                    //multipoleClusterThreshold = multipolesData->value("threshold", multipoleClusterThreshold);
                     clusterThreshold = multipolesData->value("threshold", clusterThreshold);
                     multipoleExpansionLevel = multipolesData->value("l max", multipoleExpansionLevel);
                     multipoleChargeDistance = multipolesData->value("charge distance", multipoleChargeDistance);
@@ -431,9 +431,45 @@ namespace discamb {
                     fragment.label = sub.value("id", fragment.label);
                     fragment.charge = data.value("charge", 0);
                     fragment.spin_multiplicity = data.value("spin multiplicity", 1);
-
+                    
                     if (fragment.label.empty())
                         fragment.label = "subsystem_" + to_string(fragmentsConstructionData.size() + 1);
+
+                    // capping hydrogens
+                    //fragment.atoms.cappingHydrogens[0].bondedAtom
+                    //fragment.atoms.cappingHydrogens[0].bondedAtomSymmOp
+                    //fragment.atoms.cappingHydrogens[0].directingAtom
+                    //fragment.atoms.cappingHydrogens[0].directingAtomSymmOp
+
+                    if(sub.find("capping hydrogen atoms")!= sub.end())
+                    {
+                        if (!sub["capping hydrogen atoms"].is_array())
+                            on_error::throwException("invalid format of subsystems definition for Hirshfeld Atom Model calculations, 'capping hydrogen atoms' field must be an array", __FILE__, __LINE__);
+                        for (auto const& capH : sub["capping hydrogen atoms"])
+                        {
+                            if (!capH.is_object())
+                                on_error::throwException("invalid format of subsystems definition for Hirshfeld Atom Model calculations, 'capping hydrogen atoms' field must be an array of objects", __FILE__, __LINE__);
+                            CappingHydrogen cappingH;
+                            
+                            cappingH.bondedAtom = capH.value("bonded", "");
+                            cappingH.bondedAtomSymmOp = capH.value("bonded symm", "");
+                            cappingH.directingAtom = capH.value("directing", "");
+                            cappingH.directingAtomSymmOp = capH.value("directing symm", "");
+                            fragment.atoms.cappingHydrogens.push_back(cappingH);
+                        }
+                    }
+
+                    if(sub.find("multipole sites") != sub.end())
+                    {
+                        if (!sub["multipole sites"].is_string())
+                            on_error::throwException("invalid format of subsystems definition for Hirshfeld Atom Model calculations, 'multipole sites' field must be a string", __FILE__, __LINE__);
+
+                        string atoms_str = sub["multipole sites"].get<string>();
+                        vector<string> words;
+                        string_utilities::split(atoms_str, words, ' ');
+                        crystal_structure_utilities::splitIntoAtomAndSymmOp(words, fragment.customMultipoleSites, true);
+                    }
+
                     crystalFragments.push_back(fragment);
                     subsystemIdx++;
                 }

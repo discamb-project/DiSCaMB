@@ -184,8 +184,20 @@ namespace discamb {
             for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
                 subsystemSpecificDmSettings[subsystemIdx] = mSettings.fragmentWfnCalculation[subsystemIdx].distributedMultipoleCluster;
         vector<FragmentAtoms> fragmentAtoms;
+
         for (auto const subsystem : mSettings.crystalFragments)
             fragmentAtoms.push_back(subsystem.atoms);
+
+        for (subsystemIdx = 0; subsystemIdx < nSubsystems; subsystemIdx++)
+        {
+            const auto& subsystem = mSettings.crystalFragments[subsystemIdx];
+            if (!subsystem.customMultipoleSites.empty())
+            {
+                if (!subsystemSpecificDmSettings[subsystemIdx].has_value())
+                    subsystemSpecificDmSettings[subsystemIdx] = DistributedMultipoleCentersSettings();
+                subsystemSpecificDmSettings[subsystemIdx].value().predefinedMultipoleClusterAtoms = subsystem.customMultipoleSites;
+            }
+        }
 
         vector< vector<pair<string, string > > > multipoleClusterAtoms(nSubsystems);
 
