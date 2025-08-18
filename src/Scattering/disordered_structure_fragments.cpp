@@ -554,7 +554,7 @@ namespace disordered_structure_fragments{
                 double weight = weight_atom_symmOp[0];
                 string symmOp = "x,y,z";
                 if(weight_atom_symmOp.size()==3)
-                    string symmOp = weight_atom_symmOp[2]; 
+                    symmOp = weight_atom_symmOp[2]; 
                 
                 int atomIdx = 0;
                 if (label2idx.count(atomLabel) == 0)

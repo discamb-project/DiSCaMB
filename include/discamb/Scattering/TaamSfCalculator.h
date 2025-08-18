@@ -2,14 +2,14 @@
 
 #include "discamb/Scattering/SfCalculator.h"
 #include "discamb/AtomTyping/AtomType.h"
+#include "discamb/AtomTyping/LocalCoordinateSystem.h"
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
-#include "discamb/Scattering/AtomTypeHC_Parameters.h"
+#include "discamb/CrystalStructure/AtomInCrystalID.h"
 #include "discamb/HC_Model/HC_ModelParameters.h"
 #include "discamb/HC_Model/SlaterOrbitalWfnData.h"
+#include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
 #include "discamb/Scattering/disordered_structure_fragments.h"
-#include "discamb/CrystalStructure/AtomInCrystalID.h"
-#include "discamb/AtomTyping/LocalCoordinateSystem.h"
 
 #include <memory>
 

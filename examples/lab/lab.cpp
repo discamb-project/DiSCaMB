@@ -2620,9 +2620,49 @@ void frozen_lcs()
     
 }
 
+void atomTypesDisorder()
+{
+    CrystalAtomTypeAssigner assigner;
+    vector < vector <pair<int, string> > > fragmentAtoms(1);
+    fragmentAtoms[0].push_back({ 0, "x,y,z" });
+    fragmentAtoms[0].push_back({ 1, "x,y,z" });
+    fragmentAtoms[0].push_back({ 1, "-X+1/2,-Y+1/2,Z" });
+
+    vector< vector<int> > atomsToAssign{ {0, 1, 2} };
+    vector< vector<int> > typeID(1);
+    vector< vector<LocalCoordinateSystem<AtomInCrystalID> > > lcs;
+
+    MATTS_BankReader bankReader;
+    vector<AtomType> types;
+    vector<AtomTypeHC_Parameters> hcParameters;
+    BankSettings bankSettings;
+    bankReader.read("MATTS2021databank.txt", types, hcParameters, bankSettings);
+    assigner.setAtomTypes(types);
+
+    Crystal crystal;
+    structure_io::read_structure("ice.res", crystal);
+
+    assigner.assign(
+            crystal,
+            fragmentAtoms,
+            atomsToAssign,
+            typeID,
+            lcs);
+
+    for (auto& ids : typeID[0])
+        if (ids >= 0)
+            cout << types[ids].id << endl;
+        else
+            cout << "unassigned" << endl;
+
+}
+
 int main(int argc, char* argv[])
 {
     try {
+
+        atomTypesDisorder();
+        return 0;
 
         frozen_lcs();
         return 0;
