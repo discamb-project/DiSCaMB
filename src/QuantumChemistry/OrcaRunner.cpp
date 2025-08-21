@@ -325,7 +325,7 @@ namespace discamb {
         const
     {
 
-        system("mkdir orca_dir");
+        //system("mkdir orca_dir");
 
         OrcaTask orcaTask;
         orcaTask.orcaFolder = mExecFolder;

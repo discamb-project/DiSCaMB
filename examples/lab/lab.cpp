@@ -2657,9 +2657,28 @@ void atomTypesDisorder()
 
 }
 
+void ucContentAtomOrder(const std::string& structureFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    UnitCellContent unitCellContent(crystal);
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+    {
+        UnitCellContent::AtomID id;
+        id.atomIndex = i;
+        id.unitCellPosition.set(0, 0, 0);
+        string label, symmOp;
+        unitCellContent.interpreteAtomID(id, label, symmOp);
+        cout << i << " " << label << " " << symmOp << endl;
+    }
+}
+
 int main(int argc, char* argv[])
 {
     try {
+        ucContentAtomOrder(argv[1]);
+        return 0;
 
         atomTypesDisorder();
         return 0;

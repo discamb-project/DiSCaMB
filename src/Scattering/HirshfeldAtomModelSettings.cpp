@@ -589,6 +589,7 @@ namespace discamb {
                         atomRepresentativeInfo.atomLabel = subsystems[susbsystem_idx].atoms.atomList[idxInSubsystem].first;
                         atomRepresentativeInfo.fixedWeightValue = weights[idxInSubsystem];
                         atomRepresentativeInfo.fragmentIdx = susbsystem_idx;
+                        atomRepresentativeInfo.idxInSubsystem = idxInSubsystem;
                         atomRepresentativeInfo.isWeightFixed = true;
                         atomRepresentativeInfo.symmetryCode = subsystems[susbsystem_idx].atoms.atomList[idxInSubsystem].second;
                         atomRepresentativeInfo.transformType = "symmetry";
