@@ -200,6 +200,13 @@ namespace discamb {
         return create(crystal, json_data);
     }
 
+    //void SfCalculator::calculateFormFactors(
+    //    const std::vector<Vector3i>& hkl,
+    //    std::vector< std::vector<std::complex<double> > >& formFactors)
+    //    const
+    //{
+    //    int nAtoms = 
+    //}
 
     SfCalculator *SfCalculator::create(
         const Crystal &crystal,

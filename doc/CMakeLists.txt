@@ -1,4 +1,4 @@
-IF(BUILD_DOCS)
+IF(DISCAMB_BUILD_DOCS)
     find_package(Doxygen REQUIRED)
 
     if(DOXYGEN_FOUND)
@@ -11,9 +11,12 @@ IF(BUILD_DOCS)
         
         set_target_properties(doc 
             PROPERTIES 
-                EXCLUDE_FROM_ALL TRUE)
+                EXCLUDE_FROM_ALL TRUE
+                FOLDER "doc")
         
         MESSAGE("DOC PROCESSED")
-    endif(DOXYGEN_FOUND)
+    else()
+        MESSAGE("Doxygen not found, API documentations will not be generated")
+    endif()
 
-ENDIF(BUILD_DOCS)
+ENDIF(DISCAMB_BUILD_DOCS)
