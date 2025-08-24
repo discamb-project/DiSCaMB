@@ -429,8 +429,8 @@ namespace discamb {
                     fragment.label = sub.value("name", "");
                     fragment.label = sub.value("label", fragment.label);
                     fragment.label = sub.value("id", fragment.label);
-                    fragment.charge = data.value("charge", 0);
-                    fragment.spin_multiplicity = data.value("spin multiplicity", 1);
+                    fragment.charge = sub.value("charge", 0);
+                    fragment.spin_multiplicity = sub.value("spin multiplicity", 1);
                     
                     if (fragment.label.empty())
                         fragment.label = "subsystem_" + to_string(fragmentsConstructionData.size() + 1);
