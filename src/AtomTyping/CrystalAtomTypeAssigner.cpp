@@ -340,6 +340,7 @@ namespace discamb {
 
         vector<LocalCoordinateSystem<int> > lcsMolecule;
         StructureWithDescriptors structureWithDescriptors;
+        structureWithDescriptors.settings = mDescriptorsSettings;
         //vector<int> typeId;
         vector<int> atomToAssign(crystal.atoms.size());
 
