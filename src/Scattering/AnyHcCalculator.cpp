@@ -119,7 +119,7 @@ namespace discamb {
     {
         //AnyScattererStructureFactorCalculator 
         mCrystal = crystal;
-        
+        mFrozenLcs = frozenLcs;
         HC_ModelParameters parameters = _parameters;
 		mUseImplementationForLargeMolecules = implementationForLargeMolecules;
 
@@ -208,6 +208,8 @@ namespace discamb {
             delete mHcCalculator;
     }
 
+    
+
     void AnyHcCalculator::calculateStructureFactorsAndDerivatives(
         const std::vector<AtomInCrystal> &atoms,
         const std::vector<Vector3i> &hkl,
@@ -221,15 +223,18 @@ namespace discamb {
 		{
 			mCalculator->update(atoms);
 			mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution);
+            mCalculator->update(mCrystal.atoms);
 		}
 		else
 		{
+            update(atoms);
             mHcCalculator->calculateStructureFactorsAndDerivatives(
                 atoms, mLcsMatrices, hkl,
                 f,
                 dTarget_dparam,
                 dTarget_df,
                 countAtomContribution);
+            update(mCrystal.atoms);
 		}
     }
 
@@ -247,15 +252,18 @@ namespace discamb {
         {
             mCalculator->update(atoms);
             mCalculator->calculateStructureFactorsAndDerivatives(hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, derivativesSelector);
+            mCalculator->update(mCrystal.atoms);
         }
         else
         {
+            update(atoms);
             mHcCalculator->calculateStructureFactorsAndDerivatives(
                 atoms, mLcsMatrices, hkl,
                 f,
                 dTarget_dparam,
                 dTarget_df,
                 countAtomContribution, derivativesSelector);
+            update(mCrystal.atoms);
         }
     }
 
@@ -285,13 +293,16 @@ namespace discamb {
     {
 		update(atoms);
 
-		WallClockTimer timer;
+		//WallClockTimer timer;
 
-		timer.start();
+		//timer.start();
 		if (mUseImplementationForLargeMolecules)
 			mHcCalculator->calculateStructureFactors(atoms, mLcsMatrices, hkl, f);
 		else
 			mCalculator->calculateStructureFactors(hkl, f, countAtomContribution);
+
+        update(mCrystal.atoms);
+
 		//cout << "time of structure factor calculation in HC model, excluding model setup, in ms " << timer.stop() << endl;
         //vector<complex<double> > fake_dTarget_df(hkl.size());
         //std::vector<TargetFunctionAtomicParamDerivatives> dTarget_dparam;
@@ -304,13 +315,14 @@ namespace discamb {
     {
         mCalculator->update(atoms);
 		if (mUseImplementationForLargeMolecules)
-		{
-			mCrystal.atoms = atoms;
-			int nLcs = mLcs.size();
-			for (int i = 0; i < nLcs; i++)
-				mLcs[i]->calculate(mLcsMatrices[i], mCrystal);
-		}
-        //on_error::not_implemented(__FILE__, __LINE__);
+            if(!mFrozenLcs)
+    		{
+    			mCrystal.atoms = atoms;
+    			int nLcs = mLcs.size();
+    			for (int i = 0; i < nLcs; i++)
+    				mLcs[i]->calculate(mLcsMatrices[i], mCrystal);
+    		}
+        
     }
 
     void AnyHcCalculator::calculateStructureFactorsAndDerivatives(

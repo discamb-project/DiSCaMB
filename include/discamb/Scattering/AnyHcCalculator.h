@@ -23,7 +23,8 @@ namespace discamb {
 		std::shared_ptr<AtomicFormFactorCalculationsManager> mManager;
 		// introduced for large molecules 
 		HansenCoppensStructureFactorCalculator* mHcCalculator;
-		bool mUseImplementationForLargeMolecules;
+		bool mUseImplementationForLargeMolecules = false;
+        bool mFrozenLcs = false;
 		std::vector<std::shared_ptr<LocalCoordinateSystemInCrystal> > mLcs;
 		std::vector<Matrix3d> mLcsMatrices;
         
@@ -37,6 +38,8 @@ namespace discamb {
 			int nThreads,
             bool frozenLcs,
             bool symmDefVal);
+
+
     public:
         AnyHcCalculator(const Crystal &crystal,
             const HC_ModelParameters &parameters,

@@ -2674,9 +2674,306 @@ void ucContentAtomOrder(const std::string& structureFile)
     }
 }
 
+void hkl_at_resolution(
+    const UnitCell& uc,
+    double resolution,
+    vector<Vector3i> &hkls)
+{
+
+}
+
+
+//void compare_derivatives(
+//    const string& structure_file,
+//    const string& hkl_file)
+//{
+//    Crystal crystal;
+//    structure_io::read_structure(structure_file, crystal);
+//    vector<Vector3i> hkls;
+//    vector<double> intensities, sigmas;
+//    vector<int> batch;
+//    hkl_io::readShelxHkl(hkl_file, hkls, intensities, sigmas, batch, false);
+//
+//    nlohmann::json settings = nlohmann::json::parse(R"(
+//  {
+//    "model": "taam",
+//    "bank path":"MATTS2021databank.txt",
+//    "algorithm": "macromol",
+//    "table": "IT92"
+//  }
+//)");
+//
+//
+//    auto sf_calculator = SfCalculator::create_shared_ptr(crystal, settings);
+//    vector<complex<double> > f_1, f_2, dT_df;
+//    vector<TargetFunctionAtomicParamDerivatives> dt_dp_1, dt_dp_2;
+//    int nHkl = hkls.size();
+//
+//    dT_df.assign(nHkl, 1.0);
+//    sf_calculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkls, f_1, dt_dp_1, dT_df);
+//
+//    settings["table"] = "Waasmeier-Kirfel";
+//
+//    auto sf_calculator2 = SfCalculator::create_shared_ptr(crystal, settings);
+//    sf_calculator2->calculateStructureFactorsAndDerivatives(crystal.atoms, hkls, f_2, dt_dp_2, dT_df);
+//    bool size_match;
+//    double agreement_factors_occ, agreement_factors_u, agreement_factors_xyz, aux;
+//    agreement_factors::for_derivatives(dt_dp_1, dt_dp_2, size_match, agreement_factors_xyz, agreement_factors_u, agreement_factors_occ, aux);
+//    cout << "agreement_factors_xyz " << agreement_factors_xyz << "\n"
+//        << "agreement_factors_u " << agreement_factors_u << "\n"
+//        << "agreement_factors_occ " << agreement_factors_occ << "\n";
+//
+//}
+
+double target(
+    const vector<double>& I_obs,
+    const vector<double>& I_calc,
+    const vector<complex<double> >& F_calc)
+{
+    double sum = 0;
+    for (auto const& f : F_calc)
+        sum += f.real() * f.real();
+    return sum;
+    //double numerator = 0.0;
+    //double denominator = 0.0;
+    //for (double i_obs : I_obs)
+    //    denominator += i_obs * i_obs;
+
+    //for (int k = 0; k < I_obs.size(); k++)
+    //{
+    //    double diff = I_obs[k] - I_calc[k];
+    //    numerator += diff * diff;
+    //}
+
+    ////return sqrt(numerator / denominator);
+    //return numerator;
+}
+
+void dTarget_dF(
+    const vector<double>& I_obs,
+    const vector<complex<double> >& F_calc,
+    vector<complex<double> >& dt_df)
+{
+    int nHkl = I_obs.size();
+    dt_df.assign(nHkl, 0.0);
+    for (int i = 0; i < nHkl; i++)
+        dt_df[i] = 2.0 * F_calc[i].real();
+
+    /*
+    int nHkl = I_obs.size();
+    dt_df.assign(nHkl, 0.0);
+    for (int i = 0; i < nHkl; i++)
+    {
+        double I_calc = norm(F_calc[i]);
+        if (I_calc < 1e-10)
+        {
+            dt_df[i] = 0.0;
+            continue;
+        }
+
+        double diff = I_obs[i] - I_calc;
+
+        //dt_df[i] = -2.0 * diff * F_calc[i] / I_calc;
+        dt_df[i] = -4.0 * diff * F_calc[i];
+    }
+    */
+}
+
+
+void make_f_model(
+    const Crystal& crystal,
+    const vector<Vector3i>& hkls,
+    nlohmann::json& settings,
+    vector<complex<double> >& f_model)
+{
+    Crystal c = crystal;
+    for (int i = 0; i < c.atoms.size(); i++)
+        if (c.atoms[i].adp.size() == 6)
+        {
+            double u_iso = crystal_structure_utilities::u_eq(c.unitCell, c.atoms[i].adp);
+            c.atoms[i].adp.assign(1, u_iso);
+        }
+
+    auto sf_calculator = SfCalculator::create_shared_ptr(crystal, settings);
+    vector<bool> includeAtom(c.atoms.size(), true);
+    sf_calculator->calculateStructureFactors(crystal.atoms, hkls, f_model);
+}
+
+
+
+void test_derivatives(
+    const string &structure_file, 
+    const string& hkl_file)
+{
+    double step = 1e-5;
+
+    Crystal crystal;
+    structure_io::read_structure(structure_file, crystal);
+    vector<Vector3i> hkls;
+    vector<double> intensities, sigmas;
+    vector<int> batch;
+    hkl_io::readShelxHkl(hkl_file, hkls, intensities, sigmas, batch, false);
+
+    nlohmann::json settings = nlohmann::json::parse(R"(
+  {
+    "model": "taam",
+    "bank path":"MATTS2021databank.txt",
+    "#algorithm": "macromol",
+    "frozen lcs": true
+  }
+)");
+
+
+
+
+    auto sf_calculator = SfCalculator::create_shared_ptr(crystal, settings);
+    //sf_calculator->calculateStructureFactorsAndDerivatives()
+
+    
+    int nAtoms = crystal.atoms.size();
+    vector<TargetFunctionAtomicParamDerivatives> numerical_derivatives(nAtoms), analytical_derivatives, analytical_derivatives_2(nAtoms);
+    
+    vector<complex<double> > f_calc, f_model;
+    int hklIdx, nHkl = hkls.size();
+    vector<double> I_obs, I_calc(hkls.size());
+    make_f_model(crystal, hkls, settings, f_model);
+    for (auto& f : f_model)
+        I_obs.push_back(norm(f));
+    sf_calculator->calculateStructureFactors(crystal.atoms, hkls, f_calc);
+
+    for (int coordIdx = 0; coordIdx < 3; coordIdx++)
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            auto atoms = crystal.atoms;
+            //cart[coordIdx] += step;
+            atoms[atomIdx].coordinates[coordIdx] += step;
+            sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+            for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+                I_calc[hklIdx] = norm(f_calc[hklIdx]);
+            double target_plus = target(I_obs, I_calc, f_calc);
+
+            atoms[atomIdx].coordinates[coordIdx] -= 2*step;
+            sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+            for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+                I_calc[hklIdx] = norm(f_calc[hklIdx]);
+            double target_minus = target(I_obs, I_calc, f_calc);
+
+            numerical_derivatives[atomIdx].atomic_position_derivatives[coordIdx] = (target_plus - target_minus) / (2 * step);
+        }
+
+        //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        //{
+        //    auto atoms = crystal.atoms;
+        //    Vector3d cart, frac;
+        //    crystal.unitCell.fractionalToCartesian(atoms[atomIdx].coordinates, cart);
+        //    cart[coordIdx] += step;
+        //    crystal.unitCell.cartesianToFractional(cart, atoms[atomIdx].coordinates);
+        //    sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+        //    for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+        //        I_calc[hklIdx] = norm(f_calc[hklIdx]);
+        //    double target_plus = target(I_obs, I_calc);
+
+        //    cart[coordIdx] -= 2*step;
+        //    crystal.unitCell.cartesianToFractional(cart, atoms[atomIdx].coordinates);
+        //    sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+        //    for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+        //        I_calc[hklIdx] = norm(f_calc[hklIdx]);
+        //    double target_minus = target(I_obs, I_calc);
+
+        //    numerical_derivatives[atomIdx].atomic_position_derivatives[coordIdx] = (target_plus - target_minus) / (2 * step);
+        //}
+
+    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+    {
+        auto atoms = crystal.atoms;
+        atoms[atomIdx].occupancy += step;
+        sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+        for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+            I_calc[hklIdx] = norm(f_calc[hklIdx]);
+        double target_plus = target(I_obs, I_calc, f_calc);
+        atoms[atomIdx].occupancy -= 2 * step;
+        sf_calculator->calculateStructureFactors(atoms, hkls, f_calc);
+        for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+            I_calc[hklIdx] = norm(f_calc[hklIdx]);
+        double target_minus = target(I_obs, I_calc, f_calc);
+        numerical_derivatives[atomIdx].occupancy_derivatives = (target_plus - target_minus) / (2 * step);
+
+        for (int i = 0; i < atoms[atomIdx].adp.size(); i++)
+            numerical_derivatives[atomIdx].adp_derivatives.push_back(0.0);
+
+        //for (int i = 0; i < atoms[atomIdx].adp.size(); i++)
+        //{
+        //    atoms[atomIdx].adp[i] += stepAdp;
+        //    sfCalculator->update(atoms);
+        //    sfCalculator->calculateStructureFactorsAndDerivatives(hkl, sf_plus, derivatives_plus, countAtom);
+        //    atoms[atomIdx].adp[i] -= 2 * stepAdp;
+        //    sfCalculator->update(atoms);
+        //    sfCalculator->calculateStructureFactorsAndDerivatives(hkl, sf_minus, derivatives_minus, countAtom);
+        //    derivatives.adpDerivatives[atomIdx][i] = (sf_plus - sf_minus) / (2 * stepAdp);
+        //    atoms[atomIdx].adp[i] -= stepAdp;
+        //}
+
+    }
+    vector<complex<double> > dt_df;
+    dTarget_dF(I_obs, f_calc, dt_df);
+    sf_calculator->calculateStructureFactorsAndDerivatives(crystal.atoms, hkls, f_calc, analytical_derivatives, dt_df);
+
+    /*analytical derivatives 2*/
+    vector<bool> count_atom(nAtoms, true);
+    for (hklIdx = 0; hklIdx < nHkl; hklIdx++)
+    {
+        complex<double> sf;
+        SfDerivativesAtHkl df;
+        sf_calculator->calculateStructureFactorsAndDerivatives(hkls[hklIdx], sf, df, count_atom);
+        //analytical_derivatives_2
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            for (int i = 0; i < 3; i++)
+                analytical_derivatives_2[atomIdx].atomic_position_derivatives[i] += dt_df[hklIdx].real() * df.atomicPostionDerivatives[atomIdx][i].real() +
+                dt_df[hklIdx].imag() * df.atomicPostionDerivatives[atomIdx][i].imag();
+        }
+        
+    }
+
+    for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+    {
+        cout << crystal.atoms[atomIdx].label << "\n";
+        cout << "dT/dxyz    numerical    analytical    analytical2 \n";
+        string xyz_str = "xyz";
+        for (int i = 0; i < 3; i++)
+        {
+            cout << "  " << xyz_str[i] << "  " << numerical_derivatives[atomIdx].atomic_position_derivatives[i]
+                << "  " << analytical_derivatives[atomIdx].atomic_position_derivatives[i]  
+                << "  " << analytical_derivatives_2[atomIdx].atomic_position_derivatives[i] << "\n";
+        }
+        cout<< "  occ " << "  " << numerical_derivatives[atomIdx].occupancy_derivatives
+            << "  " << analytical_derivatives[atomIdx].occupancy_derivatives << "\n";
+    }
+    // derivatives dF/dp
+
+
+}
+
+
+
+
 int main(int argc, char* argv[])
 {
+
     try {
+
+        if (argc != 3)
+            on_error::throwException("expected structure file and hkl file\n", __FILE__, __LINE__);
+
+        test_derivatives(argv[1], argv[2]);
+        return 0;
+
+        if (argc != 3)
+            on_error::throwException("expected structure file and hkl file\n", __FILE__, __LINE__);
+
+        //compare_derivatives(argv[1], argv[2]);
+        //return 0;
+
         ucContentAtomOrder(argv[1]);
         return 0;
 
