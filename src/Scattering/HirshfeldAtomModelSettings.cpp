@@ -70,7 +70,7 @@ namespace discamb {
             if (data.contains("density calculation range"))
                 edCalcAtomIncludeRange = data.find("density calculation range")->get<double>();
             else
-                edCalcAtomIncludeRange.reset();
+                edCalcAtomIncludeRange = defaultAtomIncludeRange;
 
         }
 

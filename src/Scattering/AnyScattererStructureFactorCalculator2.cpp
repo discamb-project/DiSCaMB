@@ -1163,6 +1163,228 @@ namespace discamb{
         //    const std::vector<Vector3i> &hkl,
         //    std::vector<std::complex<double> > &f) {}
 
+
+        void AnyScattererStructureFactorCalculator2::calculateStructureFactorsAndDerivatives_ordered_hkl_alg(
+            const std::vector<Vector3i>& _hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& _dTarget_df,
+            const std::vector<bool>& countAtomContribution)
+        {
+            std::vector<Vector3d> hkl;
+            makeCartesianHkl(_hkl, hkl);
+            // local copies
+
+            //vector<Vector3d> atomic_positions = _atomic_positions;
+            //vector<vector<double> > atomic_displacement_parameters = _atomic_displacement_parameters;
+            //vector<REAL> atomic_occupancy = _atomic_occupancy;
+            //vector<REAL> atomic_multiplicity_weight = _atomic_multiplicity_weight;
+
+            vector<vector<Vector3i> > orderedHklLines;
+            vector<vector<int> > mapToOriginalSetIndices;
+            int lineDirection = scattering_utilities::findPreferredHklOrderingDirection(_hkl, orderedHklLines, mapToOriginalSetIndices);
+            int nLines = orderedHklLines.size();
+
+
+
+            //--
+
+
+            const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
+            //complex<REAL> fAtomSphericalAndAnomalous;
+            const REAL two_pi = 2 * REAL(M_PI);
+            const REAL two_pi_sqare = 2 * REAL(M_PI * M_PI);
+            REAL temperature_factor, hVectorLength, hVectorLength2, multiplier;
+            //REAL temperature_factor, multiplier, hVectorLength;
+            REAL const* adps;
+            vector<Vector3<REAL> > rotated_h(mSymOps.size());
+
+            vector<REAL> translation_factor(mSymOps.size());
+            complex<REAL> unweightedTransformedAtomFF, unweightedTransformedAtomFF_Sum, dTargetDf;
+
+            complex<REAL> adp_derivatives[6];
+            complex<REAL> xyz_derivatives[3];
+            REAL atomic_phase_factor_real, atomic_phase_factor_im, atomic_phase_factor_phase;
+            REAL realFContrib, imagFContrib;
+
+
+            REAL atomWeight; // = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
+
+            complex<REAL> anomalousScattering, atom_ff, aux;
+
+            //--
+
+            int nSymmOps = mSymOps.size();
+            int n_adp_components, nAtoms, nHklVectors = hkl.size();
+            vector<vector<REAL> > adpMultipliers(nSymmOps, vector<double>(6));
+            nAtoms = mR_at.size();
+
+            vector<complex<double> > dTarget_df = _dTarget_df;
+            for (int i = 0; i < nHklVectors; i++)
+                dTarget_df[i] = conj(dTarget_df[i]);
+
+            // set dTarget_dparam to zero ..
+
+            f.assign(nHklVectors, 0.0);
+
+            dTarget_dparam.resize(mR_at.size());
+
+            for (int atom_index = 0; atom_index < nAtoms; atom_index++)
+            {
+                dTarget_dparam[atom_index].adp_derivatives.assign(mAdp[atom_index].size(), 0.0);
+                dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
+                dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
+            }
+
+            //
+
+            vector < vector<complex<double> > > atomic_ff(nSymmOps, vector < complex<double> >(nAtoms));
+
+
+            for (int hklIndex = 0; hklIndex < nHklVectors; hklIndex++)
+            {
+
+                //cout << _hkl[hklIndex][0] << " " << _hkl[hklIndex][1] << " " << _hkl[hklIndex][2] << "\n";
+
+                dTargetDf = dTarget_df[hklIndex];
+
+                hVectorLength2 = hkl[hklIndex] * hkl[hklIndex];
+                hVectorLength = sqrt(hVectorLength2);
+
+                pre_atom_loop_sf_calc( /*  in: */  mSymOps, hkl[hklIndex],
+                    /* out: */ rotated_h, translation_factor, adpMultipliers);
+
+                for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    mManager->calculateCart(rotated_h[symOpIdx], atomic_ff[symOpIdx], countAtomContribution);
+
+                realFContrib = 0;
+                imagFContrib = 0;
+
+
+                for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+                {
+
+                    //cout << endl << endl << mCrystal.atoms[atomIdx].label << endl;
+
+                    if (!countAtomContribution[atomIdx])
+                        continue;
+
+
+                    atomWeight = mCrystal.atoms[atomIdx].occupancy * mAtomicMultiplicityWeight[atomIdx];
+                    //anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
+                    //fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
+
+                    n_adp_components = mAdp[atomIdx].size();// atomic_displacement_parameters[atomIdx].size();
+
+                    if (!n_adp_components == 0)
+                        adps = &mAdp[atomIdx][0];
+
+                    if (n_adp_components == 6)
+                        for (int i = 0; i < 6; i++)
+                            adp_derivatives[i] = 0.0;
+
+                    xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
+
+                    unweightedTransformedAtomFF_Sum = 0.0;
+
+                    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
+                    {
+
+                        const Vector3d& rotated_h_ref = rotated_h[symOpIdx];
+
+                        atomic_phase_factor_phase = two_pi * (rotated_h_ref * mR_at[atomIdx] +
+                            translation_factor[symOpIdx]);
+
+                        atomic_phase_factor_real = cos(atomic_phase_factor_phase);
+                        atomic_phase_factor_im = sin(atomic_phase_factor_phase);
+
+                        complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
+
+
+                        atom_ff = atomic_ff[symOpIdx][atomIdx];// mManager->calculateCart(atomIdx, rotated_h_ref);
+
+
+                        if (n_adp_components == 6)
+                        {
+                            double* multipliers = &adpMultipliers[symOpIdx][0];
+                            temperature_factor = exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
+                                - multipliers[2] * adps[2] - multipliers[3] * adps[3]
+                                - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
+
+                            unweightedTransformedAtomFF = atom_ff * atomic_position_phase_factor * temperature_factor;
+
+                            adp_derivatives[0] -= multipliers[0] * unweightedTransformedAtomFF;
+                            adp_derivatives[1] -= multipliers[1] * unweightedTransformedAtomFF;
+                            adp_derivatives[2] -= multipliers[2] * unweightedTransformedAtomFF;
+                            adp_derivatives[3] -= multipliers[3] * unweightedTransformedAtomFF;
+                            adp_derivatives[4] -= multipliers[4] * unweightedTransformedAtomFF;
+                            adp_derivatives[5] -= multipliers[5] * unweightedTransformedAtomFF;
+
+                        }
+                        else
+                            unweightedTransformedAtomFF = atom_ff * atomic_position_phase_factor;
+
+                        unweightedTransformedAtomFF_Sum += unweightedTransformedAtomFF;
+
+                        xyz_derivatives[0] += rotated_h_ref[0] * unweightedTransformedAtomFF;
+                        xyz_derivatives[1] += rotated_h_ref[1] * unweightedTransformedAtomFF;
+                        xyz_derivatives[2] += rotated_h_ref[2] * unweightedTransformedAtomFF;
+
+                        //cout << atom_ff << " " << unweightedTransformedAtomFF << endl;
+
+                    } // symmetry operations
+
+
+                    if (n_adp_components == 1)
+                    {
+                        temperature_factor = exp(-hVectorLength * hVectorLength * (*adps));
+                        unweightedTransformedAtomFF_Sum *= temperature_factor;
+                        dTarget_dparam[atomIdx].adp_derivatives[0] -= hVectorLength2 * (dTargetDf.real() * unweightedTransformedAtomFF_Sum.real() -
+                            dTargetDf.imag() * unweightedTransformedAtomFF_Sum.imag());
+                    }
+                    else
+                        if (n_adp_components == 6)
+                            for (int i = 0; i < 6; ++i)
+                                dTarget_dparam[atomIdx].adp_derivatives[i] += dTargetDf.real() * adp_derivatives[i].real() -
+                                dTargetDf.imag() * adp_derivatives[i].imag();
+
+
+                    dTarget_dparam[atomIdx].occupancy_derivatives += unweightedTransformedAtomFF_Sum.real() * dTargetDf.real() -
+                        unweightedTransformedAtomFF_Sum.imag() * dTargetDf.imag();
+                    //cout << mCrystal.atoms[atomIdx].label << " " << unweightedTransformedAtomFF_Sum * atomWeight << endl;
+                    realFContrib += unweightedTransformedAtomFF_Sum.real() * atomWeight;
+                    imagFContrib += unweightedTransformedAtomFF_Sum.imag() * atomWeight;
+
+                    //cout << atomIdx << " " << unweightedTransformedAtomFF_Sum.real()* atomWeight << " " << unweightedTransformedAtomFF_Sum.imag()* atomWeight << "\n";
+
+                    n_adp_components == 1 ? aux = temperature_factor * dTargetDf : aux = dTargetDf;
+
+                    for (int i = 0; i < 3; ++i)
+                        dTarget_dparam[atomIdx].atomic_position_derivatives[i] -= aux.real() * xyz_derivatives[i].imag() +
+                        aux.imag() * xyz_derivatives[i].real();
+
+                } // symmetrically independent atoms
+
+                f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
+                //cin >> hklIndex;
+            } // h vectors
+
+            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            {
+                atomWeight = mCrystal.atoms[atomIdx].occupancy * mAtomicMultiplicityWeight[atomIdx];
+                dTarget_dparam[atomIdx].occupancy_derivatives *= mAtomicMultiplicityWeight[atomIdx];
+                multiplier = two_pi_sqare * atomWeight;
+                for (int i = 0; i < dTarget_dparam[atomIdx].adp_derivatives.size(); i++)
+                    dTarget_dparam[atomIdx].adp_derivatives[i] *= multiplier;
+                multiplier = two_pi * atomWeight;
+                dTarget_dparam[atomIdx].atomic_position_derivatives.x *= multiplier;
+                dTarget_dparam[atomIdx].atomic_position_derivatives.y *= multiplier;
+                dTarget_dparam[atomIdx].atomic_position_derivatives.z *= multiplier;
+            }
+
+            convertDerivatives(dTarget_dparam);
+        }
+
         /** \brief Calculates structure factors and derivatives of target function with respet to structural parameters.
 
         \param atoms carry atomic structural parameters (positions, ADPs, occupancy)

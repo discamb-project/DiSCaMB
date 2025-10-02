@@ -8,6 +8,7 @@
 #include "discamb/BasicUtilities/parse_cmd.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/CrystalStructure/crystallographic_point_group_tables.h"
+#include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
 #include "discamb/IO/cif_io.h"
 #include "discamb/IO/discamb_io.h"
 #include "discamb/IO/NativeIAM_Reader.h"
@@ -2954,13 +2955,125 @@ void test_derivatives(
 
 }
 
+void pydiscamb_timing_averages(
+    int n_pdb,
+    map<string, vector<double> >& data)
+{
+    for (auto& entry : data)
+    {
+        cout << entry.first << "\n";
+        int n_measurements = entry.second.size();
+        int n_repetitions = n_measurements / n_pdb;
+        for (int pdbIdx = 0; pdbIdx < n_pdb; pdbIdx++)
+        {
+            double average_time = 0.0;
+            for (int i = 0; i < n_repetitions; i++)
+                average_time += entry.second[pdbIdx * n_repetitions + i];
+            cout << pdbIdx + 1 << "   " << average_time / n_repetitions << "\n";
+        }
+    }
 
+}
 
+void pydiscamb_timing()
+{
+    ifstream in("pdb.csv");
+
+    string line;
+    map<string, vector<double> > grads, fcalc;
+    while (getline(in, line))
+    {
+        vector<string> words;
+        string_utilities::split(line, words, ',');
+        if (words.size() == 7)
+        {
+            if (words[3] == "grads")
+                grads[words[2]].push_back(stod(words[6]));
+            if (words[3] == "f_calc")
+                fcalc[words[2]].push_back(stod(words[6]));
+        }
+    }
+    int n_pdb = 4;
+    cout<< "fcalc\n";
+    pydiscamb_timing_averages(n_pdb, fcalc);
+    cout << "grad\n";
+    pydiscamb_timing_averages(n_pdb, grads);
+
+}
+
+void u_iso_along_line()
+{
+    double u_iso = 0.02;
+
+    Crystal crystal;
+
+    crystal.unitCell.set(3, 4, 6, 90, 90, 90);
+    vector<SpaceGroupOperation> sg_ops;
+    sg_ops.push_back(SpaceGroupOperation(string("X,Y,Z")));
+    crystal.spaceGroup.set(sg_ops);
+
+    AtomInCrystal atom;
+    atom.adp.push_back(u_iso);
+    atom.coordinates.set(0, 0, 0);
+    atom.label = "C";
+    atom.multiplicity = 1.0;
+    atom.occupancy = 1.0;
+    atom.type = "C";
+    crystal.atoms.push_back(atom);
+
+    Vector3i h0(-2, 3, -5);
+    Vector3i step(0, 0, 1);
+
+    vector<Vector3i> hkl;
+    for (int i = 0; i < 10; i++)
+        hkl.push_back(h0 + i * step);
+    
+    auto iam = SfCalculator::create_shared_ptr(crystal, { { "model", "IAM" } });
+
+    vector<complex<double> > f_u, f_no_u;
+    iam->calculateStructureFactors(crystal.atoms, hkl, f_u);
+    crystal.atoms[0].adp[0] = 0.0;
+    iam->calculateStructureFactors(crystal.atoms, hkl, f_no_u); 
+
+    for (int i = 0; i < 10; i++)
+        cout << hkl[i] << " " << f_u[i].real() / f_no_u[i].real() << "\n";
+
+    ReciprocalLatticeUnitCell rUnitCell(crystal.unitCell);
+    Vector3d step_cart;
+    rUnitCell.fractionalToCartesian(step, step_cart);
+    double t_n, c_n, c;
+    c = exp(-2.0 * step_cart * step_cart * 2 * M_PI * M_PI * u_iso);
+
+    for (int i = 0; i < 10; i++)
+    {
+        
+        Vector3d h_cart;
+        rUnitCell.fractionalToCartesian(hkl[i], h_cart);
+        double t_calc = exp(-2 * M_PI * M_PI * u_iso * h_cart * h_cart);
+        cout << hkl[i] << " " <<  t_calc << "\n";
+        if (i == 0)
+        {
+            t_n = t_calc;
+            c_n = exp(-(2.0 * step_cart * h_cart + step_cart * step_cart) * 2.0 * M_PI * M_PI * u_iso);
+        }
+        else
+        {
+            t_n *= c_n;
+            c_n *= c;
+        }
+        cout << hkl[i] << " " << t_n << "\n";
+    }
+}
 
 int main(int argc, char* argv[])
 {
 
     try {
+        u_iso_along_line();
+        return 0;
+
+        pydiscamb_timing();
+        return 0;
 
         if (argc != 3)
             on_error::throwException("expected structure file and hkl file\n", __FILE__, __LINE__);

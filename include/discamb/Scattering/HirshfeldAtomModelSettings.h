@@ -31,7 +31,8 @@ namespace discamb {
             ElectronDensityPartitionType type = ElectronDensityPartitionType::Hirshfeld;
             nlohmann::json partitionSpecificData;
             double power = 1.0;
-            std::optional<double> edCalcAtomIncludeRange;
+            static constexpr double defaultAtomIncludeRange = 6.0;
+            std::optional<double> edCalcAtomIncludeRange = defaultAtomIncludeRange;
         };
 
         struct WfnCalculation {

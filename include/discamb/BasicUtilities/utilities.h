@@ -13,10 +13,10 @@ namespace discamb {
 
 
     struct HardwareResources {
-        int nCores;
-        int totalMemoryMB;
-        int diskSpaceGB;
-        void set(const nlohmann::json& data);
+        int nCores = 1;
+        int totalMemoryMB = 1000;
+        int diskSpaceGB = 10;
+        void set(const nlohmann::json& data, bool setMissingToDefault = false);
     };
 
 

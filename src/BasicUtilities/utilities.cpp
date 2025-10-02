@@ -7,9 +7,12 @@ namespace discamb {
     //struct HardwareResources {
     //    int nCores;
     //    int memoryMB;
-    void HardwareResources::set(const nlohmann::json& data)
+    void HardwareResources::set(
+        const nlohmann::json& data,
+        bool setMissingToDefault)
     {
-        *this = HardwareResources();
+        if(setMissingToDefault)
+            *this = HardwareResources();
         nCores = data.value("n cores", nCores);
         nCores = data.value("n threads", nCores);
 

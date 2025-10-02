@@ -17,6 +17,10 @@ namespace discamb{
     * @{
     */
 
+    /**
+    taken from AnyScattererStructureFactorCalculator and adjusted for
+    using ordered hkl algorithm
+    */
 
     class AnyScattererStructureFactorCalculator2
     {
@@ -196,6 +200,13 @@ namespace discamb{
             const std::vector<std::complex<double> > &dTarget_df,
             const std::vector<bool> &countAtomContribution);
 
+        //_ordered_hkl_alg
+        void calculateStructureFactorsAndDerivatives_ordered_hkl_alg(
+            const std::vector<Vector3i>& hkl,
+            std::vector<std::complex<double> >& f,
+            std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
+            const std::vector<std::complex<double> >& dTarget_df,
+            const std::vector<bool>& countAtomContribution);
 
         void calculateStructureFactorsAndDerivatives(
             const Vector3i &hkl,
