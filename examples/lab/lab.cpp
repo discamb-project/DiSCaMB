@@ -3065,11 +3065,81 @@ void u_iso_along_line()
     }
 }
 
+void u_aniso_along_line()
+{
+    vector<double> u_aniso = { 0.01744, 0.01549, 0.01296, -0.00272, -0.00479, 0.00333};
+    Matrix3d u_matrix( 0.01744, -0.00272, -0.00479,
+                      -0.00272, 0.015490, 0.00333,
+                      -0.00479, 0.003330, 0.01296);
+    Matrix3d u_matrix_2pi2 = u_matrix * 2.0 * M_PI * M_PI;
+    Crystal crystal;
+
+    crystal.unitCell.set(3, 4, 6, 90, 90, 90);
+    vector<SpaceGroupOperation> sg_ops;
+    sg_ops.push_back(SpaceGroupOperation(string("X,Y,Z")));
+    crystal.spaceGroup.set(sg_ops);
+
+    AtomInCrystal atom;
+    atom.adp = u_aniso;
+    atom.coordinates.set(0, 0, 0);
+    atom.label = "C";
+    atom.multiplicity = 1.0;
+    atom.occupancy = 1.0;
+    atom.type = "C";
+    crystal.atoms.push_back(atom);
+
+    Vector3i h0(-2, 3, -5);
+    Vector3i step(0, 0, 1);
+
+    vector<Vector3i> hkl;
+    for (int i = 0; i < 10; i++)
+        hkl.push_back(h0 + i * step);
+
+    auto iam = SfCalculator::create_shared_ptr(crystal, { { "model", "IAM" } });
+
+    vector<complex<double> > f_u, f_no_u;
+    iam->calculateStructureFactors(crystal.atoms, hkl, f_u);
+    crystal.atoms[0].adp.resize(1); 
+    crystal.atoms[0].adp[0] = 0.0;
+    iam->calculateStructureFactors(crystal.atoms, hkl, f_no_u);
+
+    for (int i = 0; i < 10; i++)
+        cout << hkl[i] << " " << f_u[i].real() / f_no_u[i].real() << "\n";
+
+    ReciprocalLatticeUnitCell rUnitCell(crystal.unitCell);
+    Vector3d step_cart;
+    rUnitCell.fractionalToCartesian(step, step_cart);
+    double t_n, c_n, c;
+    c = exp(-4.0 * M_PI * M_PI * step_cart * u_matrix * step_cart);
+
+    for (int i = 0; i < 10; i++)
+    {
+
+        Vector3d h_cart;
+        rUnitCell.fractionalToCartesian(hkl[i], h_cart);
+        double t_calc = exp(- h_cart * u_matrix_2pi2 * h_cart);
+        cout << hkl[i] << " " << t_calc << "\n";
+        if (i == 0)
+        {
+            t_n = t_calc;
+            c_n = exp(-(2.0 * h_cart + step_cart) * u_matrix_2pi2 * step_cart);
+        }
+        else
+        {
+            t_n *= c_n;
+            c_n *= c;
+        }
+        cout << hkl[i] << " " << t_n << "\n";
+    }
+}
+
+
 int main(int argc, char* argv[])
 {
 
     try {
-        u_iso_along_line();
+        u_aniso_along_line();
+        //u_iso_along_line();
         return 0;
 
         pydiscamb_timing();

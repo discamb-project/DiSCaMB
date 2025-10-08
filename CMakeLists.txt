@@ -1,12 +1,17 @@
 #Specify the version being used aswell as the language
 cmake_minimum_required(VERSION 3.15)
 
-
 cmake_policy(SET CMP0091 NEW)
 
 PROJECT(discamb)
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
+option(DISCAMB_BUILD_EXAMPLES "Build the example programs" OFF)
+option(DISCAMB_MSVC_MT "An options for MSVC to build multi-threaded statically-linked version" OFF)
+
+if(DISCAMB_MSVC_MT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON) 
 
@@ -21,8 +26,6 @@ endif()
 
 
 
-option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
-option(DISCAMB_BUILD_EXAMPLES "Build the example programs" OFF)
 if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     option(USE_STD_SPH_BESSEL "use std::sph_bessel" OFF) 
 else()
@@ -40,8 +43,8 @@ set(CMAKE_MINSIZEREL_POSTFIX "s")
 set(CMAKE_RELWITHDEBINFO_POSTFIX "rd")
 
 
-SET(DISCAMB_INCLUDE_PATH "" CACHE PATH "dir with discamb headers folder 'discamb'")
-include_directories(${DISCAMB_INCLUDE_PATH})
+#SET(DISCAMB_INCLUDE_PATH "" CACHE PATH "dir with discamb headers folder 'discamb'")
+#include_directories(${DISCAMB_INCLUDE_PATH})
 
 if(WIN32)
     SET(CMAKE_DETECTED_WIN32 TRUE)
