@@ -1701,6 +1701,30 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
             calcUnitCellConnectivity_Simple(uc, connectivity, threshold);
     }
 
+    void calcUnitCellConnectivity(
+        const UnitCellContent& uc,
+        const std::vector<std::vector<AtomInCrystalID> >& asymmetricUnitConnectivity,
+        std::vector<std::vector<UnitCellContent::AtomID> >& connectivity)
+    {
+        int nAtomsInUnitCell = uc.nAtoms();
+        connectivity.clear();
+        connectivity.resize(nAtomsInUnitCell);
+        for(int atomIdx=0; atomIdx<nAtomsInUnitCell; atomIdx++)
+            for(auto const& neighborAsu : asymmetricUnitConnectivity[uc.indexOfSymmetryEquivalentAtomInCrystal(atomIdx)])
+            {
+                int neighborAsuIdx = neighborAsu.index();
+                SpaceGroupOperation neighborSymmOp = neighborAsu.getSymmetryOperation();
+                SpaceGroupOperation asuAtomSymmOp = uc.getGeneratingOperation(atomIdx, 0);
+                SpaceGroupOperation fullNeighborSymmOp = asuAtomSymmOp * neighborSymmOp;
+                //string neighbourLabel = uc.getAtom(neighborAsuIdx).label;
+                string neighbourLabel = uc.getCrystal().atoms[uc.indexOfSymmetryEquivalentAtomInCrystal(neighborAsuIdx)].label;
+                UnitCellContent::AtomID neighbourId;
+                uc.findAtom(neighbourLabel, fullNeighborSymmOp.string(), neighbourId);
+                connectivity[atomIdx].push_back(neighbourId);
+            }
+    }
+
+
     void calcUnitCellConnectivity_Simple(
         const UnitCellContent &uc,
         std::vector<std::vector<UnitCellContent::AtomID> > &connectivity,
@@ -2546,30 +2570,13 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
     }
 
     void graphToNthNeighbour(
-        const UnitCellContent &unitCellContent,
-        const std::vector<UnitCellContent::AtomID> &startingSet,
-        std::vector<UnitCellContent::AtomID> &graph,
+        const std::vector<std::vector<UnitCellContent::AtomID> >& unitCellConnectivity,
+        const std::vector<UnitCellContent::AtomID>& startingSet,
+        std::vector<UnitCellContent::AtomID>& graph,
         int n,
-        double threshold,
-        std::vector<int> &shellSizes)
+        //double threshold,
+        std::vector<int>& shellSizes)
     {
-        std::vector<std::vector<UnitCellContent::AtomID> > unitCellConnectivity;
-        calcUnitCellConnectivity(unitCellContent, unitCellConnectivity, threshold);
-        //ofstream out("uc_connect");
-        //for (auto &atomConn : unitCellConnectivity)
-        //{
-        //    
-        //    for (auto &neighb : atomConn)
-        //    {
-        //        out << neighb.atomIndex << ",(" << neighb.unitCellPosition[0] << ", " << neighb.unitCellPosition[1]
-        //            << ", " << neighb.unitCellPosition[2] << ")  ";
-        //    }
-        //    out << endl;
-        //}
-
-        //out.flush();
-        //out.close();
-
         vector<UnitCellContent::AtomID> newShell;
         vector<vector<UnitCellContent::AtomID> > graphShells;
 
@@ -2585,7 +2592,7 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         {
             newShell.clear();
 
-            auto &outerShell = graphShells.back();
+            auto& outerShell = graphShells.back();
 
             for (auto node : outerShell)
             {
@@ -2619,11 +2626,98 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
 
         graph.clear();
         shellSizes.clear();
-        for (auto &shell : graphShells)
+        for (auto& shell : graphShells)
         {
             graph.insert(graph.end(), shell.begin(), shell.end());
             shellSizes.push_back(shell.size());
         }
+
+    }
+
+
+    void graphToNthNeighbour(
+        const UnitCellContent& unitCellContent, 
+        const std::vector<UnitCellContent::AtomID>& startingSet,
+        std::vector<std::vector<AtomInCrystalID> >& asymmetric_unit_connectivity,
+        std::vector<UnitCellContent::AtomID>& graph,
+        int n, 
+        std::vector<int>& shellSizes)
+    {
+        std::vector<std::vector<UnitCellContent::AtomID> > unitCellConnectivity;
+
+        calcUnitCellConnectivity(unitCellContent, asymmetric_unit_connectivity, unitCellConnectivity);
+
+        graphToNthNeighbour(unitCellConnectivity, startingSet, graph, n, shellSizes);
+    }
+
+
+
+    void graphToNthNeighbour(
+        const UnitCellContent &unitCellContent,
+        const std::vector<UnitCellContent::AtomID> &startingSet,
+        std::vector<UnitCellContent::AtomID> &graph,
+        int n,
+        double threshold,
+        std::vector<int> &shellSizes)
+    {
+        std::vector<std::vector<UnitCellContent::AtomID> > unitCellConnectivity;
+        calcUnitCellConnectivity(unitCellContent, unitCellConnectivity, threshold);
+        graphToNthNeighbour(unitCellConnectivity, startingSet, graph, n, shellSizes);
+
+        //vector<UnitCellContent::AtomID> newShell;
+        //vector<vector<UnitCellContent::AtomID> > graphShells;
+
+        //int i;
+
+        //graphShells.resize(1);
+        //for (i = 0; i < startingSet.size(); i++)
+        //    graphShells[0].push_back(startingSet[i]);
+
+        //UnitCellContent::AtomID neighbourId;
+
+        //for (int step = 1; step <= n; step++)
+        //{
+        //    newShell.clear();
+
+        //    auto &outerShell = graphShells.back();
+
+        //    for (auto node : outerShell)
+        //    {
+
+        //        for (auto neighbour : unitCellConnectivity[node.atomIndex])
+        //        {
+        //            neighbourId = neighbour;
+        //            neighbourId.unitCellPosition += node.unitCellPosition;
+        //            // check if neighbbour already selected, if not add to new shell
+        //            bool alreadySelected = false;
+        //            for (auto shell : graphShells)
+        //                if (find(shell.begin(), shell.end(), neighbourId) != shell.end())
+        //                {
+        //                    alreadySelected = true;
+        //                    break;
+        //                }
+
+        //            if (!alreadySelected)
+        //                if (find(newShell.begin(), newShell.end(), neighbourId) == newShell.end())
+        //                    newShell.push_back(neighbourId);
+        //        }
+        //    }
+
+        //    if (newShell.empty())
+        //        break;
+        //    else
+        //        graphShells.push_back(newShell);
+        //}
+
+        //// generate graph
+
+        //graph.clear();
+        //shellSizes.clear();
+        //for (auto &shell : graphShells)
+        //{
+        //    graph.insert(graph.end(), shell.begin(), shell.end());
+        //    shellSizes.push_back(shell.size());
+        //}
 
     }
 

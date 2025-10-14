@@ -34,6 +34,8 @@ namespace discamb {
         frozen_lcs = data.value("frozen lcs", false);
         algorithm = data.value("algorithm", "standard");
         def_val_symm = data.value("def-val symmetry", false);
+        if(data.find("macromolecular structural information") != data.end())
+            macromolecularInfo.set(data["macromolecular structural information"]);
 
         //string wfnDataBank = data.value("wavefunction bank", "CR");
         //SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
@@ -189,8 +191,12 @@ namespace discamb {
         if (settings.splitWithInternalAltlocLabels && settings.orderedSubcrystalAtoms.empty())
             disordered_structure_fragments::split_with_labels_internal_altloc(crystal, orderedSubcrystalAtoms);
 
-        if (!orderedSubcrystalAtoms.empty())
+        if (!orderedSubcrystalAtoms.empty() || !settings.macromolecularInfo.altlocs.empty())
         {
+            if (orderedSubcrystalAtoms.empty())
+            {
+
+            }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
             auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(
                 crystal,

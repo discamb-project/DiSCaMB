@@ -46,6 +46,8 @@ namespace discamb {
         /**
         if assignemntInfoFile is empty the assignment info is not printed
         */
+
+
         TaamSfCalculatorMultiOrderedImpl(
             const Crystal &crystal,
             const std::vector < std::vector <std::pair<std::string, double> > >& atomList,

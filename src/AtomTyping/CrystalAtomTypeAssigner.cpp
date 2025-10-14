@@ -55,6 +55,109 @@ namespace discamb {
         return "none";
     }
 
+    //
+    //void CrystalAtomTypeAssigner::assign(
+    //    const Crystal& crystal,
+    //    const PredefinedStructuralDescriptors& predefinedDescriptors,
+    //    std::vector<int>& typeID,
+    //    std::vector<LocalCoordinateSystem<AtomInCrystalID> >& lcs) const
+    //{
+    //    // split
+    //    //vector<vector<int> > altloc_parts;
+    //    //set<char> altloc_charactes;
+    //    //for (char c : predefinedDescriptors.altlocs)
+    //    //    if(c!=' ')
+    //    //        altloc_charactes.insert(c);
+    //    //int idx = 0;
+    //    //map<char, int> altloc2idx;
+    //    //for (char c : altloc_charactes)
+    //    //    altloc2idx[c] = idx++;
+    //    //altloc_parts.resize(std::max<int>(1, altloc_charactes.size()));
+    //    
+    //    //
+    //    UnitCellContent unitCellContent(crystal);
+    //    vector<UnitCellContent::AtomID> asymmetricUnit, graph;
+    //    
+
+
+    //    SpaceGroupOperation spaceGroupOperation;
+    //    int atomIdx, nAtoms = crystal.atoms.size();
+    //    Vector3<CrystallographicRational> translation;
+    //    Matrix3i rotation;
+    //    Vector3i latticeTranslation;
+
+
+
+    //    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+    //    {
+    //        /*
+    //        UnitCellContent atoms fractional coordinates are adjusted to be between 0 and 1,
+    //        the atom pushed back into asymmetricUnit corresponds to original atom from asymmetric unit
+    //        (with no cordinates adjusted)
+    //        */
+    //        spaceGroupOperation = unitCellContent.getGeneratingOperation(atomIdx, 0);
+    //        spaceGroupOperation.getTranslation(translation);
+    //        latticeTranslation.set(-translation[0].numerator(), -translation[1].numerator(), -translation[2].numerator());
+    //        asymmetricUnit.push_back(UnitCellContent::AtomID(atomIdx, latticeTranslation));
+    //    }
+
+
+    //    //structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, 8, mDescriptorsSettings.covalentBondThreshold);
+    //    structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, mTotalRange, mDescriptorsSettings.covalentBondThreshold);
+
+
+
+    //    // graph as list of atoms and generating symmetry operations
+    //    // atom order is preserved
+
+    //    //vector<pair<int, SpaceGroupOperation> > graphAtoms;
+    //    vector<AtomInCrystalID> graphAtoms;
+    //    vector<int> atomicNumbers, atomicNumbersASU;
+    //    vector<Vector3d> positions;
+    //    Vector3d fractional, cartesian;
+    //    int atomIndexInAsymmetricUnit;
+    //    crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersASU);
+
+    //    for (auto& atom : graph)
+    //    {
+    //        // atom symmetry operation
+    //        unitCellContent.getGeneratingOperation(atom.atomIndex, 0).get(rotation, translation);
+    //        translation += atom.unitCellPosition;
+    //        spaceGroupOperation.set(rotation, translation);
+    //        // --
+    //        atomIndexInAsymmetricUnit = unitCellContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex);
+    //        graphAtoms.push_back({ atomIndexInAsymmetricUnit, spaceGroupOperation });
+    //        // generate coordinates
+    //        spaceGroupOperation.apply(crystal.atoms[atomIndexInAsymmetricUnit].coordinates, fractional);
+    //        crystal.unitCell.fractionalToCartesian(fractional, cartesian);
+    //        positions.push_back(cartesian);
+    //        // --
+    //        atomicNumbers.push_back(atomicNumbersASU[atomIndexInAsymmetricUnit]);
+    //    }
+    //    //_DEBUG
+    //    //xyz_io::writeXyz("asignment_struct.xyz", atomicNumbers, positions);
+    //    //END DEBUG
+
+
+    //    vector<LocalCoordinateSystem<int> > lcsMolecule;
+    //    StructureWithDescriptors structureWithDescriptors;
+    //    structureWithDescriptors.settings = mDescriptorsSettings;
+    //    //vector<int> typeId;
+    //    vector<int> atomToAssign(crystal.atoms.size());
+
+    //    for (int i = 0; i < crystal.atoms.size(); i++)
+    //        atomToAssign[i] = i;
+    //    structureWithDescriptors.set(atomicNumbers, positions);
+    //    mAssigner.assign(structureWithDescriptors, atomToAssign, typeID, lcsMolecule);
+    //    // convert lcs molecule to lcs crystal
+    //    int lcsIdx, nLcs = lcsMolecule.size();
+    //    lcs.clear();
+    //    lcs.resize(nLcs);
+    //    for (lcsIdx = 0; lcsIdx < nLcs; lcsIdx++)
+    //        convertUbdbLcs(lcsMolecule[lcsIdx], graphAtoms, lcs[lcsIdx]);
+
+    //}
+
     void CrystalAtomTypeAssigner::assign(
         const Crystal& crystal,
         std::vector<int>& typeID,

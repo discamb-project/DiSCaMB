@@ -11,6 +11,7 @@ add_library(discamb
             $<TARGET_OBJECTS:QuantumChemistry>
             $<TARGET_OBJECTS:Scattering> 
             $<TARGET_OBJECTS:StructuralProperties>
+            $<TARGET_OBJECTS:Test>            
             discamb.cpp)
 
 SET_PROPERTY(TARGET discamb PROPERTY FOLDER "libs")

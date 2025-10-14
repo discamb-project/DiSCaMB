@@ -24,10 +24,16 @@ namespace discamb {
         double maxCnDistanceAromaticRing = 1.44;
     };
 
+
     struct StructureWithDescriptors
     {
 
         void set(const MoleculeData &moleculeData);
+
+        void set(const std::vector<Vector3d>& positions, 
+                 const std::vector< std::vector<int> >& connectivity,
+                 const std::vector< std::vector<int> >& planes);
+
 
         void set(const std::vector<int> &atomicNumbers,
                  const std::vector<Vector3d> &positions,

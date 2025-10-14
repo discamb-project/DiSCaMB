@@ -10,6 +10,7 @@
 #include "discamb/Scattering/AtomTypeHC_Parameters.h"
 #include "discamb/Scattering/CombinedStructureFactorCalculator.h"
 #include "discamb/Scattering/disordered_structure_fragments.h"
+#include "discamb/StructuralProperties/MacromolecularStructuralInformation.h"
 
 #include <memory>
 
@@ -19,6 +20,7 @@ namespace discamb {
     * \addtogroup Scattering Scattering
     * @{
     */
+
 
     struct TaamSfCalculatorSettings {
         void set(const Crystal &crystal, const nlohmann::json& data, const std::string& bankText=std::string());
@@ -46,6 +48,7 @@ namespace discamb {
         std::string algorithm = "standard";
         std::vector < std::vector <std::pair<std::string, double> > > orderedSubcrystalAtoms;
         std::vector<disordered_structure_fragments::Fragment> taamFragments;
+        MacromolecularStructuralInformation macromolecularInfo;
     };
 
 

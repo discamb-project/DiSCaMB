@@ -3,6 +3,7 @@
 
 #include "discamb/BasicUtilities/Tribool.h"
 #include "discamb/CrystalStructure/Crystal.h"
+#include "discamb/CrystalStructure/AtomInCrystalID.h"
 #include "discamb/CrystalStructure/UnitCellContent.h"
 #include "discamb/CrystalStructure/CrystalVarianceCovarianceMatrix.h"
 
@@ -110,12 +111,29 @@ namespace discamb {
             std::vector<std::vector<UnitCellContent::AtomID> > &connectivity,
             double treshold,
             const std::string &method = "boxes");
-        
+
+        void calcUnitCellConnectivity(
+            const UnitCellContent& uc,
+            const std::vector<std::vector<AtomInCrystalID> >& asymmetricUnitConnectivity,
+            std::vector<std::vector<UnitCellContent::AtomID> >& connectivity);
+
+
         void graphToNthNeighbour(const UnitCellContent &unitCellContent, const std::vector<UnitCellContent::AtomID> &startingSet,
             std::vector<UnitCellContent::AtomID> &graph, int n, double threshold);
 
         void graphToNthNeighbour(const UnitCellContent &unitCellContent, const std::vector<UnitCellContent::AtomID> &startingSet,
             std::vector<UnitCellContent::AtomID> &graph, int n, double threshold, std::vector<int> &shellSizes);
+
+        void graphToNthNeighbour(const UnitCellContent& unitCellContent, const std::vector<UnitCellContent::AtomID>& startingSet,
+            std::vector<std::vector<AtomInCrystalID> > &asymmetric_unit_connectivity,
+            std::vector<UnitCellContent::AtomID>& graph, int n, std::vector<int>& shellSizes);
+
+        void graphToNthNeighbour(
+            const std::vector<std::vector<UnitCellContent::AtomID> > &unitCellConnectivity, 
+            const std::vector<UnitCellContent::AtomID>& startingSet,
+            std::vector<UnitCellContent::AtomID>& graph, 
+            int n,
+            std::vector<int>& shellSizes);
 
 
         void calculateConnectivity(

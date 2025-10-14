@@ -41,6 +41,11 @@ namespace disordered_structure_fragments{
         const Crystal& crystal,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
 
+    void split_with_altlocs(
+        const Crystal& crystal,
+        const std::vector<char>& altlocs,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
 
     void split_with_labels_new_impl(
         const Crystal& crystal,

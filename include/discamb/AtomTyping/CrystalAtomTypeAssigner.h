@@ -3,6 +3,7 @@
 #include "MolecularAtomTypeAssigner.h"
 #include "AtomType.h"
 #include "StructureWithDescriptors.h"
+//#include "discamb/CrystalStructure/PredefinedStructuralDescriptors.h"
 #include "discamb/MathUtilities/Vector3.h"
 #include "discamb/Scattering/AtomRepresentativeInfo.h"
 
@@ -25,6 +26,12 @@ namespace discamb {
         void setDescriptorsSettings(const DescriptorsSettings &settings);
 
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
+        
+        //void assign(
+        //    const Crystal& crystal, 
+        //    const PredefinedStructuralDescriptors &predefinedDescriptors,
+        //    std::vector<int>& typeID, 
+        //    std::vector<LocalCoordinateSystem<AtomInCrystalID> >& lcs) const;
         
         void assign(
             const Crystal& crystal, 

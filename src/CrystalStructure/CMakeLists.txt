@@ -8,6 +8,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/crystallographic_point_group_tables.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/CrystalVarianceCovarianceMatrix.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/LocalCoordinateSystemInCrystal.h"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/PredefinedStructuralDescriptors.h" 
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/SpaceGroup.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/SpaceGroupOperation.h"

@@ -39,6 +39,7 @@
 #include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
+#include "discamb/Test/test_crystal_structures.h"
 #include <fstream>
 
 using namespace std;
@@ -3133,11 +3134,166 @@ void u_aniso_along_line()
     }
 }
 
+struct AtomInfo
+{
+    char altloc = ' ';
+    vector<int> bonded_atoms;
+    vector<char> altlocs;
+    vector<int> plane;
+    vector<int> syms;
+};
+
+void atom_typing_next_gen()
+{
+    Crystal crystal;
+    structure_io::read_structure("model.res", crystal);
+    ifstream in("out.log");
+    string line;
+    
+    //for(int i=65;i<=90;i++)
+    nlohmann::json structal_information = nlohmann::json::array();
+    std::vector<AtomInfo> atoms_info;
+
+    while(getline(in, line))
+    {
+        vector<string> words, words2, vec_components_str;
+        string_utilities::split(line, words, '"');
+        if (words.size() == 3)
+        {
+            nlohmann::json atom_structal_information;
+            AtomInfo atom_info;
+
+            atom_info.altloc = words[1][16];
+            atom_structal_information["altloc"] = string(1, atom_info.altloc);
+            string_utilities::split(words[2], words2, ':');
+            //bonds: [22] altlocs: ['B'] plane: None syms: None
+            //bonds: [34] altlocs: [''] plane: [33, 35, 34, 49] syms: None
+            // 0           1            2          3         4
+            //bonds : [22] altlocs: ['B'] plane: None syms: None
+            if (words2.size() == 5)
+            {
+                string s;
+                int start;
+                int end;
+                //bonds: [34] altlocs: [''] plane: [33, 35, 34, 49] syms: None
+                if (words2[1].find("None") == string::npos)
+                {
+                    start = words2[1].find('[') + 1;
+                    end = words2[1].find(']');
+                    s = words2[1].substr(start, end - start);
+                    string_utilities::split(s, vec_components_str, ',');
+                    for(auto &component: vec_components_str)
+                        atom_info.bonded_atoms.push_back(stoi(component));
+                    atom_structal_information["bonds"] = atom_info.bonded_atoms;
+                }
+                if (words2[3].find("None") == string::npos)
+                {
+                    start = words2[3].find('[') + 1;
+                    end = words2[3].find(']');
+                    s = words2[3].substr(start, end - start);
+                    string_utilities::split(s, vec_components_str, ',');
+                    for (auto& component : vec_components_str)
+                        atom_info.plane.push_back(stoi(component));
+                    atom_structal_information["plane"] = atom_info.plane;
+                }
+                structal_information.push_back(atom_structal_information);
+            }
+        }
+    }
+    in.close();
+    nlohmann::json data;
+    data["atom data"] = structal_information;
+    std::ofstream o("structal_information.json");
+    //o << std::setw(4) << data << std::endl;
+
+    nlohmann::json taam_conf = nlohmann::json::parse(R"(
+  {
+    "model": "taam",
+    "bank path":"MATTS2021databank.txt",
+    "algorithm": "macromol",
+    "frozen lcs": true
+  }
+)");
+    taam_conf["macromolecular structural information"]["atom data"] = structal_information;
+    //cout << "*************\n";
+    //cout << std::setw(4) << taam_conf << std::endl;
+    o << std::setw(4) << taam_conf << std::endl;
+}
+
+void test_connectivity_algorithm()
+{
+    Crystal crystal;
+    test_crystal_structures::get_test_crystal_structure("urea", crystal);
+    UnitCellContent unitCellContent(crystal);
+    std::vector<std::vector<UnitCellContent::AtomID> > uc_connectivity;
+    
+    structural_properties::calcUnitCellConnectivity(unitCellContent, uc_connectivity, 0.4);
+    std::vector<std::vector<AtomInCrystalID> > asymmetric_unit_connectivity;
+    std::vector<UnitCellContent::AtomID> graph_calculated_bonds, graph_predefined_bonds;
+    vector<int> shellSizes_calculated_bonds, shellSizes_predefined_bonds;
+    vector<vector<pair<int, string> > > asymm_unit_connectivity_pairs;
+    vector<UnitCellContent::AtomID> startingSet;
+    structural_properties::asymmetricUnitConnectivity(crystal, asymm_unit_connectivity_pairs, 0.4);
+    
+    int nAtomsAsymmUnit = crystal.atoms.size();
+    asymmetric_unit_connectivity.resize(nAtomsAsymmUnit);
+    for(int atomIdx=0; atomIdx<nAtomsAsymmUnit; atomIdx++)
+    {
+        UnitCellContent::AtomID id;
+        unitCellContent.findAtom(crystal.atoms[atomIdx].label, string("X,Y,Z"), id);
+        
+        startingSet.push_back(id);
+        for(auto &p: asymm_unit_connectivity_pairs[atomIdx])
+        {
+            UnitCellContent::AtomID bonded_atom;
+            unitCellContent.findAtom(crystal.atoms[p.first].label, p.second, bonded_atom);
+            AtomInCrystalID id;
+            string label, symmOp;
+            unitCellContent.interpreteAtomID(bonded_atom, label, symmOp);
+            id.set(label, crystal, SpaceGroupOperation(symmOp));
+            asymmetric_unit_connectivity[atomIdx].push_back(id);
+        }
+    }
+
+    structural_properties::graphToNthNeighbour(
+        unitCellContent,
+        startingSet,
+        asymmetric_unit_connectivity,
+        graph_predefined_bonds,
+        8,
+        shellSizes_predefined_bonds);
+
+    structural_properties::graphToNthNeighbour(
+        unitCellContent,
+        startingSet,
+        graph_calculated_bonds,
+        8,
+        0.4,
+        shellSizes_calculated_bonds);
+    cout << boolalpha << (shellSizes_calculated_bonds == shellSizes_predefined_bonds) << endl;
+}
 
 int main(int argc, char* argv[])
 {
 
     try {
+        atom_typing_next_gen();
+        return 0;
+
+        test_connectivity_algorithm();
+        return 0;
+
+        optional<vector<char> > word;
+        vector<char> v;
+        word = vector<char>();
+        word->push_back('a');
+        word->push_back('b');
+        word->push_back('c');
+        v = word.value();
+        for (char c : v)
+            cout << c;
+        return 0;
+
         u_aniso_along_line();
         //u_iso_along_line();
         return 0;

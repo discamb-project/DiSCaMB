@@ -32,6 +32,7 @@ void StructureWithDescriptors::set(
     set(m.atomicNumbers, m.atomPositions, m.atomLabels);
 }
 
+
 void StructureWithDescriptors::set(
     const std::vector<int> &atomicNumbers, 
     const std::vector<Vector3d> &positions,

@@ -194,6 +194,24 @@ namespace discamb {
             Crystal &crystal,
             std::map<std::string, std::string>& data)
         {
+            ifstream in(fName);
+            read(in, crystal, data);
+            in.close();
+        } 
+
+        void read(
+            std::istream& input,
+            Crystal& crystal)
+        {
+            map<string, string> data;
+            read(input, crystal, data);
+        }
+
+        void read(
+            std::istream& input,
+            Crystal& crystal,
+            std::map<std::string, std::string>& data)
+        {
             // list of SHELXL instructions from  http://shelx.uni-goettingen.de/shelxl_html.php
             vector<string> instructions = { "ABIN","ACTA","AFIX","ANIS","ANSC","ANSR","BASF","BIND",
                 "BLOC","BOND","BUMP","CELL","CGLS","CHIV","CONF","CONN","DAMP","DANG","DEFS","DELU",
@@ -211,31 +229,29 @@ namespace discamb {
             vector<vector<SpaceGroupOperation> > atomPointGroups;
             vector<string> sfac;
             vector<double> adp, adp_prec;
-            bool lastKeywordIsTitle=false;
+            bool lastKeywordIsTitle = false;
             int lattice = 1;
             bool continuationLine, lineShouldBeContinued, readParameters, readFvars, cellFound = false;
             // -- read file lines
             string line, error_message;
-            ifstream in(fName);
 
-            while (in.good())
+            while (input.good())
             {
-                getline(in, line);
+                getline(input, line);
                 lines.push_back(line);
             }
-            in.close();
             // --
 
             lineShouldBeContinued = false;
             readParameters = false;
             readFvars = false;
-            for (auto &line : lines)
+            for (auto& line : lines)
             {
                 continuationLine = lineShouldBeContinued;
                 lineShouldBeContinued = false;
-                
+
                 // All characters following '!' or '=' in an instruction line are ignored.
-                
+
                 if (line.find('!') != string::npos)
                     line = line.substr(0, line.find('!'));
 
@@ -245,9 +261,9 @@ namespace discamb {
                         line = line.substr(0, line.find('='));
                         lineShouldBeContinued = true;
                     }
-                
+
                 //
-                
+
                 if (line.empty())
                     continue;
 
@@ -257,9 +273,9 @@ namespace discamb {
                 {
                     if (line[0] != ' ')
                     {
-                        if(lastKeywordIsTitle)
+                        if (lastKeywordIsTitle)
                             continue;
-                        error_message = string("invalid line in shelix file '") + fName + string("', it should start with space character, the line is : '") +
+                        error_message = string("invalid line in shelix file/input, it should start with space character, the line is : '") +
                             line + string("'");
                         on_error::throwException(error_message, __FILE__, __LINE__);
                     }
@@ -272,13 +288,13 @@ namespace discamb {
                     if (lastKeywordIsTitle)
                         continue;
 
-                    error_message = string("invalid line in shelix file '") + fName + string("', it should start with space character, the line is : '") +
+                    error_message = string("invalid line in shelix file/input, it should start with space character, the line is : '") +
                         line + string("'");
                     on_error::throwException(error_message, __FILE__, __LINE__);
                 }
 
                 // ------------------------
-                
+
                 if (words.empty())
                     continue;
 
@@ -322,7 +338,7 @@ namespace discamb {
                                 crystal.unitCell.set(stod(words[2]), stod(words[3]), stod(words[4]), stod(words[5]), stod(words[6]), stod(words[7]));
 
                         }
-                        if(keyword == string("LATT"))
+                        if (keyword == string("LATT"))
                         {
                             if (words.size() != 2)
                                 error_message = string("invalid shelix instruction file line: '") + line + string("'");
@@ -340,7 +356,7 @@ namespace discamb {
                         {
                             bool element_list = true;
                             // check if it is 'SFAC E a1 b1 a2 b2 a3 b3 a4 b4 c f' f" mu r wt'
-                            if(words.size()>2)
+                            if (words.size() > 2)
                                 if (words[2][0] == '-' || isdigit(words[2][0]) || words[2][0] == '.')
                                 {
                                     element_list = false;
@@ -350,9 +366,9 @@ namespace discamb {
                                 sfac.insert(sfac.end(), words.begin() + 1, words.end());
                         }
 
-                        if(!error_message.empty())
+                        if (!error_message.empty())
                             on_error::throwException(error_message, __FILE__, __LINE__);
-                        
+
                     }
                     else // atom parameters line
                     {
@@ -373,17 +389,17 @@ namespace discamb {
 
             // process space group 
             //A, B, C, I, F, R, H.
-            map<int, char> centering { {1,'P'}, {2,'I'}, {3,'R'},{4,'F'}, {5,'A'}, {6,'B'}, {7,'C'} };
+            map<int, char> centering{ {1,'P'}, {2,'I'}, {3,'R'},{4,'F'}, {5,'A'}, {6,'B'}, {7,'C'} };
 
             if (centering.find(abs(lattice)) == centering.end())
                 on_error::throwException("invalid lattice specification in shelx file", __FILE__, __LINE__);
 
             vector<SpaceGroupOperation> spaceGroupOperations;
-            for (auto const &symmOpAsString : symmetryLines)
+            for (auto const& symmOpAsString : symmetryLines)
                 spaceGroupOperations.push_back(SpaceGroupOperation(symmOpAsString));
 
             crystal.spaceGroup.set(spaceGroupOperations, centering[abs(lattice)], true, (lattice >= 0), Vector3<CrystallographicRational>());
-            
+
             // process atoms
             AtomInCrystal atom;
             vector<double> atomicParameters, precision;
@@ -395,12 +411,12 @@ namespace discamb {
                 std::transform(fVarsLine.begin() + 1, fVarsLine.end(), fvarsValues.begin(), [](const string& s) {return stod(s); });
             }
             //atomParameterLines
-            for (auto const &parametersLine : atomParameterLines)
+            for (auto const& parametersLine : atomParameterLines)
             {
-                  if (parametersLine.size() < 6)
+                if (parametersLine.size() < 6)
                 {
                     error_message = "invalid atomic data specification in shelx file '";
-                    for (auto &word : parametersLine)
+                    for (auto& word : parametersLine)
                         error_message += word + " ";
                     error_message += "'";
                     on_error::throwException(error_message, __FILE__, __LINE__);
@@ -451,7 +467,8 @@ namespace discamb {
 
             }
 
+        }
 
-        } // void read(..)
+
     } //namespace shelx_io
 } // namespace discamb
