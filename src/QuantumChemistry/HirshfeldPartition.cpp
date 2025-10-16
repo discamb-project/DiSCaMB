@@ -74,7 +74,8 @@ namespace discamb {
         
         if(data.find("power")!=data.end())
             setPower(data.find("power")->get<double>());
-
+        if(mIncludeRange>0.0)
+            setIncludeRange(mIncludeRange);
     }
 
     void HirshfeldPartition::applySettings(
@@ -89,6 +90,8 @@ namespace discamb {
         
 
         int i, j, nAtoms = mAtomPositions.size();
+        if(nAtoms==0)
+            return;
         mIncludeAtoms.clear();
         mIncludeAtoms.resize(nAtoms);
 

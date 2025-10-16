@@ -44,6 +44,7 @@ public:
     void start();
     /**\brief Stops time measurement and returns time in ms.*/
     double stop();
+    double elapsedTime() const;
     /** \brief Returns type of the clock.
         Result is one of the following: std::chrono:: 'steady_clock', 'POSIX <sys/time.h> gettimeofday',
         'Windows QueryPerformanceFrequency', 'C time_t time(time_t *)'

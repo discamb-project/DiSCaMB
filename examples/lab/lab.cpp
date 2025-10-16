@@ -3273,10 +3273,36 @@ void test_connectivity_algorithm()
     cout << boolalpha << (shellSizes_calculated_bonds == shellSizes_predefined_bonds) << endl;
 }
 
+void json2mol(const std::string& file_name)
+{
+    std::ifstream inp_file(file_name);
+    nlohmann::json data = nlohmann::json::parse(inp_file);
+    inp_file.close();
+    vector<int> z;
+    if (data.contains("Z"))
+        for (auto& element : data["Z"])
+            z.push_back(element.get<int>());
+    vector<Vector3d> positions;
+    if (data.contains("positions"))
+        for (auto& element : data["positions"])
+        {
+            vector<double> pos = element.get<vector<double> >();
+            positions.push_back(Vector3d(pos[0], pos[1], pos[2]));
+        }
+    xyz_io::writeXyz("out.xyz", z, positions);
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
+
+        if (argc != 2)
+            on_error::throwException("expected json structure file \n", __FILE__, __LINE__);
+
+        json2mol(argv[1]);
+        return 0;
+
         atom_typing_next_gen();
         return 0;
 

@@ -24,6 +24,13 @@ double WallClockTimer::stop()
     return double(chrono::duration_cast<chrono::milliseconds>(mStop-mStart).count());
 }
 
+double WallClockTimer::elapsedTime()
+const
+{
+    auto time_now = chrono::steady_clock::now();
+    return double(chrono::duration_cast<chrono::milliseconds>(time_now - mStart).count());
+}
+
 std::string WallClockTimer::type()
 const
 {
