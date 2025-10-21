@@ -53,10 +53,11 @@ namespace discamb {
         const string& iamTable,
         bool iamElectronScattering,
         bool frozen_lcs,
-        const std::string& algorithm)
+        const std::string& algorithm,
+        const std::optional<MacromolecularStructuralInformation>& macromolInfo)
     {
         set(crystal, atomList, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, macromolInfo);
 
     }
 
@@ -74,6 +75,16 @@ namespace discamb {
         const Crystal& crystal,
         const std::vector < std::vector <std::pair<std::string, double> > >& atomList)
     {
+        //if(_atomList.empty() && macromolInfo == std::nullopt)
+          //  on_error::throwException("no subcrystals defined for Taam Multi-Order structure factor calculator ", __FILE__, __LINE__);
+
+        //std::vector < std::vector <std::pair<std::string, double> > > atomList = _atomList;
+
+        //if (atomList.empty())
+        //{
+
+        //}
+
         map<string, int> label2idx;
         int atomIdx, nAtoms = crystal.atoms.size();
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
@@ -319,8 +330,8 @@ namespace discamb {
         const string& iamTable,
         bool iamElectronScattering,
         bool frozen_lcs,
-        const std::string &algorithm
-        /*bool generateAssignmentInfo*/ )
+        const std::string &algorithm,
+        const std::optional<MacromolecularStructuralInformation>& macromolInfo)
     {
         //_DEBUG
 

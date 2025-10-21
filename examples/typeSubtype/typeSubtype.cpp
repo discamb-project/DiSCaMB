@@ -69,29 +69,58 @@ void type_subtype(const string& bankFile)
                 out << "   " << types[idx].id << "\n";
         }
     }
-
-
-
-    //for (int i = 0; i < nTypes; i++)
-    //{
-    //    vector<string> generalizedTypes;
-    //    for (int j = 0; j < nTypes; j++)
-    //        if (i != j)
-    //            if (typeMatchAlgorithms[i].generalize(typeMatchAlgorithms[j]))
-    //            {
-    //                generalizedTypes.push_back(types[j].id);
-    //                generalizedTypeIdx[i].push_back(j);
-    //            }
-    //    if (generalizedTypes.empty())
-    //        out << "type " << types[i].id << " does not generalize any other type\n";
-    //    else
-    //    {
-    //        out << "type " << types[i].id << " generalize types:\n";
-    //        for (string& generalizedType : generalizedTypes)
-    //            out << "   " << generalizedType << "\n";
-    //    }
-    //}
     out.close();
+    // type_hierarchy[level] - the higher level the more general types are
+    vector<vector<int> > type_hierarchy;
+    vector<bool> type_at_lower_level(nTypes, false);
+    int nTypesInHierarchy = 0;
+    bool all_levels_found = false;
+    bool errors_in_hierarchy = false;
+    while (!all_levels_found)
+    {
+        vector<int> level;
+        for (int i = 0; i < nTypes; i++)
+            if (!type_at_lower_level[i])
+            {
+                if (generalizedTypeIdx[i].empty())
+                {
+                    level.push_back(i);
+                    type_at_lower_level[i] = true;
+                }
+                else
+                {
+                    bool all_generalized_types_at_lower_level = true;
+                    for (int generalized_type_idx : generalizedTypeIdx[i])
+                        if (!type_at_lower_level[generalized_type_idx])
+                            all_generalized_types_at_lower_level = false;
+                    if (all_generalized_types_at_lower_level)
+                    {
+                        level.push_back(i);
+                        type_at_lower_level[i] = true;
+                    }
+                }
+            }
+        if(!level.empty())
+            type_hierarchy.push_back(level);
+        else{
+            all_levels_found = true;
+            if (nTypesInHierarchy == nTypes)
+                errors_in_hierarchy = true;
+        }
+    }
+    out.open("type_hierarchy.log");
+    if (errors_in_hierarchy)
+        out << "errors found in type hierarchy\n\n";
+    out << "type hierarchy (the higher level the more general types are):\n";
+    for (int l = 0; l < type_hierarchy.size(); l++)
+    {
+        out << "level " << l << ":\n";
+        for (int type_idx : type_hierarchy[l])
+            out << "   " << types[type_idx].id << "\n";
+    }
+    out.close();
+    //out.open("type_generalization_with_defs.log");
+    //out << "only types generaation with definitions:\n\n";
 }
 
 

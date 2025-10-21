@@ -2,8 +2,11 @@
 
 #include "discamb/Scattering/SfCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
+#include "discamb/StructuralProperties/MacromolecularStructuralInformation.h"
+
 
 #include <memory>
+#include <optional>
 
 namespace discamb {
 
@@ -66,7 +69,8 @@ namespace discamb {
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
-            const std::string &algorithm = "standard");
+            const std::string &algorithm = "standard",
+            const std::optional<MacromolecularStructuralInformation> &macromolInfo = std::nullopt);
         
         TaamSfCalculatorMultiOrderedImpl(const Crystal &crystal, const nlohmann::json &data);
         TaamSfCalculatorMultiOrderedImpl(const Crystal& crystal, const std::string &jsonFile);
@@ -104,8 +108,8 @@ namespace discamb {
             const std::string& iamTable = std::string(),
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
-            const std::string& algorithm = "standard"/*,
-            bool generateAssignmentInfo = false*/);
+            const std::string& algorithm = "standard",
+            const std::optional<MacromolecularStructuralInformation>& macromolInfo = std::nullopt);
         
 
         virtual ~TaamSfCalculatorMultiOrderedImpl();

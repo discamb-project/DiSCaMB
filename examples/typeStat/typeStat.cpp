@@ -1456,6 +1456,49 @@ void getFiles(
 
 }
 
+void printTypeInfo(
+    const string& fileName,
+    const vector<vector<int> >& typeIndices,
+    const vector<AtomType>& types)
+{
+    ofstream out(fileName);
+    if (!out.good())
+        on_error::throwException(string("cannot write to log file '") + fileName + string("'"), __FILE__, __LINE__);
+    size_t nTypes = types.size();
+    size_t nStructures = typeIndices.size();
+    vector<size_t> typeCounts(nTypes, 0);
+
+    for (size_t structureIdx = 0; structureIdx < nStructures; structureIdx++)
+    {
+        size_t nAtoms = typeIndices[structureIdx].size();
+        for (size_t atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            int typeIdx = typeIndices[structureIdx][atomIdx];
+            if (typeIdx >= 0)
+                typeCounts[typeIdx]++;
+        }
+    }
+    vector<pair<int, string> > countsAndTypeId;
+    int typeIdMaxLength = 0;
+    for (int i = 0; i < nTypes; i++)
+    {
+        countsAndTypeId.push_back({ (int)typeCounts[i], types[i].id });
+        if(typeIdMaxLength< types[i].id.size())
+            typeIdMaxLength = types[i].id.size();
+    }
+    sort(countsAndTypeId.begin(), countsAndTypeId.end(), greater< pair<int, string> >());
+
+    out << "Type ID               Number of assigned atoms\n";
+    out << "----------------------------------------------\n";
+    for (size_t typeIdx = 0; typeIdx < nTypes; typeIdx++)
+    {
+        out << setw(typeIdMaxLength + 2) << countsAndTypeId[typeIdx].second << " " << setw(10) << countsAndTypeId[typeIdx].first << "\n";
+        //out << setw(20) << types[typeIdx].id << " " << setw(10) << typeCounts[typeIdx] << "\n";
+    }
+    out.close();
+
+}
+
 int main(int argc, char *argv[])
 {
     //MATTS_BankReader bankReader;
@@ -1500,14 +1543,14 @@ int main(int argc, char *argv[])
         if (arguments.size() == 0)
         {
             string error_message = 
-                "missing arguments, expected name of databank file and optionally " 
-                "file format and name of folder with structure files, "
-                "file formats can be cif, shelx, xd, mol2 or xyz - shelx is default"
-                "possible options:"
-                "-no_ai - assignment_info.txt is not written"
-                "-no_tidi - type_instances_detailed_info.txt is not written"
-                "-no_tii - type_instances_info.txt is not written"
-                "-no_bulky - the three file mentioned above are not written";
+                "missing arguments, expected name of databank file and optionally\n" 
+                "file format and name of folder with structure files, \n"
+                "file formats can be cif, shelx, xd, mol2 or xyz - shelx is default\n"
+                "possible options:\n"
+                "-no_ai - assignment_info.txt is not written\n"
+                "-no_tidi - type_instances_detailed_info.txt is not written\n"
+                "-no_tii - type_instances_info.txt is not written\n"
+                "-no_bulky - the three file mentioned above are not written\n";
             on_error::throwException(error_message, __FILE__, __LINE__);
         }
         else {
@@ -1634,7 +1677,7 @@ int main(int argc, char *argv[])
         printUnassignedAtomsInfoSortedByNStructuresAndFormula("unassigned_atoms_sorted_by_n_str_and_formula.txt", header, sortedUnassignedAtoms);
         printUnassignedFormulaStats("unassigned_formula_stats.txt", header, sortedUnassignedAtoms);
         printStructureAssignedAndNot("structures_complete_assignemnet.txt", structureIds, typeIndices, structureDescriptors);
-
+        printTypeInfo("types_stats.txt", typeIndices, types);
         printMoveAssigned("move_assigned.bat", filePaths, typeIndices);
 
         cout << "\r";
