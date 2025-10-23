@@ -1024,8 +1024,12 @@ namespace discamb {
         void readAtomTypesJson(
             const std::string& jsonFileName,
             std::vector<AtomType>& atomTypes,
+            std::vector<nlohmann::json>& typeData,
             DescriptorsSettings& descriptorsSettings)
         {
+            atomTypes.clear();
+            typeData.clear();
+
             // read json file
 
             ifstream in(jsonFileName);
@@ -1046,20 +1050,68 @@ namespace discamb {
             if (data.find("default atomic properties") != data.end())
                 json2atomDescriptors(data.find("default atomic properties").value(), defaultAtomDescriptors);
 
+            
             if (data.find("types") != data.end())
             {
                 auto types = data.find("types");
                 for (auto type : types->items())
-                    if(type.key() != string("comment"))
+                    if (type.key() != string("comment"))
                     {
                         AtomType atomType;
                         json2atomType(type.value(), element_groups, type.key(), atomType, defaultAtomDescriptors);
                         //atomType.id = type.key();
+                        //atomTypesAndData.push_back({ atomType, type.value()});
                         atomTypes.push_back(atomType);
+                        typeData.push_back(type.value());
                     }
             }
-
             checkForRepeatingTypeIds(atomTypes);
+
+        }
+
+        void readAtomTypesJson(
+            const std::string& jsonFileName,
+            std::vector<AtomType>& atomTypes,
+            DescriptorsSettings& descriptorsSettings)
+        {
+            vector<nlohmann::json> typesData;
+            readAtomTypesJson(jsonFileName, atomTypes, typesData, descriptorsSettings);
+
+
+            //// read json file
+
+            //ifstream in(jsonFileName);
+
+            //if (!in.good())
+            //    on_error::throwException(string("cannot read file '") + jsonFileName + string("'"), __FILE__, __LINE__);
+
+            //json data = json::parse(in);
+            //in.close();
+
+            //// set element groups
+
+            //map<string, set<int> > element_groups;
+            //if (data.find("element groups") != data.end())
+            //    json2elementGroups(data["element groups"], element_groups);
+            //// 
+            //AtomDescriptors defaultAtomDescriptors;
+            //if (data.find("default atomic properties") != data.end())
+            //    json2atomDescriptors(data.find("default atomic properties").value(), defaultAtomDescriptors);
+
+            //if (data.find("types") != data.end())
+            //{
+            //    auto types = data.find("types");
+            //    for (auto type : types->items())
+            //        if(type.key() != string("comment"))
+            //        {
+            //            AtomType atomType;
+            //            json2atomType(type.value(), element_groups, type.key(), atomType, defaultAtomDescriptors);
+            //            //atomType.id = type.key();
+            //            atomTypes.push_back(atomType);
+            //        }
+            //}
+
+            //checkForRepeatingTypeIds(atomTypes);
         }
 
         void writeAtomTypesTxt(

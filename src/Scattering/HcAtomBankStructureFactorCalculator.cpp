@@ -409,7 +409,16 @@ namespace discamb {
                 multipoleModelPalameters, true, nonMultipolarAtoms);
 
         if (!multipolarCif.empty())
-            cif_io::saveCif(multipolarCif, crystal, multipoleModelPalameters, lcs);
+        {
+            bool hc_types_only = true;
+            for (auto& coordinate_system : lcs)
+                if (coordinate_system.direction1_type == LcsDirectionType::NOT_SET)
+                    hc_types_only = false;
+            if(hc_types_only)
+                cif_io::saveCif(multipolarCif, crystal, multipoleModelPalameters, lcs);
+            else
+                clog << "Warning: Multipolar CIF file not written because not all atoms have Hansen-Coppens multipole representation.\n";
+        }
 
 
         //ubdb_utilities::ubdb_type_assignment_to_HC_parameters(

@@ -722,6 +722,8 @@ namespace discamb {
         {
             bool hasMultipoleModel = !parameters.atom_to_type_map.empty();
             
+            //for(parameters.atom_to_type_map
+
             Crystal crystal = _crystal;
             DataSet multipoleData;
             std::vector<Vector3d> dummyAtomFractionalPosition;

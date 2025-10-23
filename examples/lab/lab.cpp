@@ -3292,10 +3292,39 @@ void json2mol(const std::string& file_name)
     xyz_io::writeXyz("out.xyz", z, positions);
 }
 
+void test_taam_typing(const std::string& structure_file)
+{
+    Crystal crystal;
+    structure_io::read_structure(structure_file, crystal);
+    nlohmann::json taam_conf = nlohmann::json::parse(R"(
+  {
+    "model": "taam",
+    "bank path":"MATTS2021databank.txt",
+    "algorithm": "macromol",
+    "frozen lcs": true
+  }
+)");
+    vector<Vector3i> hkls{ {1,0,0},{2,3,4} };
+    auto sf_calculator = SfCalculator::create_shared_ptr(crystal, taam_conf);
+    vector < vector < complex<double> > > f_atom; 
+    sf_calculator->calculateFormFactors(hkls, f_atom, vector<bool>(crystal.atoms.size(), true));
+    cout << "Form factors per atom:\n";
+    for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+    {
+        cout << crystal.atoms[atomIdx].label << ":\n";
+        for (int hklIdx = 0; hklIdx < hkls.size(); hklIdx++)
+            cout << "  " << hkls[hklIdx] << "  " << f_atom[hklIdx][atomIdx] << "\n";
+    }
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
+        if (argc != 2)
+            on_error::throwException("expected structure file \n", __FILE__, __LINE__);
+        test_taam_typing(argv[1]);
+        return 0;
 
         if (argc != 2)
             on_error::throwException("expected json structure file \n", __FILE__, __LINE__);

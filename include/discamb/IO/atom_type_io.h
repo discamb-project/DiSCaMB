@@ -13,6 +13,7 @@ namespace discamb {
         void readAtomTypes(const std::string& fileName, std::vector<AtomType>& atomTypes, DescriptorsSettings& descriptorsSettings);
 
         void readAtomTypesJson(const std::string& jsonFileName, std::vector<AtomType> &atomTypes, DescriptorsSettings &descriptorsSettings);
+        void readAtomTypesJson(const std::string& jsonFileName, std::vector<AtomType> &atomType, std::vector<nlohmann::json> &typeData, DescriptorsSettings& descriptorsSettings);
         
         void json2atomType(
             const nlohmann::json &data, 

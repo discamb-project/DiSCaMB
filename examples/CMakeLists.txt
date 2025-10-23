@@ -11,5 +11,10 @@ ADD_SUBDIRECTORY(discamb_ff)
 ADD_SUBDIRECTORY(taam_symmetry)
 ADD_SUBDIRECTORY(typeStat)
 ADD_SUBDIRECTORY(typeSubtype)
-#ADD_SUBDIRECTORY(test)
+
+
+
+
+
+
 

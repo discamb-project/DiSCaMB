@@ -18,9 +18,10 @@ using namespace std;
 void type_subtype(const string& bankFile)
 {
     vector<AtomType> types;
+    vector<nlohmann::json> typeData;
     DescriptorsSettings descriptorsSettings;
 
-    atom_type_io::readAtomTypes(bankFile, types, descriptorsSettings);
+    atom_type_io::readAtomTypesJson(bankFile, types, typeData, descriptorsSettings);
 
     int nTypes = types.size();
     vector<TypeMatchAlgorithm> typeMatchAlgorithms(nTypes);
@@ -119,8 +120,61 @@ void type_subtype(const string& bankFile)
             out << "   " << types[type_idx].id << "\n";
     }
     out.close();
+
+    out.open("type_hierarchy_with_defs.log");
+    if (errors_in_hierarchy)
+        out << "errors found in type hierarchy\n\n";
+    out << "type hierarchy (the higher level the more general types are):\n";
+    for (int l = 0; l < type_hierarchy.size(); l++)
+    {
+        out << "#################################################################\n\n";
+        out << "level " << l << ":\n\n";
+        out << "#################################################################\n\n";
+
+        for (int type_idx : type_hierarchy[l])
+        {
+            out << "   type " << types[type_idx].id << "\n";
+
+            out << typeData[type_idx].dump(4) << "\n\n";
+            if (l > 0)
+            {
+                out << "GENERALIZE TYPES:\n\n";
+                for (int generalized_type_idx : generalizedTypeIdx[type_idx])
+                {
+                    if (find(type_hierarchy[l - 1].begin(), type_hierarchy[l - 1].end(), generalized_type_idx)!= type_hierarchy[l - 1].end())
+                    {
+                        out << "      type " << types[generalized_type_idx].id << "\n";
+                        out << typeData[generalized_type_idx].dump(4) << "\n\n";
+                    }
+                }
+            }
+            out << "\n-------------------------------------------------\n\n";
+        }
+    }
+    out.close();
+
+
     //out.open("type_generalization_with_defs.log");
     //out << "only types generaation with definitions:\n\n";
+    out.open("types_and_named_rings");
+    map<int, vector<int> > named_ring_count_to_type_idx;
+    for (int i = 0; i < nTypes; i++)
+        named_ring_count_to_type_idx[types[i].ringLabels.size()].push_back(i);
+    
+    for (auto& type_set : named_ring_count_to_type_idx)
+    {
+        out << "types with " << type_set.first << " named rings:\n";
+        for (int type_idx : type_set.second)
+        {
+            out << "   " << types[type_idx].id;
+            for(auto &label: types[type_idx].ringLabels)
+                out << " " << label;
+            out << "\n";
+        }
+        out << "\n\n";
+    }
+
+    out.close();
 }
 
 
