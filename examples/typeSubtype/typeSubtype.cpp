@@ -1,6 +1,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/AtomTyping/TypeMatchAlgorithm.h"
+#include "discamb/AtomTyping/atom_typing_utilities.h"
 #include "discamb/IO/atom_type_io.h"
 #include "discamb/IO/MATTS_BankReader.h"
 
@@ -30,12 +31,16 @@ void type_subtype(const string& bankFile)
     ofstream out("generalize.log");
 
     vector<vector<int> > generalizedTypeIdx(nTypes);
+    vector<vector<int> > generalizedBy(nTypes);
 
     for (int i = 0; i < nTypes; i++)
         for (int j = 0; j < nTypes; j++)
             if (i != j)
                 if (typeMatchAlgorithms[i].generalize(typeMatchAlgorithms[j]))
+                {
                     generalizedTypeIdx[i].push_back(j);
+                    generalizedBy[j].push_back(i);
+                }
     
     vector<pair<int, int> > equivalentTypes;
 
@@ -175,6 +180,68 @@ void type_subtype(const string& bankFile)
     }
 
     out.close();
+
+    // cross-testing
+    //sortTypesByGenarality
+    vector<vector<string> > type_hierarchy_str(type_hierarchy.size());
+
+    for (int l = 0; l < type_hierarchy.size(); l++)
+        for (int i = 0; i < type_hierarchy[l].size(); i++)
+            type_hierarchy_str[l].push_back(types[type_hierarchy[l][i]].id);
+
+
+    vector<vector<string> > type_hierarchy_str2(type_hierarchy.size());
+    atom_typing_utilities::sortTypesByGenarality(types);
+    int type_count = 0;
+    for (int l = 0; l < type_hierarchy.size(); l++)
+        for (int i = 0; i < type_hierarchy[l].size(); i++)
+            type_hierarchy_str2[l].push_back(types[type_count++].id);
+
+    bool hierarchiesTheSame = true;
+    for (int l = 0; l < type_hierarchy.size(); l++)
+    {
+        sort(type_hierarchy_str[l].begin(), type_hierarchy_str[l].end());
+        sort(type_hierarchy_str2[l].begin(), type_hierarchy_str2[l].end());
+        if (type_hierarchy_str[l] != type_hierarchy_str2[l])
+            hierarchiesTheSame = false;
+
+    }
+    cout << "hierarchies generated with two algorithms are the same: " << boolalpha << hierarchiesTheSame << "\n";
+
+    // generalization via different branches
+    vector<int> typeLevel(nTypes);
+    for (int l = 0; l < type_hierarchy.size(); l++)
+        for (int i = 0; i < type_hierarchy[l].size(); i++)
+            typeLevel[type_hierarchy[l][i]] = l;
+    out.open("multigeneralization");
+    for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+    {
+        //generalizedTypeIdx[i].push_back(j);
+        if (generalizedBy[typeIdx].size() > 1)
+        {
+            vector<pair<int,int> > levels_and_types;
+            for (int i = 0; i < generalizedBy[typeIdx].size(); i++)
+                levels_and_types.push_back({ typeLevel[generalizedBy[typeIdx][i]],generalizedBy[typeIdx][i] });
+            sort(levels_and_types.begin(), levels_and_types.end());
+            bool type_name_printed = false;
+            for(int j=1;j< levels_and_types.size();j++)
+                if (levels_and_types[j].first == levels_and_types[j - 1].first)
+                {
+                    if (!type_name_printed)
+                    {
+                        out << types[typeIdx].id << " generalized with same level types:" << "\n";
+                        out << "    " << types[levels_and_types[j-1].first].id;
+                        type_name_printed = true;
+                    }
+                    out << "    " << types[levels_and_types[j].first].id;
+                }
+            if (type_name_printed)
+                out << "\n";
+        }
+
+    }
+    out.close();
+
 }
 
 
