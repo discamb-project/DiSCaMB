@@ -230,10 +230,10 @@ void type_subtype(const string& bankFile)
                     if (!type_name_printed)
                     {
                         out << types[typeIdx].id << " generalized with same level types:" << "\n";
-                        out << "    " << types[levels_and_types[j-1].first].id;
+                        out << "    " << types[levels_and_types[j-1].second].id;
                         type_name_printed = true;
                     }
-                    out << "    " << types[levels_and_types[j].first].id;
+                    out << "    " << types[levels_and_types[j].second].id;
                 }
             if (type_name_printed)
                 out << "\n";
