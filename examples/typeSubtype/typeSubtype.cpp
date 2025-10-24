@@ -181,8 +181,46 @@ void type_subtype(const string& bankFile)
 
     out.close();
 
+
+    // generalization via different branches
+    vector<int> typeLevel(nTypes);
+    for (int l = 0; l < type_hierarchy.size(); l++)
+        for (int i = 0; i < type_hierarchy[l].size(); i++)
+            typeLevel[type_hierarchy[l][i]] = l;
+    out.open("multigeneralization");
+    for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+    {
+        //generalizedTypeIdx[i].push_back(j);
+        if (generalizedBy[typeIdx].size() > 1)
+        {
+            vector<pair<int,int> > levels_and_types;
+            for (int i = 0; i < generalizedBy[typeIdx].size(); i++)
+                levels_and_types.push_back({ typeLevel[generalizedBy[typeIdx][i]],generalizedBy[typeIdx][i] });
+            
+            sort(levels_and_types.begin(), levels_and_types.end());
+            bool type_name_printed = false;
+
+            for(int j=1;j< levels_and_types.size();j++)
+                if (levels_and_types[j].first == levels_and_types[j - 1].first)
+                {
+                    if (!type_name_printed)
+                    {
+                        out << types[typeIdx].id << " generalized with same level types:" << "\n";
+                        out << "    " << types[levels_and_types[j-1].second].id;
+                        type_name_printed = true;
+                    }
+                    out << "    " << types[levels_and_types[j].second].id;
+                }
+            if (type_name_printed)
+                out << "\n";
+        }
+
+    }
+    out.close();
+
+
     // cross-testing
-    //sortTypesByGenarality
+//sortTypesByGenarality
     vector<vector<string> > type_hierarchy_str(type_hierarchy.size());
 
     for (int l = 0; l < type_hierarchy.size(); l++)
@@ -207,40 +245,6 @@ void type_subtype(const string& bankFile)
 
     }
     cout << "hierarchies generated with two algorithms are the same: " << boolalpha << hierarchiesTheSame << "\n";
-
-    // generalization via different branches
-    vector<int> typeLevel(nTypes);
-    for (int l = 0; l < type_hierarchy.size(); l++)
-        for (int i = 0; i < type_hierarchy[l].size(); i++)
-            typeLevel[type_hierarchy[l][i]] = l;
-    out.open("multigeneralization");
-    for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
-    {
-        //generalizedTypeIdx[i].push_back(j);
-        if (generalizedBy[typeIdx].size() > 1)
-        {
-            vector<pair<int,int> > levels_and_types;
-            for (int i = 0; i < generalizedBy[typeIdx].size(); i++)
-                levels_and_types.push_back({ typeLevel[generalizedBy[typeIdx][i]],generalizedBy[typeIdx][i] });
-            sort(levels_and_types.begin(), levels_and_types.end());
-            bool type_name_printed = false;
-            for(int j=1;j< levels_and_types.size();j++)
-                if (levels_and_types[j].first == levels_and_types[j - 1].first)
-                {
-                    if (!type_name_printed)
-                    {
-                        out << types[typeIdx].id << " generalized with same level types:" << "\n";
-                        out << "    " << types[levels_and_types[j-1].second].id;
-                        type_name_printed = true;
-                    }
-                    out << "    " << types[levels_and_types[j].second].id;
-                }
-            if (type_name_printed)
-                out << "\n";
-        }
-
-    }
-    out.close();
 
 }
 
