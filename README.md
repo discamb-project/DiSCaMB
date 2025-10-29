@@ -4,4 +4,4 @@ Its API will undergo substantial changes till publication release planned for wi
 See also
 http://discamb.org/
 and
-https://github.com/viljarjf/pyDiSCaMB.
+https://github.com/discamb-project/pyDiSCaMB.
