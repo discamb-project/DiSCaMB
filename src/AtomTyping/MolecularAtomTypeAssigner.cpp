@@ -74,6 +74,35 @@ namespace discamb {
 
     }
 
+    void MolecularAtomTypeAssigner::assign_all_possible(
+        const StructureWithDescriptors& descriptors,
+        std::vector< std::vector<int> >& typeIDs)
+    {
+        int atomIndex, nAtoms;
+
+        //SharedPointer<DescriptionDetailTreeNode>::type searchTreeNode, childNode;
+        vector<int> atomMatch;
+
+
+        nAtoms = descriptors.atomDescriptors.size();
+        
+        typeIDs.clear();
+        typeIDs.resize(nAtoms);
+
+        for (atomIndex = 0; atomIndex < nAtoms; atomIndex++)
+        {
+            // --- new code ---
+            for (int i = 0; i < mAtomTypeMatchalgorithms.size(); i++)
+            {
+                LocalCoordinateSystem<int> lcs;
+                if (mAtomTypeMatchalgorithms[i].match(i, descriptors, lcs))
+                    typeIDs[atomIndex].push_back(i);
+            }
+
+        }
+
+    }
+
     void MolecularAtomTypeAssigner::assign(
         const StructureWithDescriptors &descriptors,
         const std::vector<int> &atomsToAssign,
