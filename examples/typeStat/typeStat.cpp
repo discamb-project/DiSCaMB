@@ -1563,7 +1563,7 @@ int main(int argc, char *argv[])
         DescriptorsSettings descriptorsSettings;
         atom_type_io::readAtomTypes(bank_file, types, descriptorsSettings);
 
-        atom_typing_utilities::sortTypesByGenarality(types);
+        atom_typing_utilities::sortTypesByGenarality_LevelsAbove(types);
 
         atom_type_io::writeAtomTypesTxt("atom_types.log", types);
         //bankReader.read(argv[1], types, typeHcParameters, bankSettings);

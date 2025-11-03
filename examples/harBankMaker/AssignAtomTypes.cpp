@@ -1,6 +1,7 @@
 #include "AssignAtomTypes.h"
 
 #include "discamb/AtomTyping/AtomType.h"
+#include "discamb/AtomTyping/atom_typing_utilities.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
@@ -38,6 +39,8 @@ void AssignAtomTypes::readBank(
 
     vector<AtomType> types;
     atom_type_io::readAtomTypes(bankFile, types, descriptorsSettings);
+    atom_typing_utilities::sortTypesByGenarality_LevelsBelow(types);
+
 
     // select atom types 
     
@@ -354,10 +357,61 @@ void AssignAtomTypes::run()
         << "                             structures     formulas\n";
 
 
+    vector<tuple<int, int, int, int> > typeStats;
+    for (int i = 0; i < nOccurences.size(); i++)
+    {
+        out << setw(longestTypeId + 2) << mAtomTypes[i].id << "  " << setw(12) << nOccurences[i] << " "
+            << setw(12) << nContainingMols[i] << setw(12) << inludingMolFormulaIdx[i].size() << "\n";
+        typeStats.push_back({ nOccurences[i], nContainingMols[i], (int)inludingMolFormulaIdx[i].size(), i });
+    }
+    //
+
+    out << "\n\n TYPE STATISTICS SORTED BY OCCURENCES\n"
+        << "  type id   n occurences    n containing   n with different\n"
+        << "                             structures     formulas\n";
+    sort(typeStats.begin(), typeStats.end());
+    reverse(typeStats.begin(), typeStats.end());
+    for (int i = 0; i < nOccurences.size(); i++)
+    {
+        out << setw(longestTypeId + 2) << mAtomTypes[get<3>(typeStats[i])].id << "  " << setw(12) << get<0>(typeStats[i]) << " "
+            << setw(12) << get<1>(typeStats[i]) << setw(12) << get<2>(typeStats[i]) << "\n";
+    }
+
+    // 
+    typeStats.clear();
+    out << "\n\n TYPE STATISTICS SORTED BY OCCURENCES including subtype contribution\n"
+        << "  type id   n occurences    n containing   n with different\n"
+        << "                             structures     formulas\n";
+    vector<vector<int> > typesGeneralized;
+    vector<vector<int> > hierarchyLevel;
+    atom_typing_utilities::typeGeneralization(mAtomTypes, typesGeneralized, hierarchyLevel);
 
     for (int i = 0; i < nOccurences.size(); i++)
-        out << setw(longestTypeId + 2) << mAtomTypes[i].id << "  " << setw(12) << nOccurences[i] << " "
-        << setw(12) << nContainingMols[i] << setw(12) << inludingMolFormulaIdx[i].size() << "\n";
+    {
+        
+        int nOcc = nOccurences[i];
+        int nContaining = nContainingMols[i];
+        int nFormulas = (int)inludingMolFormulaIdx[i].size();
+        for(int generalizeIdx: typesGeneralized[i])
+        {
+            nOcc += nOccurences[generalizeIdx];
+            nContaining += nContainingMols[generalizeIdx];
+            nFormulas += (int)inludingMolFormulaIdx[generalizeIdx].size();
+        }
+        typeStats.push_back({ nOcc, nContaining, nFormulas, i });
+    }
+
+    sort(typeStats.begin(), typeStats.end());
+    reverse(typeStats.begin(), typeStats.end());
+
+    for (int i = 0; i < nOccurences.size(); i++)
+    {
+        out << setw(longestTypeId + 2) << mAtomTypes[get<3>(typeStats[i])].id << "  " << setw(12) << get<0>(typeStats[i]) << " "
+            << setw(12) << get<1>(typeStats[i]) << setw(12) << get<2>(typeStats[i]) << "\n";
+    }
+
+
+    //
 
     auto it = min_element(nOccurences.begin(), nOccurences.end());
 

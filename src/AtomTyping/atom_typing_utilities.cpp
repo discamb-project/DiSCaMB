@@ -1,6 +1,7 @@
 #include "discamb/AtomTyping/atom_typing_utilities.h"
 #include "discamb/AtomTyping/TypeMatchAlgorithm.h"
 #include "discamb/AtomTyping/TypeTree.h"
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/MathUtilities/graph_algorithms.h"
 #include "discamb/StructuralProperties/RingCalculator.h"
 #include "discamb/HC_Model/ClementiRoettiData.h"
@@ -140,8 +141,23 @@ namespace discamb {
             }
             return totalRange;
         }
+        void sortTypesByGenarality_LevelsBelow(
+            std::vector<AtomType>& types)
+        {
+            vector<vector<int> > generalizedTypeIdx;
+            // type_hierarchy[level] - the higher level the more general types are
+            vector<vector<int> > type_hierarchy;
 
-        void sortTypesByGenarality(
+            atom_typing_utilities::typeGeneralization(types, generalizedTypeIdx, type_hierarchy);
+
+            vector<AtomType> typesSorted;
+            for(int l=0; l<type_hierarchy.size(); l++)
+                for(int i=0; i<type_hierarchy[l].size(); i++)
+                    typesSorted.push_back(types[type_hierarchy[l][i]]);
+            typesSorted.swap(types);
+        }
+
+        void sortTypesByGenarality_LevelsAbove(
             vector<AtomType>& types)
         {
             TypeTree tree;
@@ -167,6 +183,133 @@ namespace discamb {
 
             reverse(types.begin(), types.end());
         }
+
+        void findGeneralizingTypes(
+            const std::vector<std::vector<int> >& typesGeneralized,
+            std::vector<std::vector<int> >& generalizedBy)
+        {
+            int nTypes = typesGeneralized.size();
+            generalizedBy.clear();
+            generalizedBy.resize(nTypes);
+
+            for (int i = 0; i < nTypes; i++)
+                for (int generalizedTypeIdx : typesGeneralized[i])
+                    generalizedBy[generalizedTypeIdx].push_back(i);
+
+        }
+
+
+        void typeGeneralizationDiagnostics(
+            const std::vector<std::vector<int> >& typesGeneralized,
+            const std::vector<std::vector<int> >& hierarchyLevel,
+            std::vector<std::pair<int, int> > &equivalentTypes,
+            std::vector<std::pair<int, std::vector<int> > > &generalizedByMultipleTypesAtLevelUp)
+        {
+            equivalentTypes.clear();
+            generalizedByMultipleTypesAtLevelUp.clear();
+            
+            // check for equivalent types
+
+            int nTypes = typesGeneralized.size();
+            for (int i = 0; i < nTypes; i++)
+                for (int otherType : typesGeneralized[i])
+                {
+                    if (find(typesGeneralized[otherType].begin(),
+                        typesGeneralized[otherType].end(), i) !=
+                        typesGeneralized[otherType].end())
+                        equivalentTypes.push_back({ i, otherType });
+
+                }
+
+            // check for types generalized by multiple types at the level above
+            
+            vector<int> typeLevel(nTypes);
+            for (int l = 0; l < hierarchyLevel.size(); l++)
+                for (int i = 0; i < hierarchyLevel[l].size(); i++)
+                    typeLevel[hierarchyLevel[l][i]] = l;
+            
+            vector<vector<int> > generalizedBy;
+            findGeneralizingTypes(typesGeneralized, generalizedBy);
+
+            for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+                if (generalizedBy[typeIdx].size() > 1)
+                {
+                    vector<int> levelUpGeneralizingTypes;
+                    for (int i = 0; i < generalizedBy[typeIdx].size(); i++)
+                        if (typeLevel[generalizedBy[typeIdx][i]] == typeLevel[typeIdx] + 1)
+                            levelUpGeneralizingTypes.push_back(generalizedBy[typeIdx][i]);
+                    if (levelUpGeneralizingTypes.size() > 1)
+                        generalizedByMultipleTypesAtLevelUp.push_back(
+                            { typeIdx, levelUpGeneralizingTypes });
+                }
+        }
+
+
+        void typeGeneralization(
+            const std::vector<AtomType>& types,
+            std::vector<std::vector<int> >& typesGeneralized,
+            std::vector<std::vector<int> >& hierarchyLevel)
+        {
+            typesGeneralized.clear();
+            hierarchyLevel.clear();
+
+            int nTypes = types.size();
+            vector<TypeMatchAlgorithm> typeMatchAlgorithms(nTypes);
+            for (int i = 0; i < nTypes; i++)
+                typeMatchAlgorithms[i].setType(types[i]);
+
+            typesGeneralized.resize(nTypes);
+
+            for (int i = 0; i < nTypes; i++)
+                for (int j = 0; j < nTypes; j++)
+                    if (i != j)
+                        if (typeMatchAlgorithms[i].generalize(typeMatchAlgorithms[j]))
+                            typesGeneralized[i].push_back(j);
+
+            // type_hierarchy[level] - the higher level the more general types are
+            //vector<vector<int> > type_hierarchy;
+            vector<bool> type_at_lower_level(nTypes, false);
+            int nTypesInHierarchy = 0;
+            bool all_levels_found = false;
+            bool errors_in_hierarchy = false;
+            while (!all_levels_found)
+            {
+                vector<int> level;
+                for (int i = 0; i < nTypes; i++)
+                    if (!type_at_lower_level[i])
+                    {
+                        if (typesGeneralized[i].empty())
+                        {
+                            level.push_back(i);
+                            //type_at_lower_level[i] = true;
+                        }
+                        else
+                        {
+                            bool all_generalized_types_at_lower_level = true;
+                            for (int generalized_type_idx : typesGeneralized[i])
+                                if (!type_at_lower_level[generalized_type_idx])
+                                    all_generalized_types_at_lower_level = false;
+                            if (all_generalized_types_at_lower_level)
+                            {
+                                level.push_back(i);
+                                //type_at_lower_level[i] = true;
+                            }
+                        }
+                    }
+                for (int typeIdx : level)
+                    type_at_lower_level[typeIdx] = true;
+                if (!level.empty())
+                    hierarchyLevel.push_back(level);
+                else {
+                    all_levels_found = true;
+                    if (nTypesInHierarchy == nTypes)
+                        on_error::throwException("error in type hierarchy", __FILE__, __LINE__);
+                        //errors_in_hierarchy = true;
+                }
+            }
+
+        }
+
 
     }
 
