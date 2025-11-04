@@ -148,6 +148,7 @@ namespace discamb {
         // returns false if there are no such two atoms
         bool chooseNamedNeighboursForLcs(int& neighbour1, int& neighbour2);
         void unnamedNeighboursAtomicNumbers(int atomIdx, std::vector<int>& unnamedNeighborsZ);
+        void transformUnnamedAtomsToNamed(int atomicNumber);
         std::optional<int> getAtomIndex(const std::string &label) const;
         static void sphericalTypes(std::vector<AtomType> &types);
         void transformToCanonicalForm();

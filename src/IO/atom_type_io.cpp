@@ -1066,7 +1066,11 @@ namespace discamb {
                     }
             }
             checkForRepeatingTypeIds(atomTypes);
-
+            vector<int> upgradeUnnamedAtoms = data.value("upgrade unnamed atoms", vector<int>());
+            if(!upgradeUnnamedAtoms.empty())
+                for(auto &type: atomTypes)
+                    for(int z: upgradeUnnamedAtoms)
+                        type.transformUnnamedAtomsToNamed(z);
         }
 
         void readAtomTypesJson(

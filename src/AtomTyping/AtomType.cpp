@@ -473,6 +473,33 @@ namespace discamb {
                 unnamedNeighborsZ.erase(find(unnamedNeighborsZ.begin(), unnamedNeighborsZ.end(), *atoms[idx].atomic_number_range.begin()));
     }
 
+    void AtomType::transformUnnamedAtomsToNamed(
+        int atomicNumber)
+    {
+        int nAtoms = atoms.size();
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            vector<int> unnamedNeighborsZ;
+            unnamedNeighboursAtomicNumbers(atomIdx, unnamedNeighborsZ);
+            for (int z : unnamedNeighborsZ)
+            {
+                if (z == atomicNumber)
+                {
+                    AtomDescriptors newAtom;
+                    newAtom.atomic_number_range.insert(z);
+                    newAtom.label = periodic_table::symbol(z) + to_string(atoms.size()+1);
+                    atoms.push_back(newAtom);
+                    connectivity.push_back(vector<int>());
+                    int newAtomIdx = atoms.size() - 1;
+                    // add bond between atomIdx and newAtomIdx
+                    connectivity[atomIdx].push_back(newAtomIdx);
+                    connectivity[newAtomIdx].push_back(atomIdx);
+
+                }
+            }
+        }
+    }
+
     bool AtomType::setDefaultLocalCoordinateSystem()
     {
         localCoordinateSystem = AtomTypeLCS();
