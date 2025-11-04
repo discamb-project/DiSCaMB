@@ -474,7 +474,8 @@ namespace discamb {
     }
 
     void AtomType::transformUnnamedAtomsToNamed(
-        int atomicNumber)
+        int atomicNumber, 
+        const AtomDescriptors& defaultDescriptors)
     {
         int nAtoms = atoms.size();
         for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
@@ -485,16 +486,27 @@ namespace discamb {
             {
                 if (z == atomicNumber)
                 {
-                    AtomDescriptors newAtom;
+                    AtomDescriptors newAtom = defaultDescriptors;
                     newAtom.atomic_number_range.insert(z);
                     newAtom.label = periodic_table::symbol(z) + to_string(atoms.size()+1);
-                    atoms.push_back(newAtom);
                     connectivity.push_back(vector<int>());
-                    int newAtomIdx = atoms.size() - 1;
+                    int newAtomIdx = atoms.size();
                     // add bond between atomIdx and newAtomIdx
                     connectivity[atomIdx].push_back(newAtomIdx);
                     connectivity[newAtomIdx].push_back(atomIdx);
-
+                    newAtom.fixedNumberOfNeighbors = true;
+                    
+                    if (atoms[atomIdx].atomic_number_range.size() == 1)
+                    {
+                        if (*atoms[atomIdx].atomic_number_range.begin() != 0)
+                            newAtom.neighborsAtomicNumbers.insert(*atoms[atomIdx].atomic_number_range.begin());
+                    }
+                    else
+                        newAtom.neighborsAtomicNumberRanges.push_back(atoms[atomIdx].atomic_number_range);
+                        
+                    newAtom.nNeighbours = 1;
+                    //atoms[atomIdx].neighborsAtomicNumbers.insert(z); its already there
+                    atoms.push_back(newAtom);
                 }
             }
         }

@@ -861,10 +861,11 @@ namespace discamb {
                 if (isNamed[atomIdx])
                 {
                     AtomDescriptors& currentAtom = atoms[oldIdx2New[atomIdx]];
-                    currentAtom.planar = Tribool::Undefined;
-                    currentAtom.ringInfo.in3Ring = Tribool::Undefined;
-                    currentAtom.ringInfo.in4Ring = Tribool::Undefined;
-                    currentAtom.ringInfo.inRing = Tribool::Undefined;
+                    // this is already set by defaultDescriptors ("default atomic properties" in json bank file)
+                    //currentAtom.planar = Tribool::Undefined;
+                    //currentAtom.ringInfo.in3Ring = Tribool::Undefined;
+                    //currentAtom.ringInfo.in4Ring = Tribool::Undefined;
+                    //currentAtom.ringInfo.inRing = Tribool::Undefined;
 
                     parseProperties(atomsFromString[atomIdx].properties, currentAtom);
                 }
@@ -1066,11 +1067,14 @@ namespace discamb {
                     }
             }
             checkForRepeatingTypeIds(atomTypes);
-            vector<int> upgradeUnnamedAtoms = data.value("upgrade unnamed atoms", vector<int>());
-            if(!upgradeUnnamedAtoms.empty())
-                for(auto &type: atomTypes)
-                    for(int z: upgradeUnnamedAtoms)
-                        type.transformUnnamedAtomsToNamed(z);
+            if (data.find("settings") != data.end())
+            {
+                vector<int> upgradeUnnamedAtoms = data["settings"].value("upgrade unnamed atoms", vector<int>());
+                if (!upgradeUnnamedAtoms.empty())
+                    for (auto& type : atomTypes)
+                        for (int z : upgradeUnnamedAtoms)
+                            type.transformUnnamedAtomsToNamed(z, defaultAtomDescriptors);
+            }
         }
 
         void readAtomTypesJson(
