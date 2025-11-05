@@ -95,7 +95,7 @@ namespace discamb {
             for (int i = 0; i < mAtomTypeMatchalgorithms.size(); i++)
             {
                 LocalCoordinateSystem<int> lcs;
-                if (mAtomTypeMatchalgorithms[i].match(i, descriptors, lcs))
+                if (mAtomTypeMatchalgorithms[i].match(atomIndex, descriptors, lcs))
                     typeIDs[atomIndex].push_back(i);
             }
 

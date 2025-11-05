@@ -243,12 +243,16 @@ void AssignAtomTypes::run()
 
     ofstream out(mOutputFileName);
     vector<int> nOccurences(mAtomTypes.size(), 0);
+    vector<int> nOccurencesMultipleAssinment(mAtomTypes.size(), 0);
     vector<int> nContainingMols(mAtomTypes.size(), 0);
-    vector<std::set<int> > containingFormulaIndices(mAtomTypes.size());
+    vector<int> nContainingMolsMultipleAssinment(mAtomTypes.size(), 0);
+    //vector<std::set<int> > containingFormulaIndices(mAtomTypes.size());
+    //vector<std::set<int> > containingFormulaIndicesMulipleAssignment(mAtomTypes.size());
     //vector<std::set<int> > 
     //[type idx]
     //vector<std::set<map<int, int> > > includingMolFormulas(mAtomTypes.size());
     vector<std::set<int> > inludingMolFormulaIdx(mAtomTypes.size());
+    vector<std::set<int> > inludingMolFormulaIdxMultipleAssignment(mAtomTypes.size());
     vector<StructuralFormula> structuralFormulas;
 
     int longestTypeId = 0;
@@ -270,6 +274,7 @@ void AssignAtomTypes::run()
             on_error::throwException("missing file: '" + molFilePath.string() + "'", __FILE__, __LINE__);
 
         vector<bool> contains(mAtomTypes.size(), false);
+        vector<bool> containsInMultipleAssinment(mAtomTypes.size(), false);
 
         mol2_io::Mol2Data mol2Data;
         mol2_io::read(molFilePath.string(), mol2Data);
@@ -282,6 +287,8 @@ void AssignAtomTypes::run()
         vector<int> typeId;
         vector<LocalCoordinateSystem<int> > lcs;
         mAssigner.assign(structure, typeId, lcs);
+        vector< vector<int> > multipleTypesAssignment;
+        mAssigner.assign_all_possible(structure, multipleTypesAssignment);
 
         vector<map<int, int> > formulas;
         findFormulas(mol2Data, atomicNumbers, formulas);
@@ -325,7 +332,7 @@ void AssignAtomTypes::run()
             formulaIdx[i] = idx;
         }
 
-        out << "  atom label    z    type id   substructure idx\n";
+        out << "  atom label    z    type id   substructure idx  [other types]\n";
         int nAtoms = mol2Data.atomName.size();
         for (int i = 0; i < nAtoms; i++)
         {
@@ -335,6 +342,12 @@ void AssignAtomTypes::run()
             {
                 out << setw(longestTypeId + 2) << mAtomTypes[typeId[i]].id;
                 nOccurences[typeId[i]]++;
+                for (int typeIdx : multipleTypesAssignment[i])
+                {
+                    nOccurencesMultipleAssinment[typeIdx]++;
+                    containsInMultipleAssinment[typeIdx] = true;
+                    inludingMolFormulaIdxMultipleAssignment[typeIdx].insert(formulaIdx[mol2Data.substructureIdx[i] - 1]);
+                }
                 contains[typeId[i]] = true;
                 //includingMolFormulas[typeId[i]].insert(formulas[mol2Data.substructureIdx[i] - 1]);
                 inludingMolFormulaIdx[typeId[i]].insert(formulaIdx[mol2Data.substructureIdx[i] - 1]);
@@ -342,14 +355,26 @@ void AssignAtomTypes::run()
             }
             else
                 out << setw(longestTypeId + 2) << "----";
-            out << setw(10) << mol2Data.substructureIdx[i] << "\n";
+            out << setw(10) << mol2Data.substructureIdx[i];
+            if(multipleTypesAssignment[i].size()>1)
+            {
+                out << "   [";
+                for(int tIdx: multipleTypesAssignment[i])
+                    out << mAtomTypes[tIdx].id << " ";
+                out << "]";
+            }
+            out << "\n";
         }
 
 
 
         for (int i = 0; i < contains.size(); i++)
+        {
             if (contains[i])
                 nContainingMols[i]++;
+            if (containsInMultipleAssinment[i])
+                nContainingMolsMultipleAssinment[i]++;
+        }
 
     }
     out << "\n\n TYPE STATISTICS\n"
@@ -357,12 +382,14 @@ void AssignAtomTypes::run()
         << "                             structures     formulas\n";
 
 
-    vector<tuple<int, int, int, int> > typeStats;
+    vector<tuple<int, int, int, int> > typeStats, typeStatsMultipleAssignment;
     for (int i = 0; i < nOccurences.size(); i++)
     {
         out << setw(longestTypeId + 2) << mAtomTypes[i].id << "  " << setw(12) << nOccurences[i] << " "
             << setw(12) << nContainingMols[i] << setw(12) << inludingMolFormulaIdx[i].size() << "\n";
         typeStats.push_back({ nOccurences[i], nContainingMols[i], (int)inludingMolFormulaIdx[i].size(), i });
+        typeStatsMultipleAssignment.push_back({nOccurencesMultipleAssinment[i], nContainingMolsMultipleAssinment[i],
+            (int)inludingMolFormulaIdxMultipleAssignment[i].size(), i });
     }
     //
 
@@ -410,6 +437,19 @@ void AssignAtomTypes::run()
             << setw(12) << get<1>(typeStats[i]) << setw(12) << get<2>(typeStats[i]) << "\n";
     }
 
+
+    //
+    //typeStatsMultipleAssignment
+    out << "\n\n TYPE STATISTICS for MULTIPLE TYPE ASSIGNMENT SORTED BY OCCURENCES\n"
+        << "  type id   n occurences    n containing   n with different\n"
+        << "                             structures     formulas\n";
+    sort(typeStatsMultipleAssignment.begin(), typeStatsMultipleAssignment.end());
+    reverse(typeStatsMultipleAssignment.begin(), typeStatsMultipleAssignment.end());
+    for (int i = 0; i < nOccurences.size(); i++)
+    {
+        out << setw(longestTypeId + 2) << mAtomTypes[get<3>(typeStatsMultipleAssignment[i])].id << "  " << setw(12) << get<0>(typeStatsMultipleAssignment[i]) << " "
+            << setw(12) << get<1>(typeStatsMultipleAssignment[i]) << setw(12) << get<2>(typeStatsMultipleAssignment[i]) << "\n";
+    }
 
     //
 
