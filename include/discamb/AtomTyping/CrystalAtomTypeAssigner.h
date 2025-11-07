@@ -51,13 +51,23 @@ namespace discamb {
             std::vector< std::vector<int> >& typeID, 
             std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
 
+        void assign_all_possible(const Crystal& crystal, std::vector< std::vector<int> >& typeID) const;
+
         std::string typeLabel(int typeId) const;
         void printAssignment(std::ostream &out, const Crystal &crystal, const std::vector<int> &typeID,
                                 const std::vector< LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
         void printAssignmentCSV(std::ostream &out, const Crystal &crystal, const std::vector<int> &typeID,
                                 const std::vector< LocalCoordinateSystem<AtomInCrystalID> > &lcs) const;
     private:
-
+        // assigns all possible types to each atom if process_all_types is true
+        // otherwise assigns only the first matching type and lcs
+        void assign(
+            const Crystal& crystal, 
+            bool process_all_types,
+            std::vector<int>& typeID,
+            std::vector< std::vector<int> >& typeIDs, 
+            std::vector<LocalCoordinateSystem<AtomInCrystalID> > & lcs) const;
+        
         MolecularAtomTypeAssigner mAssigner;
         std::vector<std::string> mTypeLabels;// used when printing out assignemtn info
         DescriptorsSettings mDescriptorsSettings;

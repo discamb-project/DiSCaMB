@@ -662,6 +662,7 @@ namespace discamb {
             const std::vector<std::string>& lines,
             const std::map<std::string, std::set<int> >& element_groups,
             const AtomDescriptors& defaultDescriptors,
+            const AtomDescriptors& defaultCentralAtomDescriptors,
             std::vector<AtomDescriptors>& atoms, 
             std::vector<std::vector<int> >& connectivityFinal)
         {
@@ -751,6 +752,14 @@ namespace discamb {
                 if (isNamed[atomIdx])
                 {
                     AtomDescriptors atomDescriptors = defaultDescriptors;
+                    // check if central atom and if yes assign to defaultCentralAtomDescriptors
+                    string numberStr;
+                    for (char c : atomsFromString[atomIdx].name)
+                        if (isdigit(c))
+                            numberStr += c;
+                    if (!numberStr.empty())
+                        if (stoi(numberStr) == 1)
+                            atomDescriptors = defaultCentralAtomDescriptors;
 
                     // sets AtomDescriptors::anyAtomicNumber
                     atomDescriptors.anyAtomicNumber = (atomsFromString[atomIdx].type == string("X"));
@@ -941,7 +950,8 @@ namespace discamb {
             const std::map<std::string, std::set<int> >& element_groups,
             const string atomTypeId,
             AtomType& atomType,
-            AtomDescriptors defaultAtomDescriptors)
+            const AtomDescriptors& defaultAtomDescriptors,
+            const AtomDescriptors& defaultCetralAtomDescriptors)
         {
             atomType = AtomType();
             atomType.id = atomTypeId;
@@ -958,6 +968,7 @@ namespace discamb {
                     parseStructuralFormulaTxt(atomsAndBondsLines, 
                         element_groups,
                         defaultAtomDescriptors,
+                        defaultCetralAtomDescriptors,
                         atomType.atoms,
                         atomType.connectivity);
 
@@ -1047,10 +1058,13 @@ namespace discamb {
             if (data.find("element groups") != data.end())
                 json2elementGroups(data["element groups"], element_groups);
             // 
-            AtomDescriptors defaultAtomDescriptors;
+            AtomDescriptors defaultAtomDescriptors, defaultCetralAtomDescriptors;
             if (data.find("default atomic properties") != data.end())
                 json2atomDescriptors(data.find("default atomic properties").value(), defaultAtomDescriptors);
+            if (data.find("default central atom properties") != data.end())
+                json2atomDescriptors(data.find("default atomic properties").value(), defaultCetralAtomDescriptors);
 
+            
             
             if (data.find("types") != data.end())
             {
@@ -1059,7 +1073,7 @@ namespace discamb {
                     if (type.key() != string("comment"))
                     {
                         AtomType atomType;
-                        json2atomType(type.value(), element_groups, type.key(), atomType, defaultAtomDescriptors);
+                        json2atomType(type.value(), element_groups, type.key(), atomType, defaultAtomDescriptors, defaultCetralAtomDescriptors);
                         //atomType.id = type.key();
                         //atomTypesAndData.push_back({ atomType, type.value()});
                         atomTypes.push_back(atomType);

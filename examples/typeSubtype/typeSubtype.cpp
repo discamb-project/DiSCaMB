@@ -202,7 +202,7 @@ void type_subtype(const string& bankFile)
 
 
     vector<vector<string> > type_hierarchy_str2(type_hierarchy.size());
-    atom_typing_utilities::sortTypesByGenarality_LevelsAbove(types);
+    atom_typing_utilities::sortTypesByGenarality_LevelsBelow(types);
     int type_count = 0;
     for (int l = 0; l < type_hierarchy.size(); l++)
         for (int i = 0; i < type_hierarchy[l].size(); i++)
@@ -217,9 +217,9 @@ void type_subtype(const string& bankFile)
             hierarchiesTheSame = false;
 
     }
-    atom_typing_utilities::sortTypesByGenarality_LevelsBelow(types);
+    //atom_typing_utilities::sortTypesByGenarality_LevelsBelow(types);
 
-    cout << "hierarchies generated with two algorithms are the same: " << boolalpha << hierarchiesTheSame << "\n";
+    //cout << "hierarchies generated with two algorithms are the same: " << boolalpha << hierarchiesTheSame << "\n";
 
 }
 

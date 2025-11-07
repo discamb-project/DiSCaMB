@@ -31,6 +31,8 @@
 #include <chrono>
 #include <ctime>
 
+#include <omp.h>
+
 using namespace discamb;
 using namespace std;
 
@@ -1277,19 +1279,111 @@ bool readStructure(
     return true;
 }
 
+//bool readStructureAndAssign(
+//    const vector<string> &files,
+//    const std::string &format,
+//    const CrystalAtomTypeAssigner &crystalAssigner,
+//    const MolecularAtomTypeAssigner &molecularAssigner,
+//    size_t atomTypeRange,
+//    size_t namedNeighboursRange,
+//    size_t &nAtomsInAsymmetricUnit,
+//    StructureWithDescriptors &structure,
+//    vector<int> &typeIds,
+//    vector<string> &lcs,
+//    string &error_message)
+//{
+//    try {
+//
+//        if (files.empty())
+//        {
+//            error_message = "no input file";
+//            return false;
+//        }
+//
+//        lcs.clear();
+//
+//        vector<int> atomicNumbers;
+//        vector<string> labels;
+//        vector<Vector3d> positions;
+//        bool processingCrystalStructure = true;
+//
+//        if (format == string("xyz") || format == string("mol2"))
+//        {
+//            if (format == string("xyz"))
+//            {
+//                xyz_io::readXyz(files[0], atomicNumbers, positions);
+//                for (size_t i = 0; i < atomicNumbers.size(); i++)
+//                    labels.push_back(periodic_table::symbol(atomicNumbers[i]) + to_string(i + 1));
+//            }
+//            else
+//            {
+//                mol2_io::Mol2Data mol2data;
+//                mol2_io::read(files[0], mol2data);
+//                mol2_io::atomicNumbers(mol2data, atomicNumbers);
+//                positions = mol2data.atomPosition;
+//                labels = mol2data.atomName;
+//            }
+//
+//            nAtomsInAsymmetricUnit = atomicNumbers.size();
+//            structure.set(atomicNumbers, positions, labels);
+//            vector<LocalCoordinateSystem<int> > lcsMolecule;
+//            molecularAssigner.assign(structure, typeIds, lcsMolecule);
+//            
+//            for (auto &coordinateSystem : lcsMolecule)
+//                lcs.push_back(ubdbLcsAsString(coordinateSystem, labels));
+//        }
+//        else
+//        {
+//            Crystal crystal;
+//
+//            if (format == string("shelx"))
+//                shelx_io::read(files[0], crystal);
+//            if (format == string("cif"))
+//            {
+//                vector<cif_io::DataSet> dataSets;
+//                cif_io::readCif(files[0], dataSets);
+//                cif_io::cifDataToCrystal(dataSets[0], crystal);
+//            }
+//            if (format == string("xd"))
+//            {
+//                HC_ModelParameters hcParameters;
+//                vector<XdLocalCoordinateSystem> xdLcs;
+//                xd_io::read(files[0], files[1], hcParameters, crystal, xdLcs, false);
+//            }
+//
+//            nAtomsInAsymmetricUnit = crystal.atoms.size();
+//            
+//            vector<LocalCoordinateSystem<AtomInCrystalID> > lcsCrystal;
+//            crystalAssigner.assign(crystal, typeIds, lcsCrystal, structure);
+//
+//            for (auto &atom : crystal.atoms)
+//                labels.push_back(atom.label);
+//
+//            for (auto &coordinateSystem : lcsCrystal)
+//                lcs.push_back(ubdbLcsAsString(coordinateSystem, labels));
+//        }
+//    }
+//    catch (exception &e)
+//    {
+//        error_message = e.what();
+//        return false;
+//    }
+//    return true;
+//}
+
 bool readStructureAndAssign(
-    const vector<string> &files,
-    const std::string &format,
-    const CrystalAtomTypeAssigner &crystalAssigner,
-    const MolecularAtomTypeAssigner &molecularAssigner,
+    const vector<string>& files,
+    const std::string& format,
+    const CrystalAtomTypeAssigner& crystalAssigner,
+    const MolecularAtomTypeAssigner& molecularAssigner,
     size_t atomTypeRange,
     size_t namedNeighboursRange,
-    size_t &nAtomsInAsymmetricUnit,
-    StructureWithDescriptors &structure,
-    vector<int> &typeIds,
+    size_t& nAtomsInAsymmetricUnit,
+    StructureWithDescriptors& structure,
+    vector<int>& typeIds,
     vector<vector<int> >& multiTypeIds,
-    vector<string> &lcs,
-    string &error_message)
+    vector<string>& lcs,
+    string& error_message)
 {
     try {
 
@@ -1328,8 +1422,8 @@ bool readStructureAndAssign(
             vector<LocalCoordinateSystem<int> > lcsMolecule;
             molecularAssigner.assign(structure, typeIds, lcsMolecule);
             molecularAssigner.assign_all_possible(structure, multiTypeIds);
-            
-            for (auto &coordinateSystem : lcsMolecule)
+
+            for (auto& coordinateSystem : lcsMolecule)
                 lcs.push_back(ubdbLcsAsString(coordinateSystem, labels));
         }
         else
@@ -1352,26 +1446,25 @@ bool readStructureAndAssign(
             }
 
             nAtomsInAsymmetricUnit = crystal.atoms.size();
-            
+
             vector<LocalCoordinateSystem<AtomInCrystalID> > lcsCrystal;
             crystalAssigner.assign(crystal, typeIds, lcsCrystal, structure);
             crystalAssigner.assign_all_possible(crystal, multiTypeIds);
 
-            for (auto &atom : crystal.atoms)
+            for (auto& atom : crystal.atoms)
                 labels.push_back(atom.label);
 
-            for (auto &coordinateSystem : lcsCrystal)
+            for (auto& coordinateSystem : lcsCrystal)
                 lcs.push_back(ubdbLcsAsString(coordinateSystem, labels));
         }
     }
-    catch (exception &e)
+    catch (exception& e)
     {
         error_message = e.what();
         return false;
     }
     return true;
 }
-
 
 void findMultitypes(
     const vector<AtomType> &types,
@@ -1459,6 +1552,52 @@ void getFiles(
 
 }
 
+void printMultiTypeInfo(
+    const string& fileName,
+    const vector< vector<vector<int> > >& typeIndices,
+    const vector<AtomType>& types)
+{
+    ofstream out(fileName);
+    if (!out.good())
+        on_error::throwException(string("cannot write to log file '") + fileName + string("'"), __FILE__, __LINE__);
+    size_t nTypes = types.size();
+    size_t nStructures = typeIndices.size();
+    vector<size_t> typeCounts(nTypes, 0);
+
+    for (size_t structureIdx = 0; structureIdx < nStructures; structureIdx++)
+    {
+        size_t nAtoms = typeIndices[structureIdx].size();
+        for (size_t atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            for (int i = 0; i < typeIndices[structureIdx][atomIdx].size(); i++)
+            {
+                int typeIdx = typeIndices[structureIdx][atomIdx][i];
+                if (typeIdx >= 0)
+                    typeCounts[typeIdx]++;
+            }
+        }
+    }
+    vector<pair<int, string> > countsAndTypeId;
+    int typeIdMaxLength = 0;
+    for (int i = 0; i < nTypes; i++)
+    {
+        countsAndTypeId.push_back({ (int)typeCounts[i], types[i].id });
+        if (typeIdMaxLength < types[i].id.size())
+            typeIdMaxLength = types[i].id.size();
+    }
+    sort(countsAndTypeId.begin(), countsAndTypeId.end(), greater< pair<int, string> >());
+
+    out << "Type ID               Number of assigned atoms\n";
+    out << "----------------------------------------------\n";
+    for (size_t typeIdx = 0; typeIdx < nTypes; typeIdx++)
+    {
+        out << setw(typeIdMaxLength + 2) << countsAndTypeId[typeIdx].second << " " << setw(10) << countsAndTypeId[typeIdx].first << "\n";
+        //out << setw(20) << types[typeIdx].id << " " << setw(10) << typeCounts[typeIdx] << "\n";
+    }
+    out.close();
+
+}
+
 void printTypeInfo(
     const string& fileName,
     const vector<vector<int> >& typeIndices,
@@ -1504,16 +1643,6 @@ void printTypeInfo(
 
 int main(int argc, char *argv[])
 {
-    //MATTS_BankReader bankReader;
-    vector<Crystal> crystals;
-    vector<string> structureIds;
-    vector<AtomType> types;
-    //vector<AtomTypeHC_Parameters> typeHcParameters;
-    MolecularAtomTypeAssigner molecularAssigner;
-    CrystalAtomTypeAssigner crystalAssigner;
-    //UBDB_DescriptorsSettings descriptorsSettings;
-    BankSettings bankSettings;
-	size_t nConsideredStructures, nCompletelyRecognizedStructures;
 
     try {
         string versionString = discamb_version::version();
@@ -1532,7 +1661,13 @@ int main(int argc, char *argv[])
         string fileFolder;
         string bank_file;
         vector<string> arguments, options;
-        parse_cmd::get_args_and_options(argc, argv, arguments, options);
+        map<string, string> optionsWithValues;
+        parse_cmd::get_args_and_options(argc, argv, arguments, options, optionsWithValues);
+
+        int nCores = 1;
+        if (optionsWithValues.count("-n")>0)
+            nCores = stoi(optionsWithValues["-n"]);
+
         bool do_not_write_assignment_info = parse_cmd::hasOption(options, "-no_ai");
         bool do_not_write_type_instances_detailed_info = parse_cmd::hasOption(options, "-no_tidi");
         bool do_not_write_type_instances_info = parse_cmd::hasOption(options, "-no_tii");
@@ -1563,6 +1698,44 @@ int main(int argc, char *argv[])
             if (argc > 3)
                 fileFolder = arguments[2];
         }
+
+        vector<Crystal> crystals;
+        vector<string> structureIds;
+        vector<AtomType> types;
+
+
+        vector<MolecularAtomTypeAssigner> molecularAssigners(nCores);
+        vector<CrystalAtomTypeAssigner> crystalAssigners(nCores);
+
+        BankSettings bankSettings;
+        size_t nConsideredStructures, nCompletelyRecognizedStructures;
+
+        //vector<vector<Crystal> > crystals_in_thread(nCores);
+        //vector< vector<string> > structureIds_in_thread(nCores);
+        vector<size_t> nConsideredStructures_in_thread(nCores), nCompletelyRecognizedStructures_in_thread(nCores);
+        vector<vector<string> > validStructureIds_in_thread(nCores);
+        vector< vector<StructureWithDescriptors> > structureDescriptors_in_thread(nCores);
+        vector< vector < vector<string> > > lcs_in_thread(nCores);
+        vector<vector<vector<int> > > typeIndices_in_thread(nCores);
+        vector< vector<vector<vector<int> > > > multiTypeIndices_in_thread(nCores);
+        vector< vector<size_t> > natomsInAsymmetricUnit_in_thread(nCores);
+        vector< vector<string> > fileIoErrorMessages_in_thread(nCores);
+        vector< vector<string> > invalidStructureReads_in_thread(nCores);
+
+        /*
+                
+                        vector<vector<int> > typeIndices;    
+        vector<size_t> natomsInAsymmetricUnit;
+        vector < vector<string> > lcs;
+        vector<vector<string> > filePaths;
+
+                
+                
+                typeIndices.push_back(oneStructureTypeIndices);
+                nConsideredStructures++;        
+        */
+
+
         DescriptorsSettings descriptorsSettings;
         atom_type_io::readAtomTypes(bank_file, types, descriptorsSettings);
 
@@ -1574,11 +1747,21 @@ int main(int argc, char *argv[])
     
         cout << types.size() << " types\n";
 
-        molecularAssigner.setDescriptorsSettings(descriptorsSettings);
-        molecularAssigner.setAtomTypes(types);
-        
-        crystalAssigner.setDescriptorsSettings(bankSettings.descriptorsSettings);
-        crystalAssigner.setAtomTypes(types);
+        for (int i = 0; i < nCores; i++)
+        {
+            molecularAssigners[i].setDescriptorsSettings(descriptorsSettings);
+            molecularAssigners[i].setAtomTypes(types);
+
+            crystalAssigners[i].setDescriptorsSettings(bankSettings.descriptorsSettings);
+            crystalAssigners[i].setAtomTypes(types);
+
+        }
+
+        //molecularAssigner.setDescriptorsSettings(descriptorsSettings);
+        //molecularAssigner.setAtomTypes(types);
+        //
+        //crystalAssigner.setDescriptorsSettings(bankSettings.descriptorsSettings);
+        //crystalAssigner.setAtomTypes(types);
 
         int namedAtomsRange, planarRingRange, ring34Range, atomTypeRange;
         atomTypeRange = atom_typing_utilities::atomTypesRange(types, bankSettings.descriptorsSettings.maxPlanarRing, 
@@ -1586,17 +1769,14 @@ int main(int argc, char *argv[])
     
         vector<vector<int> > typeIndices;    
         vector<vector<vector<int> > > multiTypeIndices;
-        vector<int> oneStructureTypeIndices;
-        vector<vector<int> > oneStructureMultiTypeIndices;
         vector<size_t> natomsInAsymmetricUnit;
         vector < vector<string> > lcs;
-        vector<string> oneStructureLcs;
         vector<vector<string> > filePaths;
 
         getFiles(fileFormat, filePaths, structureIds, fileFolder, string());
         
 
-        size_t structureIdx, nStructures = filePaths.size();
+        int nStructures = filePaths.size();
         
 
         LocalCoordinateSystemCalculator lcs_calculator;
@@ -1605,47 +1785,100 @@ int main(int argc, char *argv[])
 
         //-------
         
-        Crystal crystal;
-        StructureWithDescriptors oneStructureDescriptors;
-        size_t nAtomsInOneStructureAsymmetricUnit;
+        //Crystal crystal;
         //----------
 
 
         vector<size_t> atomToAssign;
         vector<string> fileIoErrorMessages;
         vector<string> invalidStructureReads;
-        string error_message;
         vector<string> validStructureIds;
+        vector<vector<int> > structureIdxPerThread(nCores);
 		nConsideredStructures = nCompletelyRecognizedStructures = 0;
+        cout << "n threads = " << nCores << "\n";
         cout << "    processing:\n";
-        for (structureIdx = 0; structureIdx < nStructures; structureIdx++)
+        omp_set_num_threads(nCores);
+
+
+#pragma omp parallel for num_threads(nCores)        
+        for (int structureIdx = 0; structureIdx < nStructures; structureIdx++)
         {
-            cout << "\r" << setw(15) << structureIds[structureIdx];
+            string error_message;
+            int thread_id = omp_get_thread_num();
+            structureIdxPerThread[thread_id].push_back(structureIdx);
+            if(thread_id==0)
+                cout << "\r" << setw(15) << structureIds[structureIdx];
+
+            StructureWithDescriptors oneStructureDescriptors;
+            size_t nAtomsInOneStructureAsymmetricUnit;
+            vector<int> oneStructureTypeIndices;
+            vector<string> oneStructureLcs;
+            vector<vector<int> > oneStructureMultiTypeIndices;
 
             oneStructureDescriptors.settings = bankSettings.descriptorsSettings;
 
-
-            if(readStructureAndAssign(filePaths[structureIdx], fileFormat, crystalAssigner, molecularAssigner, atomTypeRange, namedAtomsRange, 
-                nAtomsInOneStructureAsymmetricUnit, oneStructureDescriptors, oneStructureTypeIndices, 
-                oneStructureMultiTypeIndices, oneStructureLcs, error_message))
+            if(readStructureAndAssign(filePaths[structureIdx], fileFormat, crystalAssigners[thread_id],
+                molecularAssigners[thread_id], atomTypeRange, namedAtomsRange,
+                nAtomsInOneStructureAsymmetricUnit, oneStructureDescriptors, oneStructureTypeIndices,
+                oneStructureMultiTypeIndices,oneStructureLcs, error_message))
             {
-                natomsInAsymmetricUnit.push_back(nAtomsInOneStructureAsymmetricUnit);
-                validStructureIds.push_back(structureIds[structureIdx]);
-                structureDescriptors.push_back(oneStructureDescriptors);
-                lcs.push_back(oneStructureLcs);
-                typeIndices.push_back(oneStructureTypeIndices);
-                multiTypeIndices.push_back(oneStructureMultiTypeIndices);
-				nConsideredStructures++;
+                /*
+        
+        
+        
+        vector<size_t> nConsideredStructures_in_thread(nCores), nCompletelyRecognizedStructures_in_thread(nCores);
+        vector<vector<string> > validStructureIds_in_thread(nCores);
+        vector< vector<StructureWithDescriptors> > structureDescriptors_in_thread(nCores);
+        vector< vector < vector<string> > > lcs_in_thread(nCores);
+        vector<vector<vector<int> > > typeIndices_in_thread(nCores);
+
+                */
+                //natomsInAsymmetricUnit.push_back(nAtomsInOneStructureAsymmetricUnit);
+                multiTypeIndices_in_thread[thread_id].push_back(oneStructureMultiTypeIndices);
+                natomsInAsymmetricUnit_in_thread[thread_id].push_back(nAtomsInOneStructureAsymmetricUnit);
+                //validStructureIds.push_back(structureIds[structureIdx]);
+                validStructureIds_in_thread[thread_id].push_back(structureIds[structureIdx]);
+                structureDescriptors_in_thread[thread_id].push_back(oneStructureDescriptors);
+                //structureDescriptors.push_back(oneStructureDescriptors);
+                //lcs.push_back(oneStructureLcs);
+                lcs_in_thread[thread_id].push_back(oneStructureLcs);
+                typeIndices_in_thread[thread_id].push_back(oneStructureTypeIndices);
+                nConsideredStructures_in_thread[thread_id]++;
+				//nConsideredStructures++;
 				
 				if (find(oneStructureTypeIndices.begin(), oneStructureTypeIndices.end(), -1) == oneStructureTypeIndices.end())
-					nCompletelyRecognizedStructures++;
+                    nCompletelyRecognizedStructures_in_thread[thread_id]++;
+                    //nCompletelyRecognizedStructures++;
             }
             else 
             {
-                fileIoErrorMessages.push_back(error_message);
-                invalidStructureReads.push_back(structureIds[structureIdx]);
+                fileIoErrorMessages_in_thread[thread_id].push_back(error_message);
+                invalidStructureReads_in_thread[thread_id].push_back(structureIds[structureIdx]);
             }
 
+        }
+        cout << "\n";
+        for(int threadIdx=0; threadIdx<nCores; threadIdx++)
+        {
+            cout << "thread " << threadIdx << " processed " << structureIdxPerThread[threadIdx].size() << " structures\n";
+            nConsideredStructures += nConsideredStructures_in_thread[threadIdx];
+            nCompletelyRecognizedStructures += nCompletelyRecognizedStructures_in_thread[threadIdx];
+            for(auto &id: validStructureIds_in_thread[threadIdx])
+                validStructureIds.push_back(id);
+            for(auto &desc: structureDescriptors_in_thread[threadIdx])
+                structureDescriptors.push_back(desc);
+            for(auto &lcs_one_thread: lcs_in_thread[threadIdx])
+                lcs.push_back(lcs_one_thread);
+            for(auto &ti: typeIndices_in_thread[threadIdx])
+                typeIndices.push_back(ti);
+            for(auto &natu: natomsInAsymmetricUnit_in_thread[threadIdx])
+                natomsInAsymmetricUnit.push_back(natu);
+            for(auto &msg: fileIoErrorMessages_in_thread[threadIdx])
+                fileIoErrorMessages.push_back(msg);
+            for(auto &invRead: invalidStructureReads_in_thread[threadIdx])
+                invalidStructureReads.push_back(invRead);
+            for(auto &mti: multiTypeIndices_in_thread[threadIdx])
+                multiTypeIndices.push_back(mti);
         }
 
         validStructureIds.swap(structureIds);
@@ -1686,6 +1919,7 @@ int main(int argc, char *argv[])
         printUnassignedFormulaStats("unassigned_formula_stats.txt", header, sortedUnassignedAtoms);
         printStructureAssignedAndNot("structures_complete_assignemnet.txt", structureIds, typeIndices, structureDescriptors);
         printTypeInfo("types_stats.txt", typeIndices, types);
+        printMultiTypeInfo("multitypes_stats.txt", multiTypeIndices, types);
         printMoveAssigned("move_assigned.bat", filePaths, typeIndices);
 
         cout << "\r";

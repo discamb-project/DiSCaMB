@@ -77,6 +77,7 @@ namespace discamb {
     void MolecularAtomTypeAssigner::assign_all_possible(
         const StructureWithDescriptors& descriptors,
         std::vector< std::vector<int> >& typeIDs)
+        const
     {
         int atomIndex, nAtoms;
 

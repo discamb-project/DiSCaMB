@@ -29,7 +29,7 @@ namespace discamb {
         void assign(const StructureWithDescriptors &descriptors, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
         void assign(const StructureWithDescriptors &descriptors, const std::vector<int> &atomsToAssign, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<int> > &lcs) const;
 
-        void assign_all_possible(const StructureWithDescriptors& descriptors, std::vector< std::vector<int> >& typeID);
+        void assign_all_possible(const StructureWithDescriptors& descriptors, std::vector< std::vector<int> >& typeID) const;
 
 
     private:
