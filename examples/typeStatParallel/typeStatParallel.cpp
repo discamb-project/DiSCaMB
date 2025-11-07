@@ -667,8 +667,7 @@ void printAssignmentInfo(
     //const vector<vector<UBDB_LocalCoordinateSystem<size_t> > > &lcs,
     const vector < vector <string> > &lcs,
     map< UnassignedAtomDescriptors, vector<string> > &sortedUnassignedAtoms,
-    const vector<size_t> &nAtomsInAsymmetricUnit,
-    bool find_unassigned_and_do_not_print_output)
+    const vector<size_t> &nAtomsInAsymmetricUnit)
 {
     sortedUnassignedAtoms.clear();
     UnassignedAtomDescriptors unassignedAtomDescriptors;
@@ -1909,9 +1908,9 @@ int main(int argc, char *argv[])
 
         map< UnassignedAtomDescriptors, vector<string> > sortedUnassignedAtoms;
 
-        //if(!do_not_write_assignment_info)
-        printAssignmentInfo("assignment_info.txt", structureIds, header, bankSettings.descriptorsSettings, structureDescriptors, 
-                            typeIndices, types, lcs, sortedUnassignedAtoms, natomsInAsymmetricUnit, do_not_write_assignment_info);
+        if(!do_not_write_assignment_info)
+            printAssignmentInfo("assignment_info.txt", structureIds, header, bankSettings.descriptorsSettings, structureDescriptors, typeIndices, types,
+                        lcs, sortedUnassignedAtoms, natomsInAsymmetricUnit);
 
         printUnassignedAtomsInfo("unassigned_atoms_info.txt", header, sortedUnassignedAtoms);        
 		printUnassignedAtomsInfoSortedByN("unassigned_atoms_sorted_by_n.txt", header, sortedUnassignedAtoms);
