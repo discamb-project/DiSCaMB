@@ -955,28 +955,33 @@ namespace discamb {
         {
             atomType = AtomType();
             atomType.id = atomTypeId;
+            try {
 
+                if (data.find("atoms and bonds") != data.end())
+                {
+                    nlohmann::json atomsAndBonds = data.find("atoms and bonds").value();
+                    if (atomsAndBonds.begin()->is_string())
+                    {
+                        vector<string> atomsAndBondsLines;
+                        for (auto it = atomsAndBonds.begin(); it != atomsAndBonds.end(); it++)
+                            atomsAndBondsLines.push_back(it->get<string>());
+                        parseStructuralFormulaTxt(atomsAndBondsLines,
+                            element_groups,
+                            defaultAtomDescriptors,
+                            defaultCetralAtomDescriptors,
+                            atomType.atoms,
+                            atomType.connectivity);
 
-            if (data.find("atoms and bonds") != data.end())
+                    }
+                    else
+                    {
+                        on_error::not_implemented(__FILE__, __LINE__);
+                    }
+                }
+            }
+            catch (...)
             {
-                nlohmann::json atomsAndBonds = data.find("atoms and bonds").value();
-                if (atomsAndBonds.begin()->is_string())
-                {
-                    vector<string> atomsAndBondsLines;
-                    for (auto it = atomsAndBonds.begin(); it != atomsAndBonds.end(); it++)
-                        atomsAndBondsLines.push_back(it->get<string>());
-                    parseStructuralFormulaTxt(atomsAndBondsLines, 
-                        element_groups,
-                        defaultAtomDescriptors,
-                        defaultCetralAtomDescriptors,
-                        atomType.atoms,
-                        atomType.connectivity);
-
-                }
-                else
-                {
-                    on_error::not_implemented(__FILE__, __LINE__);
-                }
+                on_error::throwException("problem when parsing \"atoms and bonds\" for atom type " + atomType.id, __FILE__, __LINE__);
             }
             /*
         std::vector<std::string> ringLabels;

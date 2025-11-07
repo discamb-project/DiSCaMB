@@ -265,6 +265,14 @@ namespace discamb {
                     if (i != j)
                         if (typeMatchAlgorithms[i].generalize(typeMatchAlgorithms[j]))
                             typesGeneralized[i].push_back(j);
+            
+            for (int i = 0; i < nTypes; i++)
+                for(int j: typesGeneralized[i])
+                    if (find(typesGeneralized[j].begin(), typesGeneralized[j].end(), i) != typesGeneralized[j].end())
+                    {
+                        string equivalent = types[i].id + " and " + types[j].id;
+                        on_error::throwException("cannot find type hierarchy when equivalent atom types are present (equivalence detected for " + equivalent, __FILE__, __LINE__);
+                    }
 
             // type_hierarchy[level] - the higher level the more general types are
             //vector<vector<int> > type_hierarchy;

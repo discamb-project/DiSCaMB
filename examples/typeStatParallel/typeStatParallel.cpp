@@ -1739,6 +1739,28 @@ int main(int argc, char *argv[])
         DescriptorsSettings descriptorsSettings;
         atom_type_io::readAtomTypes(bank_file, types, descriptorsSettings);
 
+        vector<vector<int> > typesGeneralized;
+        vector<vector<int> > hierarchyLevel;
+        vector<pair<int, int> > equivalentTypes;
+        vector<pair<int, vector<int> > > generalizedByMultipleTypesAtSameLevel;
+
+        atom_typing_utilities::typeGeneralizationDiagnostics(
+            typesGeneralized,
+            hierarchyLevel,
+            equivalentTypes,
+            generalizedByMultipleTypesAtSameLevel);
+
+        if (!equivalentTypes.empty())
+        {
+            cout << "Error in type bank: there are equivalent types, info written to equivalent_types.txt\n";
+            ofstream equivalent_types_file("equivalent_types.txt");
+            equivalent_types_file << "Equivalent atom types:\n";
+            for (auto& type_pair : equivalentTypes)
+                equivalent_types_file << types[type_pair.first].id << "   " << types[type_pair.second].id << "\n";
+            equivalent_types_file.close();
+            return 0;
+        }
+        
         //atom_typing_utilities::sortTypesByGenarality_LevelsAbove(types);
         atom_typing_utilities::sortTypesByGenarality_LevelsBelow(types);
 
