@@ -1161,7 +1161,7 @@ namespace discamb {
             if (data.find("default atomic properties") != data.end())
                 json2atomDescriptors(data.find("default atomic properties").value(), defaultAtomDescriptors);
             if (data.find("default central atom properties") != data.end())
-                json2atomDescriptors(data.find("default atomic properties").value(), defaultCetralAtomDescriptors);
+                json2atomDescriptors(data.find("default central atom properties").value(), defaultCetralAtomDescriptors);
 
             
             set<string> typeLabels;
