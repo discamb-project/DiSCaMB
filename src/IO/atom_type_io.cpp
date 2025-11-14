@@ -632,6 +632,58 @@ namespace {
             discamb::on_error::throwException(message, __FILE__, __LINE__);
         }
     }
+
+    // checks if it is a label beginning (uppercase letter not preceded by letter)
+    bool isLabelBeginningOrEmpty(const string line, int position)
+    {
+        if (position >= line.size())
+            return true;
+
+        char c = line[position]; 
+
+        if(c == ' ')
+            return true;
+
+        if (!isalpha(c))
+            return false;
+
+        if (c != toupper(c))
+            return false;
+        if (position > 0)
+            if (isalpha(line[position - 1]))
+                return false;
+        return true;
+    }
+
+    void checkVerticalBondsInStructuralFormula(
+        const std::vector<std::string>& lines)
+    {
+        int nLines = lines.size();
+        bool ok = true;
+        for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
+        {
+            int lineSize = lines[lineIdx].size();
+            for (int charIdx = 0; charIdx < lineSize; charIdx++)
+            {
+                char c = lines[lineIdx][charIdx];
+                if (c == '|')
+                {
+                    // check above
+                    if (lineIdx > 0)
+                        if(!isLabelBeginningOrEmpty(lines[lineIdx - 1], charIdx))
+                            ok = false;
+                    // check below
+                    if (lineIdx < nLines - 1)
+                        if (!isLabelBeginningOrEmpty(lines[lineIdx + 1], charIdx))
+                            ok = false;
+                    
+                }
+            }
+        }
+        if(!ok)
+            discamb::on_error::throwException("vertical bonds '|' in structural formula should end with chemical element symbol or space", __FILE__, __LINE__);
+    }
+
 }
 
 namespace discamb {
@@ -658,6 +710,9 @@ namespace discamb {
             descriptorsSettings = bankSettings.descriptorsSettings;
         }
 
+        // checks if vertical bonds '|' end with chemical element symbol or space
+
+
         void parseStructuralFormulaTxt(
             const std::vector<std::string>& lines,
             const std::map<std::string, std::set<int> >& element_groups,
@@ -668,6 +723,8 @@ namespace discamb {
         {
             atoms.clear();
             connectivityFinal.clear();
+
+            checkVerticalBondsInStructuralFormula(lines);
 
             vector<AtomFromString> atomsFromString;
             vector<BondFromString> bondsFromString;
@@ -1070,7 +1127,7 @@ namespace discamb {
                 json2atomDescriptors(data.find("default atomic properties").value(), defaultCetralAtomDescriptors);
 
             
-            
+            set<string> typeLabels;
             if (data.find("types") != data.end())
             {
                 auto types = data.find("types");
@@ -1081,6 +1138,8 @@ namespace discamb {
                         json2atomType(type.value(), element_groups, type.key(), atomType, defaultAtomDescriptors, defaultCetralAtomDescriptors);
                         //atomType.id = type.key();
                         //atomTypesAndData.push_back({ atomType, type.value()});
+                        if(typeLabels.count(atomType.id)!=0)
+                            on_error::throwException("repeating atom type id '" + atomType.id + "' in json file", __FILE__, __LINE__);
                         atomTypes.push_back(atomType);
                         typeData.push_back(type.value());
                     }

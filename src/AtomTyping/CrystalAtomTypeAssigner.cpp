@@ -417,6 +417,7 @@ namespace discamb {
         vector<AtomInCrystalID> graphAtoms;
         vector<int> atomicNumbers, atomicNumbersASU;
         vector<Vector3d> positions;
+        vector<string> atomicLabels;
         Vector3d fractional, cartesian;
         int atomIndexInAsymmetricUnit;
         crystal_structure_utilities::atomicNumbers(crystal, atomicNumbersASU);
@@ -436,6 +437,7 @@ namespace discamb {
             positions.push_back(cartesian);
             // --
             atomicNumbers.push_back(atomicNumbersASU[atomIndexInAsymmetricUnit]);
+            atomicLabels.push_back(crystal.atoms[atomIndexInAsymmetricUnit].label);
         }
         //_DEBUG
         //xyz_io::writeXyz("asignment_struct.xyz", atomicNumbers, positions);
@@ -450,7 +452,7 @@ namespace discamb {
 
         for (int i = 0; i < crystal.atoms.size(); i++)
             atomToAssign[i] = i;
-        structureWithDescriptors.set(atomicNumbers, positions);
+        structureWithDescriptors.set(atomicNumbers, positions, atomicLabels);
         if(process_all_types)
             mAssigner.assign_all_possible(structureWithDescriptors, typeIDs);
         else

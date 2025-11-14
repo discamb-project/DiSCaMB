@@ -76,14 +76,26 @@ void FilterStructures::run()
         Crystal crystal;
         shelx_io::read((mResFolder  / file).string(), crystal);
         
-        // skip if u_iso for non-H atom
+        bool skip_structure = false;
         for (auto& atom : crystal.atoms)
+        {
+            // skip if u_iso for non-H atom
             if (atom.type != "H")
                 if (atom.adp.size() != 6)
                 {
                     log << file << " non-H atom with Uiso\n";
-                    continue;
+                    skip_structure = true;
                 }
+            // skip if disordered atomsu_iso for non-H atom
+            if (atom.occupancy != 1.0)
+            {
+                log << file << " disordered structure\n";
+                skip_structure = true;
+            }
+        }
+
+        if(skip_structure)
+            continue;
 
         nStructuresUani++;
 
