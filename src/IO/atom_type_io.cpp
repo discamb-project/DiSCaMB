@@ -34,6 +34,43 @@ using namespace nlohmann;
 */
 
 namespace {
+    struct JsonDuplicateCheck {
+        std::set<std::string> keyNames;
+        std::string lastKey;
+        int types_depth = -1;
+        bool parsingTypes = false;
+        bool operator()(int depth, nlohmann::json::parse_event_t event, nlohmann::json& parsed)
+        {
+            //lastKey
+            if (event == nlohmann::json::parse_event_t::key)
+            {
+                lastKey = parsed.get<string>();
+                if (parsingTypes && types_depth == depth)
+                {
+                    if (keyNames.count(lastKey))
+                            discamb::on_error::throwException("repeating type name '" + lastKey + "'", __FILE__, __LINE__);
+                    else
+                        if(lastKey!="comment")
+                            keyNames.insert(lastKey);
+                }
+                if (lastKey == "types")
+                {
+                    types_depth = depth+1;
+                    parsingTypes = true;
+                }
+            }
+            if (parsingTypes)
+            {
+                if (event == nlohmann::json::parse_event_t::object_end)
+                {
+                    if (depth == types_depth + 1)
+                        parsingTypes = false;
+                }
+            }
+            return true;
+        }
+    };
+
     struct AtomFromString {
         void set(const std::string& s,int endPosition);
         int labelPosition; // index in line of the first character of atom label (e.g. C in C2{planar})
@@ -1110,8 +1147,8 @@ namespace discamb {
 
             if (!in.good())
                 on_error::throwException(string("cannot read file '") + jsonFileName + string("'"), __FILE__, __LINE__);
-
-            json data = json::parse(in);
+            JsonDuplicateCheck jsonDuplicateCheck;
+            json data = json::parse(in, jsonDuplicateCheck);
             in.close();
 
             // set element groups
@@ -1140,6 +1177,7 @@ namespace discamb {
                         //atomTypesAndData.push_back({ atomType, type.value()});
                         if(typeLabels.count(atomType.id)!=0)
                             on_error::throwException("repeating atom type id '" + atomType.id + "' in json file", __FILE__, __LINE__);
+                        typeLabels.insert(atomType.id);
                         atomTypes.push_back(atomType);
                         typeData.push_back(type.value());
                     }
