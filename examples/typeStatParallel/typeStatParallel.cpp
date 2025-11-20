@@ -191,10 +191,10 @@ void printDetailedStats(
         string hash80(80, '#');
         out << hash80 << "\n" << header << hash80 << "\n\n"
             << "   content:\n"
-            << "      (1) list of types which instances were found\n"
-            << "      (2) list of types which instances were not found\n"
-            << "      (3) fraction and number of atoms with assigned atom type\n"
-			<< "      (4) fraction and number of structures with all atoms with atom type assigned\n"
+            << "      (1) fraction and number of atoms with assigned atom type\n"
+			<< "      (2) fraction and number of structures with all atoms with atom type assigned\n"
+            << "      (3) list of types which instances were found\n"
+            << "      (4) list of types which instances were not found\n"
             << "      (5) number of instances per type\n"
             << "      (6) list of instances for each type \n"
             << "\n\n" << hash80 << "\n\n\n";
@@ -213,8 +213,23 @@ void printDetailedStats(
         }
         
         //------------------------------------
+
+        out << "\n(1) fraction and number of atoms with assigned atom type\n";
+        double nAllAtoms = double(nAssignedAtoms + nNotAssignedAtoms);
+        out << "    atom type assigned to " << setprecision(2) << fixed << nAssignedAtoms / nAllAtoms * 100.0 << "% of atoms (" << nAssignedAtoms << ")\n";
+        cout << "\n\n    atom type assigned to " << setprecision(2) << fixed << nAssignedAtoms / nAllAtoms * 100.0 << "% of atoms (" << nAssignedAtoms << ")\n";
+
+        cout << "\n\n    atom type not assigned to " << nNotAssignedAtoms << " atoms\n";
+
+		out << "\n(2) fraction and number of structures with all atoms with atom type assigned\n";
+		out << "    " << nCompletelyRecognizedStructures << " of " << nConsideredStructures << " with completely recognized atom types "
+			<< " - " << setprecision(2) << fixed << double(nCompletelyRecognizedStructures) / double(nConsideredStructures) * 100.0 << "%\n";
+
+        cout << "\n    fraction and number of structures with all atoms with atom type assigned\n";
+        cout << "    " << nCompletelyRecognizedStructures << " of " << nConsideredStructures << " with completely recognized atom types "
+            << " - " << setprecision(2) << fixed << double(nCompletelyRecognizedStructures) / double(nConsideredStructures) * 100.0 << "%\n";
     
-        out << "(1) list of types which instances were found\n\n";
+        out << "(3) list of types which instances were found\n\n";
         i = 0;
         for (typeIdx = 0; typeIdx < nTypes; typeIdx++)
         {
@@ -231,7 +246,7 @@ void printDetailedStats(
     
     
     
-        out << "(2) list of types which instances were not found\n\n";
+        out << "(4) list of types which instances were not found\n\n";
         
         i = 0;
         for (typeIdx = 0; typeIdx < nTypes; typeIdx++)
@@ -249,20 +264,6 @@ void printDetailedStats(
     
             
     
-        out << "\n(3) fraction and number of atoms with assigned atom type\n";
-        double nAllAtoms = double(nAssignedAtoms + nNotAssignedAtoms);
-        out << "    atom type assigned to " << setprecision(2) << fixed << nAssignedAtoms / nAllAtoms * 100.0 << "% of atoms (" << nAssignedAtoms << ")\n";
-        cout << "\n\n    atom type assigned to " << setprecision(2) << fixed << nAssignedAtoms / nAllAtoms * 100.0 << "% of atoms (" << nAssignedAtoms << ")\n";
-
-        cout << "\n\n    atom type not assigned to " << nNotAssignedAtoms << " atoms\n";
-
-		out << "\n(4) fraction and number of structures with all atoms with atom type assigned\n";
-		out << "    " << nCompletelyRecognizedStructures << " of " << nConsideredStructures << " with completely recognized atom types "
-			<< " - " << setprecision(2) << fixed << double(nCompletelyRecognizedStructures) / double(nConsideredStructures) * 100.0 << "%\n";
-
-        cout << "\n    fraction and number of structures with all atoms with atom type assigned\n";
-        cout << "    " << nCompletelyRecognizedStructures << " of " << nConsideredStructures << " with completely recognized atom types "
-            << " - " << setprecision(2) << fixed << double(nCompletelyRecognizedStructures) / double(nConsideredStructures) * 100.0 << "%\n";
 
 
         out << "\n(5) number of instances per type\n\n";
