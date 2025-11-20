@@ -34,6 +34,43 @@ using namespace nlohmann;
 */
 
 namespace {
+    struct JsonDuplicateCheck {
+        std::set<std::string> keyNames;
+        std::string lastKey;
+        int types_depth = -1;
+        bool parsingTypes = false;
+        bool operator()(int depth, nlohmann::json::parse_event_t event, nlohmann::json& parsed)
+        {
+            //lastKey
+            if (event == nlohmann::json::parse_event_t::key)
+            {
+                lastKey = parsed.get<string>();
+                if (parsingTypes && types_depth == depth)
+                {
+                    if (keyNames.count(lastKey))
+                            discamb::on_error::throwException("repeating type name '" + lastKey + "'", __FILE__, __LINE__);
+                    else
+                        if(lastKey!="comment")
+                            keyNames.insert(lastKey);
+                }
+                if (lastKey == "types")
+                {
+                    types_depth = depth+1;
+                    parsingTypes = true;
+                }
+            }
+            if (parsingTypes)
+            {
+                if (event == nlohmann::json::parse_event_t::object_end)
+                {
+                    if (depth == types_depth + 1)
+                        parsingTypes = false;
+                }
+            }
+            return true;
+        }
+    };
+
     struct AtomFromString {
         void set(const std::string& s,int endPosition);
         int labelPosition; // index in line of the first character of atom label (e.g. C in C2{planar})
@@ -155,7 +192,18 @@ namespace {
             bondIdx[bonds[i].line][bonds[i].position] = i;
 
         vector<vector<int> > bondGroups;
-        
+
+        //cout << "#################\n\n";
+        //for (int row = 0; row < nRows; row++)
+        //{
+        //    for (int col = 0; col < nColumns; col++)
+        //        if (bondIdx[row][col] >= 0)
+        //            cout << bonds[bondIdx[row][col]].bondCharacter;
+        //        else
+        //            cout << " ";
+        //    cout << "\n";
+        //}
+
         // concatenate --- == ##
         for(int row=0; row<nRows; row++)
             for (int col = 0; col < nColumns; col++)
@@ -221,6 +269,85 @@ namespace {
                         row += bondGroup.size() - 1;
                     }
                 }
+
+        // concatenate \ 
+        for (int col = 0; col < nColumns; col++)
+            for (int row = 0; row < nRows; row++)
+                if (bondIdx[row][col] >= 0)
+                {
+                    vector<int> bondGroup;
+                    auto& bond = bonds[bondIdx[row][col]];
+                    if (bond.bondCharacter == '\\')
+                    {
+                        bondGroup.push_back(bondIdx[row][col]);
+                        bondIdx[row][col] = -1;
+                        bool checkNext = true;
+                        int row2 = row;
+                        int col2 = col;
+                        while (checkNext)
+                        {
+                            row2++;
+                            col2++;
+                            if (row2 == nRows)
+                                break;
+                            if (col2 >= bondIdx[row2].size())
+                                break;
+                            if (bondIdx[row2][col2] < 0)
+                                break;
+                            char bondChar = bonds[bondIdx[row2][col2]].bondCharacter;
+                            if (bond.bondCharacter == bondChar)
+                                bondGroup.push_back(bondIdx[row2][col2]);
+                            else
+                                discamb::on_error::throwException("consecutive bond characters should be the same, e.g. --, not =-",
+                                    __FILE__, __LINE__);
+                            bondIdx[row2][col2] = -1;
+                        }
+                        bondGroups.push_back(bondGroup);
+                        bondsUpdated.push_back(bond);
+                        bondsUpdated.back().length = bondGroup.size();
+                    }
+                }
+
+        // concatenate / 
+        for (int row = 0; row < nRows; row++)
+            for (int col = 0; col < nColumns; col++)
+                if (bondIdx[row][col] >= 0)
+                {
+                    vector<int> bondGroup;
+                    auto& bond = bonds[bondIdx[row][col]];
+                    if (bond.bondCharacter == '/')
+                    {
+                        bondGroup.push_back(bondIdx[row][col]);
+                        bondIdx[row][col] = -1;
+                        bool checkNext = true;
+                        int row2 = row;
+                        int col2 = col;
+                        while (checkNext)
+                        {
+                            row2++;
+                            col2--;
+                            if (row2 == nRows)
+                                break;
+                            if (col2 >= bondIdx[row2].size())
+                                break;
+                            if (col2 <0)
+                                break;
+                            if (bondIdx[row2][col2] < 0)
+                                break;
+                            char bondChar = bonds[bondIdx[row2][col2]].bondCharacter;
+                            if (bond.bondCharacter == bondChar)
+                                bondGroup.push_back(bondIdx[row2][col2]);
+                            else
+                                discamb::on_error::throwException("consecutive bond characters should be the same, e.g. --, not =-",
+                                    __FILE__, __LINE__);
+                            bondIdx[row2][col2] = -1;
+                        }
+                        bondGroups.push_back(bondGroup);
+                        bondsUpdated.push_back(bond);
+                        bondsUpdated.back().length = bondGroup.size();
+                    }
+                }
+
 
         vector<bool> inGroup(bonds.size(), false);
         for (auto& group : bondGroups)
@@ -308,12 +435,12 @@ namespace {
             else if (bond.bondCharacter == '\\')
             {
                 atom1 = valueIfExists(atomIdx, bond.line - 1, bond.position - 1);
-                atom2 = valueIfExists(atomIdx, bond.line + 1, bond.position + 1);
+                atom2 = valueIfExists(atomIdx, bond.line + bond.length, bond.position + bond.length);
             }
             else if (bond.bondCharacter == '/')
             {
                 atom1 = valueIfExists(atomIdx, bond.line - 1, bond.position + 1);
-                atom2 = valueIfExists(atomIdx, bond.line + 1, bond.position - 1);
+                atom2 = valueIfExists(atomIdx, bond.line + bond.length, bond.position - bond.length);
             }
             else if (bond.bondCharacter == '>')
             {
@@ -1110,8 +1237,8 @@ namespace discamb {
 
             if (!in.good())
                 on_error::throwException(string("cannot read file '") + jsonFileName + string("'"), __FILE__, __LINE__);
-
-            json data = json::parse(in);
+            JsonDuplicateCheck jsonDuplicateCheck;
+            json data = json::parse(in, jsonDuplicateCheck);
             in.close();
 
             // set element groups
@@ -1124,7 +1251,7 @@ namespace discamb {
             if (data.find("default atomic properties") != data.end())
                 json2atomDescriptors(data.find("default atomic properties").value(), defaultAtomDescriptors);
             if (data.find("default central atom properties") != data.end())
-                json2atomDescriptors(data.find("default atomic properties").value(), defaultCetralAtomDescriptors);
+                json2atomDescriptors(data.find("default central atom properties").value(), defaultCetralAtomDescriptors);
 
             
             set<string> typeLabels;
@@ -1140,6 +1267,7 @@ namespace discamb {
                         //atomTypesAndData.push_back({ atomType, type.value()});
                         if(typeLabels.count(atomType.id)!=0)
                             on_error::throwException("repeating atom type id '" + atomType.id + "' in json file", __FILE__, __LINE__);
+                        typeLabels.insert(atomType.id);
                         atomTypes.push_back(atomType);
                         typeData.push_back(type.value());
                     }
