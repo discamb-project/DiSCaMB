@@ -1048,8 +1048,36 @@ void printUnassignedAtomsInfoSortedByNStructures(
 void printUnassignedAtomsInfoSortedByNStructuresAndFormula(
     const string fName,
     string header,
-    map< UnassignedAtomDescriptors, vector<string> >& _sortedUnassignedAtoms)
+    map< UnassignedAtomDescriptors, vector<string> >& _sortedUnassignedAtoms,
+    bool hydrogen_only = false,
+    bool hydrogen_bonded_only = false)
 {
+    if(hydrogen_only && hydrogen_bonded_only)
+        on_error::throwException("printUnassignedAtomsInfoSortedByNStructuresAndFormula: "
+            "only one of hydrogen_only and hydrogen_bonded_only can be set true", __FILE__, __LINE__);
+
+    if (hydrogen_only || hydrogen_bonded_only)
+    {
+        map< UnassignedAtomDescriptors, vector<string> > filteredSortedUnassignedAtoms;
+        if (hydrogen_only)
+        {
+            for (auto& item : _sortedUnassignedAtoms)
+                if (get<0>(item.first) == 1) // hydrogen
+                    filteredSortedUnassignedAtoms.insert(item);
+        }
+        if (hydrogen_bonded_only)
+        {
+            for (auto& item : _sortedUnassignedAtoms)
+            {
+                string neighbours = get<1>(item.first);
+                if (neighbours.find("H")!=string::npos) // bonded to hydrogen
+                    filteredSortedUnassignedAtoms.insert(item);
+            }
+        }
+        printUnassignedAtomsInfoSortedByNStructuresAndFormula(fName, header, filteredSortedUnassignedAtoms);
+        return;
+    }
+
     ofstream out(fName);
     if (!out.good())
         on_error::throwException(string("cannot write to log file '") + fName + string("'"), __FILE__, __LINE__);
@@ -1939,6 +1967,8 @@ int main(int argc, char *argv[])
 		printUnassignedAtomsInfoSortedByN("unassigned_atoms_sorted_by_n.txt", header, sortedUnassignedAtoms);
         printUnassignedAtomsInfoSortedByNStructures("unassigned_atoms_sorted_by_n_str.txt", header, sortedUnassignedAtoms);
         printUnassignedAtomsInfoSortedByNStructuresAndFormula("unassigned_atoms_sorted_by_n_str_and_formula.txt", header, sortedUnassignedAtoms);
+        printUnassignedAtomsInfoSortedByNStructuresAndFormula("h_only_unassigned_atoms_sorted_by_n_str_and_formula.txt", header, sortedUnassignedAtoms, true);
+        printUnassignedAtomsInfoSortedByNStructuresAndFormula("h_bonded_only_unassigned_atoms_sorted_by_n_str_and_formula.txt", header, sortedUnassignedAtoms, false, true);
         printUnassignedFormulaStats("unassigned_formula_stats.txt", header, sortedUnassignedAtoms);
         printStructureAssignedAndNot("structures_complete_assignemnet.txt", structureIds, typeIndices, structureDescriptors);
         printTypeInfo("types_stats.txt", typeIndices, types);
