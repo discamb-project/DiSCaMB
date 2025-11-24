@@ -1,8 +1,11 @@
 #pragma once
 
 #include "discamb/CrystalStructure/Crystal.h"
+//#include "discamb/Scattering
 
 #include "json.hpp"
+
+#include <utility>
 
 namespace discamb{
 
@@ -35,6 +38,7 @@ namespace disordered_structure_fragments{
 
     void split_with_labels(
         const Crystal& crystal,
+        const std::vector<std::vector<std::pair<int, std::string> > > &connectivity,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
     // "H2.B   1    A    H105    Z N      1    A X CA     1    A"
     void split_with_labels_internal_altloc(
@@ -47,9 +51,9 @@ namespace disordered_structure_fragments{
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
 
 
-    void split_with_labels_new_impl(
-        const Crystal& crystal,
-        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+//    void split_with_labels_new_impl(
+//        const Crystal& crystal,
+//        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
 
     /*
     populates ordered_parts which then can be used in TaamSfCalculator constructor

@@ -3137,6 +3137,7 @@ void u_aniso_along_line()
 struct AtomInfo
 {
     char altloc = ' ';
+    int residue_index = -1;
     vector<int> bonded_atoms;
     vector<char> altlocs;
     vector<int> plane;
@@ -3166,6 +3167,11 @@ void atom_typing_next_gen()
             atom_info.altloc = words[1][16];
             atom_structal_information["altloc"] = string(1, atom_info.altloc);
             string_utilities::split(words[2], words2, ':');
+            atom_info.residue_index = stoi(words2[1].substr(22,3));
+            atom_structal_information["r_idx"] = atom_info.residue_index;
+            atom_structal_information["r_name"] = string_utilities::trim(words2[1].substr(17, 3));
+            atom_structal_information["at_name"] = string_utilities::trim(words2[1].substr(12, 4));
+            //atom_info.altloc = words[1][16];
             //bonds: [22] altlocs: ['B'] plane: None syms: None
             //bonds: [34] altlocs: [''] plane: [33, 35, 34, 49] syms: None
             // 0           1            2          3         4
@@ -3321,6 +3327,9 @@ int main(int argc, char* argv[])
 {
 
     try {
+        string s = "123456789";
+        cout << s.substr(3,3) << endl;
+        return 0;
         if (argc != 2)
             on_error::throwException("expected structure file \n", __FILE__, __LINE__);
         test_taam_typing(argv[1]);
