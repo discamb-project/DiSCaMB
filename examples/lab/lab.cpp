@@ -3169,8 +3169,12 @@ void atom_typing_next_gen()
             string_utilities::split(words[2], words2, ':');
             atom_info.residue_index = stoi(words2[1].substr(22,3));
             atom_structal_information["r_idx"] = atom_info.residue_index;
-            atom_structal_information["r_name"] = string_utilities::trim(words2[1].substr(17, 3));
-            atom_structal_information["at_name"] = string_utilities::trim(words2[1].substr(12, 4));
+            string residue_field = words2[1].substr(17, 3);
+            string atom_field = words2[1].substr(12, 4);
+            //atom_structal_information["r_name"] = string_utilities::trim(words2[1].substr(17, 3));
+            atom_structal_information["r_name"] = string_utilities::trim(residue_field);
+            //atom_structal_information["at_name"] = string_utilities::trim(words2[1].substr(12, 4));
+            atom_structal_information["at_name"] = string_utilities::trim(atom_field);
             //atom_info.altloc = words[1][16];
             //bonds: [22] altlocs: ['B'] plane: None syms: None
             //bonds: [34] altlocs: [''] plane: [33, 35, 34, 49] syms: None
