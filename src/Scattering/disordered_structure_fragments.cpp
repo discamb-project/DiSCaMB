@@ -546,8 +546,8 @@ namespace disordered_structure_fragments{
     //void split_with_labels_new_impl(
     void split_with_labels(
         const Crystal& crystal,
-        const std::vector<std::vector<std::pair<int, std::string> > > _connectivity,
-        std::vector< std::vector<std::pair<std::string, double> > >& _ordered_parts)
+        std::vector< std::vector<std::pair<std::string, double> > >& _ordered_parts,
+        const std::vector<std::vector<std::pair<int, std::string> > > &_connectivity)
     {
         _ordered_parts.clear();
         vector < vector<pair<int, double> > > ordered_parts;
