@@ -542,6 +542,41 @@ namespace disordered_structure_fragments{
 
     }
 
+    void split_with_macromol_info(
+        const Crystal& _crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts)
+    {
+
+        Crystal crystal = _crystal;
+        int nAtoms = crystal.atoms.size();
+        if(macromolInfo.altlocs.size() != nAtoms ||
+           macromolInfo.residueSequenceNumbers.size() != nAtoms ||
+           macromolInfo.residueNames.size() != nAtoms ||
+           macromolInfo.atomNames.size() != nAtoms)
+        {
+            string message = "inconsistent macromolecular structural information provided";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+
+        for(int atomIdx=0; atomIdx<nAtoms; atomIdx++)
+        {
+            string new_label =
+                to_string(macromolInfo.residueSequenceNumbers[atomIdx]) +
+                "_" + macromolInfo.residueNames[atomIdx] +
+                "_" + macromolInfo.atomNames[atomIdx];
+            
+            if(macromolInfo.altlocs[atomIdx]!=' ')
+                new_label += "." + macromolInfo.altlocs[atomIdx];
+
+            crystal.atoms[atomIdx].label = new_label;
+        }
+
+        
+        split_with_labels(crystal, ordered_parts, macromolInfo.connectivity);
+            
+    }
+
 
     //void split_with_labels_new_impl(
     void split_with_labels(

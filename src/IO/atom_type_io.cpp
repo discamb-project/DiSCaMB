@@ -270,7 +270,7 @@ namespace {
                     }
                 }
 
-        // concatenate \ 
+        // concatenate  '\'
         for (int col = 0; col < nColumns; col++)
             for (int row = 0; row < nRows; row++)
                 if (bondIdx[row][col] >= 0)

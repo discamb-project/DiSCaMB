@@ -195,7 +195,10 @@ namespace discamb {
         {
             if (orderedSubcrystalAtoms.empty())
             {
-
+                disordered_structure_fragments::split_with_macromol_info(
+                    crystal,
+                    settings.macromolecularInfo,
+                    orderedSubcrystalAtoms);
             }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
             auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(

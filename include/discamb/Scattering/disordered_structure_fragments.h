@@ -1,6 +1,7 @@
 #pragma once
 
 #include "discamb/CrystalStructure/Crystal.h"
+#include "discamb/StructuralProperties/MacromolecularStructuralInformation.h"
 //#include "discamb/Scattering
 
 #include "json.hpp"
@@ -35,6 +36,12 @@ namespace disordered_structure_fragments{
     void split_with_labels_0(
         const Crystal& crystal,
         std::vector< std::vector<std::pair<std::string, double> > > & ordered_parts);
+
+    void split_with_macromol_info(
+        const Crystal& crystal,
+        const MacromolecularStructuralInformation &macromolInfo,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
 
     void split_with_labels(
         const Crystal& crystal,
