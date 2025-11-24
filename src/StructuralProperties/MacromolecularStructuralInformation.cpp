@@ -13,6 +13,8 @@ namespace discamb {
         planes.clear();
         altlocs.clear();
         residueSequenceNumbers.clear();
+        residueNames.clear();
+        atomNames.clear();
 
         if (data.find("atom data") != data.end() && data["atom data"].is_array()) {
             for (const auto& atom_data : data["atom data"]) {
@@ -24,6 +26,13 @@ namespace discamb {
                 if (atom_data.find("r_idx") != atom_data.end() && atom_data["r_idx"].is_number_integer()) {
                     residueSequenceNumbers.push_back(atom_data["r_idx"].get<int>());
                 }
+
+                if (atom_data.find("r_name") != atom_data.end() && atom_data["r_name"].is_string())
+                    residueNames.push_back(atom_data["r_name"].get<std::string>());
+
+                if (atom_data.find("at_name") != atom_data.end() && atom_data["at_name"].is_string())
+                    atomNames.push_back(atom_data["at_name"].get<std::string>());
+
                 if (atom_data.find("plane") != atom_data.end() && atom_data["altloc"].is_array()) {
                     vector<pair<int, string> > plane_list;
                     for (const auto& atom_in_plane : atom_data["plane"]) {

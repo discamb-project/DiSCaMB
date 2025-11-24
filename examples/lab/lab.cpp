@@ -3167,10 +3167,10 @@ void atom_typing_next_gen()
             atom_info.altloc = words[1][16];
             atom_structal_information["altloc"] = string(1, atom_info.altloc);
             string_utilities::split(words[2], words2, ':');
-            atom_info.residue_index = stoi(words2[1].substr(22,3));
+            atom_info.residue_index = stoi(words[1].substr(22,4));
             atom_structal_information["r_idx"] = atom_info.residue_index;
-            string residue_field = words2[1].substr(17, 3);
-            string atom_field = words2[1].substr(12, 4);
+            string residue_field = words[1].substr(17, 3);
+            string atom_field = words[1].substr(12, 4);
             //atom_structal_information["r_name"] = string_utilities::trim(words2[1].substr(17, 3));
             atom_structal_information["r_name"] = string_utilities::trim(residue_field);
             //atom_structal_information["at_name"] = string_utilities::trim(words2[1].substr(12, 4));
@@ -3331,9 +3331,9 @@ int main(int argc, char* argv[])
 {
 
     try {
-        string s = "123456789";
-        cout << s.substr(3,3) << endl;
+        atom_typing_next_gen();
         return 0;
+
         if (argc != 2)
             on_error::throwException("expected structure file \n", __FILE__, __LINE__);
         test_taam_typing(argv[1]);
@@ -3345,8 +3345,6 @@ int main(int argc, char* argv[])
         json2mol(argv[1]);
         return 0;
 
-        atom_typing_next_gen();
-        return 0;
 
         test_connectivity_algorithm();
         return 0;
