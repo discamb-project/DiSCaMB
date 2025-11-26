@@ -1280,6 +1280,7 @@ namespace discamb {
                     for (auto& type : atomTypes)
                         for (int z : upgradeUnnamedAtoms)
                             type.transformUnnamedAtomsToNamed(z, defaultAtomDescriptors);
+                descriptorsSettings.readFromJson(data["settings"]);
             }
         }
 

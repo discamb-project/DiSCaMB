@@ -1,9 +1,13 @@
 #pragma once
 
+#include <map>
+
 #include "AtomInStructureDescriptors.h"
 #include "discamb/MathUtilities/Vector3.h"
 #include "discamb/BasicChemistry/MoleculeData.h"
 //#include "Molecule/Molecule.h"
+
+#include "json.hpp"
 
 namespace discamb {
     /**
@@ -20,8 +24,16 @@ namespace discamb {
         double atomInRingPlanarityThreshold = 0.1;
 		int atomInRingMaxNeighbourCount = 3;
         int maxPlanarRing = 8; // not set by user
-        double maxCcDistanceAromaticRing = 1.45;
-        double maxCnDistanceAromaticRing = 1.44;
+
+        std::map<std::pair<int, int>, double > maxBondLengthAromaticRing;/* = {
+            {{6,6}, 1.45},
+            {{6,7}, 1.41}
+        };*/
+
+        void readFromJson(const nlohmann::json& data);
+
+        //double maxCcDistanceAromaticRing = 1.45;
+        //double maxCnDistanceAromaticRing = 1.44;
     };
 
 

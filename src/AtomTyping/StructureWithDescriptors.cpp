@@ -1,8 +1,9 @@
 #include "discamb/AtomTyping/StructureWithDescriptors.h"
 
-#include "discamb/StructuralProperties/RingCalculator.h"
 #include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/StructuralProperties/CovalentRadiousBondDetector.h"
+#include "discamb/StructuralProperties/RingCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 #include <algorithm>
 #include <cmath>
@@ -25,6 +26,31 @@ namespace discamb{
     double atomInRingPlanarityThreshold = 0.1;
     int atomInRingMaxNeighbourCount = 3;
 */
+
+void DescriptorsSettings::readFromJson(
+    const nlohmann::json& data)
+{
+    covalentBondThreshold = data.value("covalent bond threshold", covalentBondThreshold);
+    atomPlanarityThreshold = data.value("atom planarity threshold", atomPlanarityThreshold);
+    ringPlanarityThreshold = data.value("ring planarity threshold", ringPlanarityThreshold);
+    atomInRingPlanarityThreshold = data.value("atom in ring planarity threshold", atomInRingPlanarityThreshold);
+    atomInRingMaxNeighbourCount = data.value("atom in ring max neighbour count", atomInRingMaxNeighbourCount);
+    if(data.find("max bond length in aromatic ring")!= data.end())
+    {
+        maxBondLengthAromaticRing.clear();
+        for (auto& [key, value] : data["max bond length in aromatic ring"].items())
+        {
+            vector<string> elements;
+            string_utilities::split(key, elements, ',');
+            if (elements.size() != 2)
+                throw std::runtime_error("Invalid key in max bond length aromatic ring settings: " + key);
+            int z1 = periodic_table::atomicNumber(elements[0]);
+            int z2 = periodic_table::atomicNumber(elements[1]);
+            double length = value.get<double>();
+            maxBondLengthAromaticRing[{z1, z2}] = length;
+        }
+    }
+}
 
 void StructureWithDescriptors::set(
     const MoleculeData& m)
@@ -76,7 +102,13 @@ void StructureWithDescriptors::set(
             labels.push_back(periodic_table::symbol(z));
 
 
-    ringCalculator.set(settings.ringPlanarityThreshold, settings.atomInRingPlanarityThreshold, settings.atomInRingMaxNeighbourCount);
+    ringCalculator.set(
+        settings.ringPlanarityThreshold,
+        settings.atomInRingPlanarityThreshold, 
+        settings.atomInRingMaxNeighbourCount,
+        settings.maxBondLengthAromaticRing);
+
+
 
     connectivity = predefinedConnectivity;
 
@@ -125,7 +157,8 @@ void StructureWithDescriptors::set(
 		atomPlanarityEsd[i] = atomDescriptors[i].planarityDisplacementEsd;
 	//----
   //  cout << __LINE__ << endl;
-    ringCalculator.calculateRings(connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd);
+    ringCalculator.calculateRings(connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd, atomicNumbers);
+    //ringCalculator.calculateRings(connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd);
     nRings = planarRings.size();
     vector<vector<pair<int, int> > > atomsRings(nAtoms);
 
@@ -254,7 +287,7 @@ void StructureWithDescriptors::setFromCrystalFragment(
             labels.push_back(periodic_table::symbol(z));
 
 
-    ringCalculator.set(settings.ringPlanarityThreshold, settings.atomInRingPlanarityThreshold, settings.atomInRingMaxNeighbourCount);
+    ringCalculator.set(settings.ringPlanarityThreshold, settings.atomInRingPlanarityThreshold, settings.atomInRingMaxNeighbourCount, settings.maxBondLengthAromaticRing);
 
     connectivity = predefinedConnectivity;
 
@@ -298,7 +331,7 @@ void StructureWithDescriptors::setFromCrystalFragment(
     for (int i = 0; i < nAtoms; i++)
         atomPlanarityEsd[i] = atomDescriptors[i].planarityDisplacementEsd;
     // ringCalculator.calculateRings(connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd);
-    ringCalculator.calculateRings(atomsToTakeIntoAccount, connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd);
+    ringCalculator.calculateRings(atomsToTakeIntoAccount, connectivity, positions, atomPlanarityEsd, maxRingSize, planarRings, planarRingsPlanarityEsd, atomicNumbers);
     nRings = planarRings.size();
     vector<vector<pair<int, int> > > atomsRings(nAtoms);
 

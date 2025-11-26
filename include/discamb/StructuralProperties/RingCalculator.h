@@ -3,8 +3,9 @@
 #include "discamb/MathUtilities/Vector3.h"
 
 #include <cstdlib>
-#include <vector>
+#include <map>
 #include <set>
+#include <vector>
 
 namespace discamb {
 
@@ -18,12 +19,46 @@ namespace discamb {
     {
     public:
         RingCalculator();
-		RingCalculator(double maxRingPlanarityEsd, double maxAtomPlanarityEsd=0.25, int maxNeighboursCount=3);
-        ~RingCalculator();
-		void set(double maxRingPlanarityEsd, double maxAtomPlanarityEsd = 0.25, int maxNeighboursCount = 3);
+		RingCalculator(
+            double maxRingPlanarityEsd, 
+            double maxAtomPlanarityEsd=0.25, 
+            int maxNeighboursCount=3,
+            const std::map<std::pair<int, int>, double >& maxBondLengthInAromaticRing = std::map<std::pair<int, int>, double >());
 
-        void calculateRings(const std::vector<std::vector<int> > &connectivityMatrix, const std::vector<Vector3d> &positions, const std::vector<double> &planarityEsd, int maxRingSize, std::vector<std::vector<int> > &rings, std::vector<double> &ringPlanarityEsd);
-        void calculateRings(const std::vector<int> &atoms, const std::vector<std::vector<int> > &connectivityMatrix, const std::vector<Vector3d> &positions, const std::vector<double> &planarityEsd, int maxRingSize, std::vector<std::vector<int> > &rings, std::vector<double> &ringPlanarityEsd);
+        ~RingCalculator();
+
+        void set(
+            double maxRingPlanarityEsd,
+            double maxAtomPlanarityEsd = 0.25,
+            int maxNeighboursCount = 3,
+            const std::map<std::pair<int, int>, double >& maxBondLengthInAromaticRing = std::map<std::pair<int, int>, double >());
+
+        void calculateRings(
+            const std::vector<std::vector<int> >& connectivityMatrix,
+            const std::vector<Vector3d>& positions,
+            const std::vector<double>& planarityEsd,
+            int maxRingSize, std::vector<std::vector<int> >& rings,
+            std::vector<double>& ringPlanarityEsd,
+            const std::vector<int>& atomicNumbers);// = std::vector<int>(),
+            //const std::map<std::pair<int, int>, double >& maxInteratomicDistance);// = std::map<std::pair<int, int>, double >());
+        /*
+        finds planar rings in the structure defined by connectivityMatrix and positions
+        if maxInteratomicDistance and atomicNumbers are given then it also checks that all interatomic distances in the ring are below the given threshold for atoms with given atomic numbers
+        atoms - indices of atoms to take into account when searching for rings
+        rings - output rings as vectors of atom indices, neighbouring indices corresponds to neighboring atoms
+        maxInteratomicDistance[{atomicNumber1, atomicNumber2}] = maxDistance - max distance for atoms with given atomic numbers to be considered being in aromatic ring
+        atomicNumbers - atomic numbers of atoms corresponding to connectivityMatrix and positions, needed when maxInteratomicDistance is provided
+        */
+        void calculateRings(
+            const std::vector<int>& atoms,
+            const std::vector<std::vector<int> >& connectivityMatrix,
+            const std::vector<Vector3d>& positions,
+            const std::vector<double>& planarityEsd,
+            int maxRingSize,
+            std::vector<std::vector<int> >& rings,
+            std::vector<double>& ringPlanarityEsd,
+            const std::vector<int>& atomicNumbers);// = std::vector<int>(),
+            //const std::map<std::pair<int, int>, double >& maxInteratomicDistance);
 
         static void calculate34Rings(const std::vector<std::vector<int> > &connectivityMatrix, 
                                      std::set<std::set<int> > &rings3,
@@ -38,6 +73,7 @@ namespace discamb {
 		double mMaxRingPlanarityEsd = 0.1;
 		double mMaxAtomPlanarityEsd = 0.1;
 		int mMaxNeighboursCount = 3;
+        std::map<std::pair<int, int>, double > mMaxBondLengthInAromaticRing;
 
         void findRings(int atom, const std::vector<std::vector<int> > &connectivityMatrix, int maxRingSize, std::vector<int> &neighbourhood,
             std::vector<std::vector<int> > &atomRings);

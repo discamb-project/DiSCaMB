@@ -1,6 +1,7 @@
 #ifndef _DISCAMB_MATHUTILITIES_VECTOR3_H_
 #define _DISCAMB_MATHUTILITIES_VECTOR3_H_
 
+#include <cmath>
 #include <iostream>
 
 namespace discamb {
@@ -64,6 +65,8 @@ public:
     Vector3<T> & operator*=(const T &scalar); 
     Vector3<T> & operator/=(const T &scalar);  	  
 
+    T norm() const;
+    T norm2() const;
 };	
 
 template<typename T>
@@ -339,6 +342,21 @@ const
 }
 
 
+template<typename T>
+inline T Vector3<T>::norm()
+const
+{
+    return std::sqrt(x * x + y * y + z * z);
+}
+
+template<typename T>
+inline T Vector3<T>::norm2()
+const
+{
+    return x * x + y * y + z * z;
+}
+
+
 // non-member operators
 
 template<typename T>
@@ -487,6 +505,8 @@ std::istream& operator>>(
     inp >> v.x >> v.y >> v.z;
     return inp;
 }
+
+
 
 /** @}*/
 } // namespace discamb

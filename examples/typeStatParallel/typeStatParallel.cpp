@@ -1767,7 +1767,7 @@ int main(int argc, char *argv[])
 
         DescriptorsSettings descriptorsSettings;
         atom_type_io::readAtomTypes(bank_file, types, descriptorsSettings);
-
+        bankSettings.descriptorsSettings = descriptorsSettings;
         vector<vector<int> > typesGeneralized;
         vector<vector<int> > hierarchyLevel;
         vector<pair<int, int> > equivalentTypes;

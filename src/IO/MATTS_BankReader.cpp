@@ -1274,6 +1274,21 @@ namespace discamb {
                 
                 if (line.find("wavefunction bank") != string::npos)
                     settings.wfn_databank = SlaterOrbitalWfnData::databankIdFromString(words.back());
+                // example line: max bond length in aromatic ring for C C 1.45
+                if (line.find("max bond length in aromatic ring for ") != string::npos)
+                {
+                    vector<string> aromaticWords;
+                    string_utilities::split(line, aromaticWords, CharacterType::WHITE_SPACE);
+                    if (aromaticWords.size() == 10)
+                    {
+                        int z1 = periodic_table::atomicNumber(aromaticWords[7]);
+                        int z2 = periodic_table::atomicNumber(aromaticWords[8]);
+                        double maxBondLength = stod(aromaticWords[9]);
+                        settings.descriptorsSettings.maxBondLengthAromaticRing[make_pair(z1, z2)] = maxBondLength;
+                    }
+                }
+                    
+
             }
 
             getline(in, line);

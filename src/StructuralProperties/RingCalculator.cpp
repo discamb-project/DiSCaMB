@@ -141,9 +141,10 @@ namespace discamb {
 	RingCalculator::RingCalculator(
 		double maxRingPlanarityEsd,
 		double maxAtomPlanarityEsd,
-		int maxNeighboursCount)
+		int maxNeighboursCount,
+        const std::map<std::pair<int, int>, double >& maxBondLengthInAromaticRing)
 	{
-		set(maxRingPlanarityEsd, maxAtomPlanarityEsd, maxNeighboursCount);
+		set(maxRingPlanarityEsd, maxAtomPlanarityEsd, maxNeighboursCount, maxBondLengthInAromaticRing);
 	}
 
     RingCalculator::~RingCalculator()
@@ -152,12 +153,14 @@ namespace discamb {
 	
 	void RingCalculator::RingCalculator::set(
 		double maxRingPlanarityEsd,
-		double maxAtomPlanarityEsd,
-		int maxNeighboursCount)
+        double maxAtomPlanarityEsd,
+		int maxNeighboursCount,
+        const std::map<std::pair<int, int>, double >& maxBondLengthInAromaticRing)
 	{
 		mMaxRingPlanarityEsd = maxRingPlanarityEsd;
 		mMaxAtomPlanarityEsd = maxAtomPlanarityEsd;
 		mMaxNeighboursCount = maxNeighboursCount;
+        mMaxBondLengthInAromaticRing = maxBondLengthInAromaticRing;
 	}
 
     void RingCalculator::calculate34Rings(
@@ -232,7 +235,8 @@ namespace discamb {
         const std::vector<double> &atomPlanarityEsd,
         int maxRingSize,
         std::vector<std::vector<int> > &rings,
-		std::vector<double> &ringPlanarityEsd)
+		std::vector<double> &ringPlanarityEsd,
+        const std::vector<int>& atomicNumbers)
     {
         int atom, nAtoms, maxDistance;
         vector<vector<int> > atomRings;
@@ -269,7 +273,7 @@ namespace discamb {
 			}
         }
 
-		// check rings planarity
+        // check rings planarity & optionally max interatomic distances
 
 		vector<vector<int> > planarRings;
 		vector<Vector3d> ringAtomsPositions;
@@ -280,6 +284,30 @@ namespace discamb {
 			for (int j = 0; j < rings[i].size(); j++)
 				ringAtomsPositions.push_back(positions[rings[i][j]]);
             auto planarity = structural_properties::planarity(ringAtomsPositions, this->mMaxRingPlanarityEsd, d);
+            if (planarity== Tribool::True && !atomicNumbers.empty())
+            {
+                for (int j = 0; j < rings[i].size(); j++)
+                {
+                    int idx1 = rings[i][j];
+                    int idx2 = rings[i][(j + 1) % rings[i].size()];
+
+                    auto const& it_original = mMaxBondLengthInAromaticRing.find({ atomicNumbers[idx1], atomicNumbers[idx2] });
+                    auto const& it_reverse = mMaxBondLengthInAromaticRing.find({ atomicNumbers[idx2], atomicNumbers[idx1] });
+                    auto const& it = (it_original != mMaxBondLengthInAromaticRing.end()) ? it_original : it_reverse;
+
+                    if (it != mMaxBondLengthInAromaticRing.end())
+                    {
+                        double maxDist = it->second;
+                        double dist = (positions[idx1] - positions[idx2]).norm();
+                        if (dist > maxDist)
+                        {
+                            planarity = Tribool::False;
+                            break;
+                        }
+                    }
+                }
+            }
+
 			if (planarity == Tribool::True)
   	        {
 			    	planarRings.push_back(rings[i]);
@@ -297,11 +325,12 @@ namespace discamb {
 		const std::vector<double> &planarityEsd,
         int maxRingSize,
         std::vector<std::vector<int> > &rings,
-		std::vector<double> &ringPlanarityEsd)
+		std::vector<double> &ringPlanarityEsd,
+        const std::vector<int>& atomicNumbers)
     {
 		vector<int> atoms(planarityEsd.size());
 		generate(atoms.begin(), atoms.end(), [i=int(0)] ( ) mutable {return i++; });
-		calculateRings(atoms, connectivityMatrix, positions, planarityEsd, maxRingSize, rings, ringPlanarityEsd);
+		calculateRings(atoms, connectivityMatrix, positions, planarityEsd, maxRingSize, rings, ringPlanarityEsd, atomicNumbers);
     }
 
 
