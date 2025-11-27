@@ -1043,7 +1043,71 @@ void printUnassignedAtomsInfoSortedByNStructures(
     out.close();
 }
 
+void create_general_unassigned_types(map< UnassignedAtomDescriptors, vector<string> >& sortedUnassignedAtoms)
+{
+    vector < pair<string, vector<string> > > atoms_and_neighbors;
+    vector<string> type_names;
+    for (auto& item : sortedUnassignedAtoms)
+    {
+        string element = periodic_table::symbol(get<0>(item.first));
+        string neighbors = get<1>(item.first);
+        type_names.push_back(element + "_" + neighbors);
+        vector<string> neighbor_elements;
 
+        if (!neighbors.empty())
+        {
+            // split H2BC into H2 B C
+            string neighbors_split_str;
+            neighbors_split_str += neighbors[0];
+            for (int i = 0; i < neighbors.size(); i++)
+            {
+                if (isalpha(neighbors[i]))
+                {
+                    if (tolower(neighbors[i]) == neighbors[i])
+                        neighbors_split_str += neighbors[i];
+                    else
+                    {
+                        neighbors_split_str += ' ';
+                        neighbors_split_str += neighbors[i];
+                    }
+                }
+            }
+            vector<string> words;
+            vector<string> neighbor_elements;
+            
+            string_utilities::split(neighbors_split_str, words);
+            for (auto& word : words)
+            {
+                string element;
+                string n_str;
+                
+                element += word[0];
+                for (int i = 1; i < word.size(); i++)
+                    if (isdigit(word[i]))
+                        n_str += word[i];
+                    else
+                        element += word[i];
+
+                neighbor_elements.push_back(element);
+                if (!n_str.empty())
+                {
+                    int n = stoi(n_str);
+                    for (int i = 1; i <= n; i++)
+                        neighbor_elements.push_back(element);
+                }
+                
+            }
+        }
+        atoms_and_neighbors.push_back({ element, neighbor_elements });
+    }
+
+    if (atoms_and_neighbors.size() != type_names.size())
+        on_error::throwException("incosistent array sizes", __FILE__, __LINE__);
+
+    //for(int i=0;i< atoms_and_neighbors.size(); i++)
+
+
+}
 
 void printUnassignedAtomsInfoSortedByNStructuresAndFormula(
     const string fName,
@@ -1554,31 +1618,58 @@ void getFiles(
     vector<vector<string> > &files,
     vector<string> &structureIds,
     const string &structuresFolder,
-    const string &path_part_2)
+    const string &path_part_2,
+    bool read_only_not_fully_assigned)
 {   
     vector<string> formats{ "cif","shelx","xyz","mol2","xd" };
-
+    map<string, string> suffix{ {"cif",".cif"},{"xyz",".xyz"},{"mol2",".mol2"},{"shelx",".res"} };
     if (find(formats.begin(), formats.end(), fileFormat) == formats.end())
         on_error::throwException(string("invalid file format: '") + fileFormat + string(" expected one of the following: cif, shelx, xyz, xd"), __FILE__, __LINE__);
 
     files.clear();
+    structureIds.clear();
 
-    if (fileFormat == string("xd"))
+    if (read_only_not_fully_assigned && fileFormat != string("xd"))
     {
-        vector<pair<string, string> > xdFilePath;
-        getXdFilePaths(xdFilePath, structureIds, structuresFolder, path_part_2);
-        for (auto &f : xdFilePath)
-            files.push_back({ f.first,f.second });
+        ifstream in("not_fully_assigned_structures.txt");
+        while (in.good())
+        {
+            string line;
+            getline(in, line);
+            if (line.empty())
+                continue;
+
+            string fName = string_utilities::trim(line);
+            structureIds.push_back(fName);
+            filesystem::path folderPath(structuresFolder);
+            filesystem::path p;
+            if(!structuresFolder.empty())
+                p = folderPath / (fName + suffix[fileFormat]);
+            else
+                p = filesystem::path(fName + suffix[fileFormat]);
+            files.push_back({ p.string() });
+        }
+        in.close();
     }
     else
     {
-        vector<string> structureFiles;
-        map<string, string> suffix{ {"cif",".cif"},{"xyz",".xyz"},{"mol2",".mol2"},{"shelx",".res"} };
-        getFilePaths(structuresFolder, structureFiles, structureIds, suffix[fileFormat]);
-        for (auto &f : structureFiles)
-            files.push_back({ f });
-    }
 
+        if (fileFormat == string("xd"))
+        {
+            vector<pair<string, string> > xdFilePath;
+            getXdFilePaths(xdFilePath, structureIds, structuresFolder, path_part_2);
+            for (auto& f : xdFilePath)
+                files.push_back({ f.first,f.second });
+        }
+        else
+        {
+            vector<string> structureFiles;
+            map<string, string> suffix{ {"cif",".cif"},{"xyz",".xyz"},{"mol2",".mol2"},{"shelx",".res"} };
+            getFilePaths(structuresFolder, structureFiles, structureIds, suffix[fileFormat]);
+            for (auto& f : structureFiles)
+                files.push_back({ f });
+        }
+    }
 }
 
 void printMultiTypeInfo(
@@ -1700,6 +1791,7 @@ int main(int argc, char *argv[])
         bool do_not_write_assignment_info = parse_cmd::hasOption(options, "-no_ai");
         bool do_not_write_type_instances_detailed_info = parse_cmd::hasOption(options, "-no_tidi");
         bool do_not_write_type_instances_info = parse_cmd::hasOption(options, "-no_tii");
+        bool read_only_not_fully_assigned = parse_cmd::hasOption(options, "-no_assigned");
         if( parse_cmd::hasOption(options, "-no_bulky") )
         {
             do_not_write_assignment_info = true;
@@ -1738,10 +1830,10 @@ int main(int argc, char *argv[])
 
         BankSettings bankSettings;
         size_t nConsideredStructures, nCompletelyRecognizedStructures;
-
+        vector<string> completely_recognized_structures;
         //vector<vector<Crystal> > crystals_in_thread(nCores);
         //vector< vector<string> > structureIds_in_thread(nCores);
-        vector<size_t> nConsideredStructures_in_thread(nCores), nCompletelyRecognizedStructures_in_thread(nCores);
+        vector<size_t> nConsideredStructures_in_thread(nCores), nCompletelyRecognizedStructures_in_thread(nCores, 0);
         vector<vector<string> > validStructureIds_in_thread(nCores);
         vector< vector<StructureWithDescriptors> > structureDescriptors_in_thread(nCores);
         vector< vector < vector<string> > > lcs_in_thread(nCores);
@@ -1824,7 +1916,7 @@ int main(int argc, char *argv[])
         vector < vector<string> > lcs;
         vector<vector<string> > filePaths;
 
-        getFiles(fileFormat, filePaths, structureIds, fileFolder, string());
+        getFiles(fileFormat, filePaths, structureIds, fileFolder, string(), read_only_not_fully_assigned);
         
 
         int nStructures = filePaths.size();
@@ -1845,6 +1937,13 @@ int main(int argc, char *argv[])
         vector<string> invalidStructureReads;
         vector<string> validStructureIds;
         vector<vector<int> > structureIdxPerThread(nCores);
+
+
+        vector< vector<string> > not_fully_assigned_structures_per_thread(nCores);
+        vector<string> not_fully_assigned_structures;
+
+
+
 		nConsideredStructures = nCompletelyRecognizedStructures = 0;
         cout << "n threads = " << nCores << "\n";
         cout << "    processing:\n";
@@ -1897,8 +1996,10 @@ int main(int argc, char *argv[])
                 nConsideredStructures_in_thread[thread_id]++;
 				//nConsideredStructures++;
 				
-				if (find(oneStructureTypeIndices.begin(), oneStructureTypeIndices.end(), -1) == oneStructureTypeIndices.end())
+                if (find(oneStructureTypeIndices.begin(), oneStructureTypeIndices.end(), -1) == oneStructureTypeIndices.end())
                     nCompletelyRecognizedStructures_in_thread[thread_id]++;
+                else
+                    not_fully_assigned_structures_per_thread[thread_id].push_back(structureIds[structureIdx]);
                     //nCompletelyRecognizedStructures++;
             }
             else 
@@ -1909,11 +2010,17 @@ int main(int argc, char *argv[])
 
         }
         cout << "\n";
-        for(int threadIdx=0; threadIdx<nCores; threadIdx++)
+        for (int threadIdx = 0; threadIdx < nCores; threadIdx++)
         {
             cout << "thread " << threadIdx << " processed " << structureIdxPerThread[threadIdx].size() << " structures\n";
             nConsideredStructures += nConsideredStructures_in_thread[threadIdx];
             nCompletelyRecognizedStructures += nCompletelyRecognizedStructures_in_thread[threadIdx];
+
+            not_fully_assigned_structures.insert(
+                not_fully_assigned_structures.end(),
+                not_fully_assigned_structures_per_thread[threadIdx].begin(),
+                not_fully_assigned_structures_per_thread[threadIdx].end());
+
             for(auto &id: validStructureIds_in_thread[threadIdx])
                 validStructureIds.push_back(id);
             for(auto &desc: structureDescriptors_in_thread[threadIdx])
@@ -1931,6 +2038,11 @@ int main(int argc, char *argv[])
             for(auto &mti: multiTypeIndices_in_thread[threadIdx])
                 multiTypeIndices.push_back(mti);
         }
+
+        ofstream not_fully_assigned_structures_file("not_fully_assigned_structures.txt");
+        for (auto& id : not_fully_assigned_structures)
+            not_fully_assigned_structures_file << id << "\n";
+        not_fully_assigned_structures_file.close();
 
         validStructureIds.swap(structureIds);
 
@@ -1971,6 +2083,7 @@ int main(int argc, char *argv[])
         printUnassignedAtomsInfoSortedByNStructuresAndFormula("h_bonded_only_unassigned_atoms_sorted_by_n_str_and_formula.txt", header, sortedUnassignedAtoms, false, true);
         printUnassignedFormulaStats("unassigned_formula_stats.txt", header, sortedUnassignedAtoms);
         printStructureAssignedAndNot("structures_complete_assignemnet.txt", structureIds, typeIndices, structureDescriptors);
+        create_general_unassigned_types(sortedUnassignedAtoms);
         printTypeInfo("types_stats.txt", typeIndices, types);
         printMultiTypeInfo("multitypes_stats.txt", multiTypeIndices, types);
         printMoveAssigned("move_assigned.bat", filePaths, typeIndices);
