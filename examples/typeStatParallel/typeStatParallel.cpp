@@ -1059,7 +1059,7 @@ void create_general_unassigned_types(map< UnassignedAtomDescriptors, vector<stri
             // split H2BC into H2 B C
             string neighbors_split_str;
             neighbors_split_str += neighbors[0];
-            for (int i = 0; i < neighbors.size(); i++)
+            for (int i = 1; i < neighbors.size(); i++)
             {
                 if (isalpha(neighbors[i]))
                 {
@@ -1071,9 +1071,10 @@ void create_general_unassigned_types(map< UnassignedAtomDescriptors, vector<stri
                         neighbors_split_str += neighbors[i];
                     }
                 }
+                else
+                    neighbors_split_str += neighbors[i];
             }
             vector<string> words;
-            vector<string> neighbor_elements;
             
             string_utilities::split(neighbors_split_str, words);
             for (auto& word : words)
@@ -1092,7 +1093,7 @@ void create_general_unassigned_types(map< UnassignedAtomDescriptors, vector<stri
                 if (!n_str.empty())
                 {
                     int n = stoi(n_str);
-                    for (int i = 1; i <= n; i++)
+                    for (int i = 1; i < n; i++)
                         neighbor_elements.push_back(element);
                 }
                 
@@ -1104,9 +1105,83 @@ void create_general_unassigned_types(map< UnassignedAtomDescriptors, vector<stri
     if (atoms_and_neighbors.size() != type_names.size())
         on_error::throwException("incosistent array sizes", __FILE__, __LINE__);
 
-    //for(int i=0;i< atoms_and_neighbors.size(); i++)
+    nlohmann::json data;
+    //data["types"] = nlohmann::json::array();
+    for (int i = 0; i < atoms_and_neighbors.size(); i++)
+    {
+        nlohmann::json type;
+        vector<string> type_lines;
+        auto& neighbors = atoms_and_neighbors[i].second;
+        string central_atom = atoms_and_neighbors[i].first + "1";
+        int nNeighbours = neighbors.size();
+        if (nNeighbours == 1)
+            type["atoms and bonds"] = nlohmann::json(vector<string>(1, central_atom + "-" + neighbors[0] + "2"));
+
+        if (nNeighbours == 2)
+        {
+            string line = neighbors[0] + "2-" + central_atom + "-" + neighbors[1] + "3";
+            type_lines.push_back(line);
+            type["atoms and bonds"] = nlohmann::json(type_lines);
+        }
+
+        if (nNeighbours == 3)
+        {
+            string line = neighbors[0] + "2-" + central_atom + "-" + neighbors[1] + "3";
+            type_lines.push_back(line);
+            int n = string(neighbors[0] + "2-").size();
+            string s = string(n, ' ');
+            type_lines.push_back(s + '|');
+            type_lines.push_back(s + neighbors[2] + "4");
+            type["atoms and bonds"] = nlohmann::json(type_lines);
+        }
+
+        if (nNeighbours == 4)
+        {
+            int n = string(neighbors[0] + "2-").size();
+            string s = string(n, ' ');
+            type_lines.push_back(s + neighbors[2] + "5");
+            type_lines.push_back(s + '|');
+            type_lines.push_back(neighbors[0] + "2-" + central_atom + "-" + neighbors[1] + "3" );
+            type_lines.push_back(s + '|');
+            type_lines.push_back(s + neighbors[3] + "4");
+            type["atoms and bonds"] = nlohmann::json(type_lines);
+        }
+
+        if (nNeighbours > 4)
+        {
+            vector<int> z;
+            for (int j = 0; j < neighbors.size(); j++)
+                z.push_back(periodic_table::atomicNumber(neighbors[j]));
+            sort(z.begin(), z.end(), greater<>());
+            neighbors.clear();
+            for(int j=0;j<4;j++)
+                neighbors.push_back(periodic_table::symbol(z[j]));
+            string other_neigbours;
+
+            for (int j = 4; j < z.size(); j++)
+            {
+                if (j > 4)
+                    other_neigbours += ',';
+                other_neigbours += periodic_table::symbol(z[j]);
+            }
+
+            int n = string(atoms_and_neighbors[i].second[0] + "2-").size();
+            string s = string(n, ' ');
+            type_lines.push_back(s + atoms_and_neighbors[i].second[1] + "5");
+            type_lines.push_back(s + '|');
+            type_lines.push_back(atoms_and_neighbors[i].second[0] + "2-" + central_atom + "(" + other_neigbours + ")-" + atoms_and_neighbors[i].second[1] + "3");
+            type_lines.push_back(s + '|');
+            type_lines.push_back(s + atoms_and_neighbors[i].second[1] + "4");
+            type["atoms and bonds"] = nlohmann::json(type_lines);
+        }
 
 
+        data["types"][type_names[i]] = type;
+    }
+    
+    ofstream out("general_types_auto.json");
+    out<< data.dump(4);
+    out.close();
 }
 
 void printUnassignedAtomsInfoSortedByNStructuresAndFormula(
