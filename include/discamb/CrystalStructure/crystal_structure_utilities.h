@@ -18,6 +18,34 @@ namespace discamb {
     namespace crystal_structure_utilities {
 
         
+        /**
+         * @brief Parameters controlling random distortions applied to a crystal
+         *        structure parameters.
+         *
+         * This struct contains flags that enable/disable perturbation of specific
+         * quantities and the maximum magnitudes of those perturbations.
+         *
+         */
+
+        struct StructureDistortionParameters
+        {
+            bool distort_positions = true;
+            bool distort_adps = false;
+            bool distort_occupancies = false;
+            bool useCartesianShift = true; // if false, fractional shift is used
+            double maxFractionalShift = 0.01; // maximum shift in fractional coordinates
+            double maxCartesianShift = 0.05; // maximum shift (per coordinate) in Cartesian coordinates (A)
+            double maxAdpChange = 0.01; // maximum change of Ueq in Angstrom^2
+            double maxOccupancyChange = 0.05; // maximum change of occupancy 
+        };
+        
+        // distors crystal structure parameters according to uniform disribution within given limits 
+
+        void distort_structure(
+            const Crystal& crystal,
+            Crystal& distortedCrystal,
+            const StructureDistortionParameters &maxFractionalShift);
+
         void stringToAtomList(const std::string& str, std::vector<std::pair<std::string, std::string> >& atomList, char separator);
 
 

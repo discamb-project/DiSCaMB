@@ -88,6 +88,47 @@ namespace discamb {
                     formula[z] = 1;
         }
 
+        void string2formula(
+            const std::string& s,
+            std::map<int, int>& formula)
+        {
+            formula.clear();
+            size_t i = 0, n = s.size();
+            while (i < n)
+            {
+                // get element symbol
+                string symbol(1, toupper(s[i]));
+                i++;
+                if (i < n)
+                    if (islower(s[i]))
+                    {
+                        symbol += s[i];
+                        i++;
+                    }
+                int atomicNumber = periodic_table::atomicNumber(symbol);
+                // get count
+                string countStr;
+                while (i < n)
+                {
+                    if (isdigit(s[i]))
+                    {
+                        countStr += s[i];
+                        i++;
+                    }
+                    else
+                        break;
+                }
+                int count = 1;
+                if (!countStr.empty())
+                    count = stoi(countStr);
+                // add to formula
+                if (formula.find(atomicNumber) != formula.end())
+                    formula[atomicNumber] += count;
+                else
+                    formula[atomicNumber] = count;
+            }
+        }
+
     } //namespace basic_chemistry_utilities
 } //namespace discamb
 

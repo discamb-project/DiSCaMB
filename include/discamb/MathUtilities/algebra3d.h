@@ -22,6 +22,7 @@ namespace discamb {
         template<typename T>
         Matrix3<T> transpose3d(const Matrix3<T>& matrix);
 
+
         template<typename T>
         void transpose3d(const Matrix3<T>& matrix, Matrix3<T>& transposed);
 
@@ -33,6 +34,8 @@ namespace discamb {
         template<typename T>
         T trace(const Matrix3<T>& matrix);
 
+        template<typename T>
+        Matrix3<T> outer(const Vector3<T>& v1, const Vector3<T>& v2);
 
         namespace auxiliary {
             template<typename T> void eigen_decomposition(T A[3][3], T V[3][3], T d[3]);
@@ -408,7 +411,17 @@ void algebra3d::transpose3d(const Matrix3<T> &m,Matrix3<T> &t)
            m(0,2), m(1,2), m(2,2));
 }
 
-
+template<typename T>
+Matrix3<T> algebra3d::outer(
+    const Vector3<T>& v1,
+    const Vector3<T>& v2)
+{
+    Matrix3<T> result;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            result(i, j) = v1(i) * v2(j);
+    return result;
+}
 
 
 }

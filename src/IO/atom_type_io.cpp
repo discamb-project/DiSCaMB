@@ -1126,7 +1126,6 @@ namespace discamb {
             atomDescriptors.ringInfo.inRing =  jsonToTribool(data,"in 5 or 6 ring", "-");
             atomDescriptors.ringInfo.in4Ring =   jsonToTribool(data,"in 4 ring", "-");
             atomDescriptors.ringInfo.in3Ring =   jsonToTribool(data,"in 3 ring", "-");
-
         }
 
         void json2atomType(

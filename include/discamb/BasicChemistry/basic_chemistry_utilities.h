@@ -17,5 +17,6 @@ namespace discamb{
         void getElementsList(const std::string& s, std::set<int>& atomic_numbers);
         void getFormula(const std::vector<int>& atomic_numbers, std::map<int, int>& formula);
         std::string formulaAsString(const std::map<int, int>& formula);
+        void string2formula(const std::string& s, std::map<int, int>& formula);
     }
 }

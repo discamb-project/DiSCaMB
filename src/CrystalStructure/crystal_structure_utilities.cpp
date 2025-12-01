@@ -11,6 +11,7 @@
 #include <limits>
 #include <cmath>
 #include <cfenv>
+#include <random>
 
 using namespace std;
 
@@ -105,6 +106,93 @@ double findShortestDistance(
 namespace discamb {
 
     namespace crystal_structure_utilities {
+
+
+        void distort_structure(
+            const Crystal& crystal,
+            Crystal& distortedCrystal,
+            const StructureDistortionParameters& distortionParameters)
+        {
+            std::default_random_engine generator;
+            std::uniform_real_distribution<double> distribution(-1.0, 1.0);
+
+            double number = distribution(generator);
+
+            distortedCrystal = crystal;
+            for (auto& atom : distortedCrystal.atoms)
+            {
+                if (distortionParameters.distort_positions)
+                {
+                    if (distortionParameters.useCartesianShift)
+                    {
+                        Vector3d shiftCart;
+                        for (int i = 0; i < 3; i++)
+                            shiftCart[i] = distribution(generator) * distortionParameters.maxCartesianShift;
+
+                        Vector3d fracShift;
+                        distortedCrystal.unitCell.cartesianToFractional(shiftCart, fracShift);
+                        atom.coordinates += fracShift;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 3; i++)
+                            atom.coordinates[i] += number * distortionParameters.maxFractionalShift;
+                    }
+                }
+                if (distortionParameters.distort_adps)
+                {
+                    if (atom.adp.size() == 1)
+                    {
+                        double delta_u = distribution(generator) * distortionParameters.maxAdpChange;
+                        double newUiso = atom.adp[0] + delta_u;
+                        if (newUiso < 0)
+                            newUiso = 0.0;
+                        atom.adp[0] = newUiso;
+                    }
+
+                    if (atom.adp.size() == 6)
+                    {
+                        auto& u = atom.adp;
+                        Matrix3d uMatrix(u[0], u[3], u[4],
+                            u[3], u[1], u[5],
+                            u[4], u[5], u[2]);
+                        Vector3d eigVec[3];
+                        double eigVal[3];
+                        algebra3d::eigensystemRealSymm(uMatrix, eigVec[0], eigVec[1], eigVec[2], eigVal[0], eigVal[1], eigVal[2]);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            double delta_u = distribution(generator) * distortionParameters.maxAdpChange;
+                            eigVal[i] += delta_u;
+                            if (eigVal[i] < 0.0)
+                                eigVal[i] = 0.0;
+                        }
+                        // reconstruct U matrix
+                        Matrix3d uMatrixNew = eigVal[0] * algebra3d::outer(eigVec[0], eigVec[0]) +
+                            eigVal[1] * algebra3d::outer(eigVec[1], eigVec[1]) +
+                            eigVal[2] * algebra3d::outer(eigVec[2], eigVec[2]);
+                        // set back to atom.adp
+                        atom.adp[0] = uMatrixNew(0, 0);
+                        atom.adp[1] = uMatrixNew(1, 1);
+                        atom.adp[2] = uMatrixNew(2, 2);
+                        atom.adp[3] = uMatrixNew(0, 1);
+                        atom.adp[4] = uMatrixNew(0, 2);
+                        atom.adp[5] = uMatrixNew(1, 2);
+                    }
+                }
+                if (distortionParameters.distort_occupancies)
+                {
+                    double delta_occupancy = distribution(generator) * distortionParameters.maxOccupancyChange;
+                    double newOccupancy = atom.occupancy + delta_occupancy;
+                    if (newOccupancy < 0.0)
+                        newOccupancy = 0.0;
+                    if (newOccupancy > 1.0)
+                        newOccupancy = 1.0;
+                    atom.occupancy = newOccupancy;
+                }
+            }
+
+        }
+
 
        /* void translateAtomTo01(
             const Crystal &crystal,

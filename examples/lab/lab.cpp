@@ -2,6 +2,7 @@
 
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
+#include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
@@ -3331,6 +3332,11 @@ int main(int argc, char* argv[])
 {
 
     try {
+        map<int, int> formula;
+        basic_chemistry_utilities::string2formula("CaBC6Si4H6O12BB", formula);
+
+        return 0;
+
         atom_typing_next_gen();
         return 0;
 
