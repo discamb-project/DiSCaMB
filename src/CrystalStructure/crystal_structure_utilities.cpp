@@ -1107,6 +1107,84 @@ namespace discamb {
 
         }
 
+        void generate_hkl(
+            const UnitCell& uc,
+            double resolution,
+            std::vector<Vector3i>& hkl)
+        {
+            hkl.clear();
+            ReciprocalLatticeUnitCell rluCell(uc);
+            Vector3i minVector, maxVector;
+            // find bounding box in hkl space
+            for(int i=0;i<8;i++)
+            {
+                Vector3d cubeVertex, cubeVertexFractional;
+                cubeVertex[0] = (i & 1) ? 1.0 : -1.0;
+                cubeVertex[1] = (i & 2) ? 1.0 : -1.0;
+                cubeVertex[2] = (i & 4) ? 1.0 : -1.0;
+                rluCell.cartesianToFractional(cubeVertex, cubeVertexFractional);
+                cubeVertexFractional *= resolution;
+
+                for(int j=0;j<3;j++)
+                {
+                    int intUp = ceil(cubeVertexFractional[j]);
+                    int intDown = floor(cubeVertexFractional[j]);
+                    if (intDown < minVector[j])
+                        minVector[j] = intDown;
+                    if (intUp > maxVector[j])
+                        maxVector[j] = intUp;
+                }
+            }
+            // generate hkl points in the bounding box and filter them by resolution
+            Vector3d hklVectorCartesian;
+            for (int h = minVector[0]; h <= maxVector[0]; h++)
+                for (int k = minVector[1]; k <= maxVector[1]; k++)
+                    for (int l = minVector[2]; l <= maxVector[2]; l++)
+                    {
+                        Vector3i hklVector(h, k, l);
+                        rluCell.fractionalToCartesian(Vector3d(h, k, l) / resolution, hklVectorCartesian);
+                        double dSpacing = 1.0 / sqrt(hklVectorCartesian * hklVectorCartesian);
+                        if (dSpacing >= resolution)
+                            hkl.push_back(hklVector);
+                    }
+
+        }
+
+        void filter_hkl(
+            const UnitCell& uc,
+            double maxResolution,
+            const std::vector<Vector3i>& hkl,
+            std::vector<Vector3i>& filteredHkl)
+        {
+            vector<int> indicesOfOriginals;
+            filter_hkl(uc, maxResolution, hkl, filteredHkl, indicesOfOriginals);
+        }
+
+        void filter_hkl(
+            const UnitCell& uc,
+            double maxResolution,
+            const std::vector<Vector3i>& hkl,
+            std::vector<Vector3i>& filteredHkl,
+            std::vector<int>& indicesOfOriginals)
+        {
+            filteredHkl.clear();
+            indicesOfOriginals.clear();
+            ReciprocalLatticeUnitCell rluCell(uc);
+            Vector3d hklVectorCartesian;
+            
+            for (int i=0; i<hkl.size(); i++)
+            {
+                rluCell.fractionalToCartesian(Vector3d(hkl[i]), hklVectorCartesian);
+                double dSpacing = 1.0 / sqrt(hklVectorCartesian * hklVectorCartesian);
+                if (dSpacing >= maxResolution)
+                {
+                    filteredHkl.push_back(hkl[i]);
+                    indicesOfOriginals.push_back(i);
+                }
+            }
+
+        }
+
     } //namespace crystal_structure_utilities
 
 } // namespace discamb

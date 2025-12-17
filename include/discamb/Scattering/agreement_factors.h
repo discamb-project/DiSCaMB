@@ -7,12 +7,19 @@
 namespace discamb {
     namespace agreement_factors {
 
-        enum AgreementFactor {Relative_L1_Percent};
+        enum AgreementFactor {Relative_L1_Percent, R2, R2_target};
 
         double value(
-            const std::vector<double>& v1, 
-            const std::vector<double>& v2,
+            const std::vector<double>& v_calc, 
+            const std::vector<double>& v_ref,
             AgreementFactor af = Relative_L1_Percent);
+
+        double value(
+            const std::vector<double>& v_calc,
+            const std::vector<double>& v_ref,
+            const std::vector<double>& weights,
+            AgreementFactor af = Relative_L1_Percent);
+
 
         double value(
             const std::vector<std::complex<double> > & v1,

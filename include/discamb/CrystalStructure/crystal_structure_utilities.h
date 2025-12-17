@@ -34,8 +34,8 @@ namespace discamb {
             bool distort_occupancies = false;
             bool useCartesianShift = true; // if false, fractional shift is used
             double maxFractionalShift = 0.01; // maximum shift in fractional coordinates
-            double maxCartesianShift = 0.05; // maximum shift (per coordinate) in Cartesian coordinates (A)
-            double maxAdpChange = 0.01; // maximum change of Ueq in Angstrom^2
+            double maxCartesianShift = 0.01; // maximum shift (per coordinate) in Cartesian coordinates (A)
+            double maxAdpChange = 0.001; // maximum change of Ueq in Angstrom^2
             double maxOccupancyChange = 0.05; // maximum change of occupancy 
         };
         
@@ -44,7 +44,7 @@ namespace discamb {
         void distort_structure(
             const Crystal& crystal,
             Crystal& distortedCrystal,
-            const StructureDistortionParameters &maxFractionalShift);
+            const StructureDistortionParameters &maxFractionalShift = StructureDistortionParameters());
 
         void stringToAtomList(const std::string& str, std::vector<std::pair<std::string, std::string> >& atomList, char separator);
 
@@ -163,7 +163,26 @@ namespace discamb {
         double rmsdCorrelation(const std::vector<double>& cartAdp1, const std::vector<double>& cartAdp2);
 
         bool isSuperLatticeNode(const Vector3i& node, const Vector3i& supeLatticeNode, const std::vector<Vector3i>& superLatticeBase);
-        void generate_hkl(const UnitCell& uc, double resolution);
+        
+        void generate_hkl(
+            const UnitCell& uc, 
+            double resolution, 
+            std::vector<Vector3i> &hkl);
+        
+        void filter_hkl(
+            const UnitCell& uc, 
+            double maxResolution, 
+            const std::vector<Vector3i>& hkl,
+            std::vector<Vector3i>& filteredHkl);
+
+        void filter_hkl(
+            const UnitCell& uc,
+            double maxResolution,
+            const std::vector<Vector3i>& hkl,
+            std::vector<Vector3i>& filteredHkl,
+            std::vector<int>& indicesOfOriginals);
+
+
     }
     /**@}*/
 }

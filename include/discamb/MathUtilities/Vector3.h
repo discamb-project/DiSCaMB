@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <string>
 
 namespace discamb {
 
@@ -67,6 +68,8 @@ public:
 
     T norm() const;
     T norm2() const;
+    
+    std::string string() const;
 };	
 
 template<typename T>
@@ -74,6 +77,7 @@ std::ostream& operator<<(std::ostream& out, const Vector3<T>& v);
 
 template<typename T>
 std::istream& operator>>(std::istream& out, Vector3<T>& v);
+
 
 // 
 
@@ -350,6 +354,12 @@ const
 }
 
 template<typename T>
+inline std::string Vector3<T>::string() const
+{
+    return std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z);
+}
+
+template<typename T>
 inline T Vector3<T>::norm2()
 const
 {
@@ -505,6 +515,7 @@ std::istream& operator>>(
     inp >> v.x >> v.y >> v.z;
     return inp;
 }
+
 
 
 

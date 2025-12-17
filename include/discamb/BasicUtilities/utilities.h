@@ -3,6 +3,7 @@
 #include "json.hpp"
 
 #include <algorithm>
+#include <complex>
 
 namespace discamb {
 
@@ -21,6 +22,18 @@ namespace discamb {
 
 
     namespace utilities {
+
+        template<typename T>
+        bool is_complex_type(const T&)
+        {
+            return false;
+        }
+
+        template<typename T>
+        bool is_complex_type(const std::complex<T> &t)
+        {
+            return true;
+        }
 
         template<typename T, typename U>
         bool hasElement(

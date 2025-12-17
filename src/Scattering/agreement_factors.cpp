@@ -10,25 +10,79 @@ namespace discamb {
             template<typename T>
             double value_relative_L1_percent(
                 const std::vector<T>& v1,
-                const std::vector<T>& v2)
+                const std::vector<T>& v2,
+                const std::vector<double> &weights)
             {
                 double numerator, denominator;
                 int i, n = v1.size();
                 if (n != v2.size())
-                    on_error::throwException("vectors size do not match when trying to calculate L1 agreement factor", __FILE__, __LINE__);
+                    on_error::throwException("vectors size do not match when trying to calculate (w)L1 agreement factor", __FILE__, __LINE__);
+                if (n != weights.size())
+                    on_error::throwException("weights size do not match when trying to calculate (w)L1 agreement factor", __FILE__, __LINE__);
                 numerator = 0.0;
                 denominator = 0.0;
 
                 for (i = 0; i < n; i++)
                 {
-                    numerator += abs(v1[i] - v2[i]);
-                    denominator += abs(v1[i]) + abs(v2[i]);
+                    numerator += weights[i] * abs(v1[i] - v2[i]);
+                    denominator += weights[i] * (abs(v1[i]) + abs(v2[i]));
                 }
                 if (denominator == 0)
                     on_error::throwException("denominator 0 when trying to calculate L1 agreement factor", __FILE__, __LINE__);
 
                 return numerator / denominator * 200;
             }
+
+            template<typename T>
+            double value_r2_target(
+                const std::vector<T>& v_calc,
+                const std::vector<T>& v_ref,
+                const std::vector<double>& weights)
+            {
+                
+                int i, n = v_calc.size();
+                if (n != v_ref.size())
+                    on_error::throwException("vectors size do not match when trying to calculate (w)R2 agreement factor", __FILE__, __LINE__);
+                if (n != weights.size())
+                    on_error::throwException("weights size do not match when trying to calculate (w)R2 agreement factor", __FILE__, __LINE__);
+                double result = 0.0;
+
+                for (i = 0; i < n; i++)
+                {
+                    double diff = v_calc[i] - v_ref[i];
+                    result += weights[i] * norm(diff);
+                }
+
+                return result;
+            }
+
+            template<typename T>
+            double value_r2(
+                const std::vector<T>& v_calc,
+                const std::vector<T>& v_ref,
+                const std::vector<double>& weights)
+            {
+                double numerator, denominator;
+                int i, n = v_calc.size();
+                if (n != v_ref.size())
+                    on_error::throwException("vectors size do not match when trying to calculate (w)R2 agreement factor", __FILE__, __LINE__);
+                if (n != weights.size())
+                    on_error::throwException("weights size do not match when trying to calculate (w)R2 agreement factor", __FILE__, __LINE__);
+                numerator = value_r2_target(v_calc, v_ref, weights);
+                denominator = 0.0;
+
+                for (i = 0; i < n; i++)
+                {
+                    double diff = v_calc[i] - v_ref[i];
+                    denominator += weights[i] * v_ref[i] * v_ref[i];
+                }
+                if (denominator == 0)
+                    on_error::throwException("denominator 0 when trying to calculate R2 agreement factor", __FILE__, __LINE__);
+
+                return sqrt(numerator / denominator) * 100;
+            }
+
+
         }
          
 
@@ -37,7 +91,28 @@ namespace discamb {
             const std::vector<double>& v2,
             AgreementFactor af)
         {
-            return value_relative_L1_percent(v1, v2);
+            vector<double> weights(v1.size(), 1.0);
+            if(af == Relative_L1_Percent)
+                return value_relative_L1_percent(v1, v2, weights);
+            else if(af == R2)
+                return value_r2(v1, v2, weights);
+            else
+                on_error::throwException("unknown agreement factor type", __FILE__, __LINE__);
+            return -1.0;
+        }
+        double value(
+            const std::vector<double>& v1,
+            const std::vector<double>& v2,
+            const std::vector<double> &weights,
+            AgreementFactor af)
+        {
+            if (af == Relative_L1_Percent)
+                return value_relative_L1_percent(v1, v2, weights);
+            else if (af == R2)
+                return value_r2(v1, v2, weights);
+            else
+                on_error::throwException("unknown agreement factor type", __FILE__, __LINE__);
+            return -1.0;
         }
 
         double value(
@@ -45,7 +120,8 @@ namespace discamb {
             const std::vector<std::complex<double> >& v2,
             AgreementFactor af)
         {
-            return value_relative_L1_percent(v1, v2);
+            vector<double> weights(v1.size(), 1.0);
+            return value_relative_L1_percent(v1, v2, weights);
         }
 
 
