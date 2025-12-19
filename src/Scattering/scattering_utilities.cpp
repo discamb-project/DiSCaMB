@@ -15,6 +15,32 @@ namespace discamb {
 namespace scattering_utilities
 {
 
+    void generate_symmetry_equivalent_hkls(
+        const SpaceGroup& spaceGroup,
+        const std::vector<Vector3i>& hkl,
+        std::vector<Vector3i>& symmEquivalentHkls)
+    {
+        int nSymm = spaceGroup.nSymmetryOperationsInSubset();
+        vector<Matrix3i> rotations(nSymm);
+
+        for (int i = 0; i < nSymm; i++)
+            spaceGroup.getSpaceGroupOperation(0, 0, i).getRotation(rotations[i]);
+        for (int i = 0; i < nSymm; i++)
+            rotations.push_back(-1 * rotations[i]);
+
+
+        symmEquivalentHkls.clear();
+        set<Vector3i> uniqueHkl;
+
+        for (auto const& rotation : rotations)
+            for (auto const& h : hkl)
+                uniqueHkl.insert(h * rotation);
+
+        symmEquivalentHkls.assign(uniqueHkl.begin(), uniqueHkl.end());
+
+    }
+
+
     std::unique_ptr<SfCalculator> scatteringFactorCalculatorFromJsonFile(
         const Crystal& crystal,
         const std::string& jsonFile)

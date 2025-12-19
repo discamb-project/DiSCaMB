@@ -1,46 +1,16 @@
 #define _CRTDBG_MAP_ALLOC
 
-#include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
-#include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
-#include "discamb/BasicChemistry/basic_chemistry_utilities.h"
-#include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
-#include "discamb/BasicUtilities/file_system_utilities.h"
 #include "discamb/BasicUtilities/parse_cmd.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
-#include "discamb/CrystalStructure/crystallographic_point_group_tables.h"
-#include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
-#include "discamb/IO/cif_io.h"
-#include "discamb/IO/discamb_io.h"
-#include "discamb/IO/NativeIAM_Reader.h"
-#include "discamb/IO/fragmentation_io.h"
 #include "discamb/IO/hkl_io.h"
 #include "discamb/IO/structure_io.h"
-#include "discamb/IO/MATTS_BankReader.h"
-#include "discamb/IO/tsc_io.h"
-#include "discamb/IO/xyz_io.h"
-#include "discamb/MathUtilities/SphConverter.h"
-#include "discamb/QuantumChemistry/fragmentation.h"
-#include "discamb/Scattering/agreement_factors.h"
-#include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator.h"
-#include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
+#include "discamb/Scattering/agreement_factors.h"
 #include "discamb/Scattering/ConstFormFactorCalculationsManager.h"
-#include "discamb/Scattering/gar_utilities.h"
-#include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
-#include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
-#include "discamb/Scattering/HcFormFactorCalculationsManager.h"
-#include "discamb/Scattering/HirshfeldAtomModelSettings.h"
-#include "discamb/Scattering/IamFormFactorCalculationsManager.h"
-#include "discamb/Scattering/IamSfCalculator.h"
-#include "discamb/Scattering/NGaussianFormFactor.h"
+#include "discamb/Scattering/SfCalculator.h"
 #include "discamb/Scattering/scattering_utilities.h"
-#include "discamb/Scattering/statistics.h"
-#include "discamb/Scattering/taam_utilities.h"
-#include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
-#include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/StructuralProperties/structural_properties.h"
-#include "discamb/Test/test_crystal_structures.h"
 #include <fstream>
 
 
@@ -317,6 +287,7 @@ int main(int argc, char* argv[])
         vector<complex<double> > f_calc_oryginal, f_calc;
 
         sf_calculator->calculateStructureFactors(crystal.atoms, hkls, f_calc_oryginal);
+        
         vector<double> i_obs, i_calc, weights;
 
         for (auto& f : f_calc_oryginal)
@@ -374,7 +345,9 @@ int main(int argc, char* argv[])
         double numerical_derivative = (tartget_plus - target_minus) / (2 * step);
         cout << "\nNumerical derivative dR2/dx1: " << numerical_derivative << endl;
 
+
         // analytical derivative
+
 
         sf_calculator->update(crystal_distorted.atoms);
         vector<bool> count_atom(crystal_distorted.atoms.size(), true);
@@ -392,9 +365,9 @@ int main(int argc, char* argv[])
             cumulativeDerivatives.atomicPostionDerivatives[atomIdx].set(complex_zero, complex_zero, complex_zero);
             cumulativeDerivatives.occupancyDerivatives.push_back(complex_zero);
         }
-        //
+        
         double d = 0.0;
-        //double denominator = 0;
+        
         for (int i = 0; i < hkls.size(); i++)
         {
             complex<double> scatteringFactor;
@@ -408,6 +381,86 @@ int main(int argc, char* argv[])
         }
         d *= -200.0 / sqrt(numerator * denominator);
         cout << "\nAnalytical derivative dR2/dx1: " << d << endl;
+
+
+        // analytical derivative with chain rule
+        
+        
+        double d_chain = 0.0;
+        vector<complex<double> > dt_df(hkls.size(), 0.0), sf;
+        sf_calculator->calculateStructureFactors(crystal_distorted.atoms, hkls, sf, vector<bool>(crystal_distorted.atoms.size(), true));
+        for (int i = 0; i < hkls.size(); i++)
+        {
+            double diff = i_obs[i] - norm(sf[i]);
+            dt_df[i] = -200.0 * weights[i] * diff * sf[i]/ sqrt(numerator * denominator);
+        }
+        vector<TargetFunctionAtomicParamDerivatives> dt_dp;
+        sf_calculator->calculateStructureFactorsAndDerivatives(crystal_distorted.atoms, hkls, sf, dt_dp, dt_df, vector<bool>(crystal_distorted.atoms.size(), true));
+
+        cout << "\nAnalytical derivative v.2 dR2/dx1: " << dt_dp[0].atomic_position_derivatives.x << endl;
+
+
+        // analytical derivative with chain rule & no form factor recalculation
+
+
+        d_chain = 0.0;
+        vector < vector<complex<double> > > form_factors;
+        vector<Vector3i> symmetryEquivalentHkls;
+        scattering_utilities::generate_symmetry_equivalent_hkls(
+            crystal.spaceGroup,
+            hkls,
+            symmetryEquivalentHkls);
+        sf_calculator->calculateFormFactors(symmetryEquivalentHkls, form_factors, vector<bool>(crystal_distorted.atoms.size(), true));
+        map<Vector3i, vector<complex<double> > > form_factors_map;
+        for (int i = 0; i < symmetryEquivalentHkls.size(); i++)
+            form_factors_map[symmetryEquivalentHkls[i]] = form_factors[i];
+        shared_ptr<AtomicFormFactorCalculationsManager> ff_manager = make_shared<ConstFormFactorCalculationsManager>(crystal.unitCell, form_factors_map);
+        AnyScattererStructureFactorCalculator asf_calculator(crystal_distorted);
+        asf_calculator.setAtomicFormfactorManager(ff_manager);
+
+        dt_df.assign(hkls.size(), complex<double>());
+        sf.clear();
+        asf_calculator.calculateStructureFactors(hkls, sf, vector<bool>(crystal_distorted.atoms.size(), true));
+        for (int i = 0; i < hkls.size(); i++)
+        {
+            complex<double> scatteringFactor;
+            asf_calculator.calculateStructureFactorsAndDerivatives(hkls[i], scatteringFactor, derivatives, count_atom);
+
+            double diff = i_obs[i] - norm(sf[i]);
+            dt_df[i] = -200.0 * weights[i] * diff * sf[i] / sqrt(numerator * denominator);
+        }
+        vector<TargetFunctionAtomicParamDerivatives> dt_dp_nff_rec;
+        asf_calculator.calculateStructureFactorsAndDerivatives(hkls, sf, dt_dp_nff_rec, dt_df, vector<bool>(crystal_distorted.atoms.size(), true));
+
+        cout << "\nAnalytical derivative v.3 dR2/dx1: " << dt_dp_nff_rec[0].atomic_position_derivatives.x << endl;
+
+
+        // analytical derivative without chain rule & no form factor recalculation
+
+        vector < vector<complex<double> > > form_factors2;
+        sf_calculator->update(crystal_distorted.atoms);
+        sf_calculator->calculateFormFactors(symmetryEquivalentHkls, form_factors2, vector<bool>(crystal_distorted.atoms.size(), true));
+        form_factors_map.clear();
+        
+        for (int i = 0; i < symmetryEquivalentHkls.size(); i++)
+            form_factors_map[symmetryEquivalentHkls[i]] = form_factors2[i];
+        
+        shared_ptr<AtomicFormFactorCalculationsManager> ff_manager2 = make_shared<ConstFormFactorCalculationsManager>(crystal.unitCell, form_factors_map);
+        AnyScattererStructureFactorCalculator asf_calculator2(crystal_distorted);
+        asf_calculator2.setAtomicFormfactorManager(ff_manager2);
+
+        d = 0.0;
+        for (int i = 0; i < hkls.size(); i++)
+        {
+            complex<double> scatteringFactor;
+            asf_calculator2.calculateStructureFactorsAndDerivatives(hkls[i], scatteringFactor, derivatives, vector<bool>(crystal_distorted.atoms.size(), true));
+
+            complex<double> dx = derivatives.atomicPostionDerivatives[0].x;
+            double diff = (i_obs[i] - norm(scatteringFactor));
+            d += weights[i] * diff * (scatteringFactor.real() * dx.real() + scatteringFactor.imag() * dx.imag());
+        }
+        d *= -200.0 / sqrt(numerator * denominator);
+        cout << "\nAnalytical derivative v.4 dR2/dx1: " << d << endl;
 
 
     }

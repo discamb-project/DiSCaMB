@@ -23,6 +23,10 @@ namespace discamb {
 
 namespace scattering_utilities
 {
+    void generate_symmetry_equivalent_hkls(
+        const SpaceGroup& spaceGroup,
+        const std::vector<Vector3i>& hkl,
+        std::vector<Vector3i>& symmEquivalentHkls);
 
     std::unique_ptr<SfCalculator> scatteringFactorCalculatorFromJsonFile(const Crystal& crystal, const std::string& jsonFile);
 
