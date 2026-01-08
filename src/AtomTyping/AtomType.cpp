@@ -196,6 +196,28 @@ namespace discamb {
         setN_RingInfo(ring4info, in4Ring, n4rings, 4, *this);
     }
 
+    bool AtomTypeLCS::checkCorrectness(std::string& errorMessage)
+        const
+    {
+        //check that axis definitions are correct
+        if (lcs_axis_type_1 == AtomTypeLCS::LCS_AxisType::LABELED_ATOM)
+            if (lcs_axis_1_definition.size() == 1)
+                if (lcs_axis_1_definition[0] == 0)
+                {
+                    errorMessage = "local coordinate system definition with vector from central atom to itself";
+                    return false;
+                }
+        
+        if (lcs_axis_type_2 == AtomTypeLCS::LCS_AxisType::LABELED_ATOM)
+            if (lcs_axis_2_definition.size() == 1)
+                if (lcs_axis_2_definition[0] == 0)
+                {
+                    errorMessage = "local coordinate system definition with vector from central atom to itself";
+                    return false;
+                }
+
+        return true;
+    }
 
     void AtomType::setLocalCoordinateSystem(
         const std::string &lcsAsString)
@@ -225,14 +247,10 @@ namespace discamb {
         setReferencePoint(lcsWords[1], localCoordinateSystem.lcs_axis_1_definition, localCoordinateSystem.lcs_axis_type_1);
         setReferencePoint(lcsWords[3], localCoordinateSystem.lcs_axis_2_definition, localCoordinateSystem.lcs_axis_type_2);
 
-        if (localCoordinateSystem.lcs_axis_type_1 == AtomTypeLCS::LCS_AxisType::LABELED_ATOM)
-            if (localCoordinateSystem.lcs_axis_1_definition.size() == 1)
-                if (localCoordinateSystem.lcs_axis_1_definition[0] == 0)
-                    on_error::throwException(string("local coordinate system definition with vector from central atom to itself for '") + this->id + string("'"), __FILE__, __LINE__);
-        if (localCoordinateSystem.lcs_axis_type_2 == AtomTypeLCS::LCS_AxisType::LABELED_ATOM)
-            if (localCoordinateSystem.lcs_axis_2_definition.size() == 1)
-                if (localCoordinateSystem.lcs_axis_2_definition[0] == 0)
-                    on_error::throwException(string("local coordinate system definition with vector from central atom to itself for '") + this->id + string("'"), __FILE__, __LINE__);
+        string errorMessage;
+        if (!localCoordinateSystem.checkCorrectness(errorMessage))  
+            on_error::throwException(string("invalid local coordinate system definition in atom type: '") + id + string("' - ") + errorMessage, __FILE__, __LINE__);
+        
 
     }
 
@@ -370,6 +388,12 @@ namespace discamb {
         if (refPoint == string("any_orthogonal"))
         {
             definitionType = AtomTypeLCS::LCS_AxisType::ANY_ORTHOGONAL;
+            return;
+        }
+
+        if (refPoint == string("most_orthogonal_atom"))
+        {
+            definitionType = AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM;
             return;
         }
 

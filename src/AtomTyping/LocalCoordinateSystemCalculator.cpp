@@ -237,16 +237,12 @@ namespace discamb {
         }
         else
         {
+            calcAtomicPositionsBasedDirection(mLcs.refPoint_1, mLcs.centralAtom, c, mLcs.direction1_type, r1);
             if (mLcs.direction2_type == LcsDirectionType::ANY_ORTHOGONAL)
-            {
-                calcAtomicPositionsBasedDirection(mLcs.refPoint_1, mLcs.centralAtom, c, mLcs.direction1_type, r1);
                 calculateAnyOrthogonal(r1, r2);
-            }
-            else
-            {
-                calcAtomicPositionsBasedDirection(mLcs.refPoint_1, mLcs.centralAtom, c, mLcs.direction1_type, r1);
+            else 
                 calcAtomicPositionsBasedDirection(mLcs.refPoint_2, mLcs.centralAtom, c, mLcs.direction2_type, r2);
-            }
+            
         }
 
         mCrossProductLcs->calculate(r1, r2, x, y, z);

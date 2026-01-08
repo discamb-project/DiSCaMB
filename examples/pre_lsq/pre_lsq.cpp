@@ -234,7 +234,55 @@ void save_one_hkl(
     
 }
 
+void prepare_synethetic_data(
+const string &structureFile,
+const string &hklFile )
+{
+    Crystal crystal, crystal_distorted;
+    structure_io::read_structure(structureFile, crystal);
+    vector<Vector3i> hkls;
+    vector<double> int_obs, int_calc, sigmas;
+    vector<int> batch;
+    hkl_io::readShelxHkl(hklFile, hkls, int_obs, sigmas, batch, false);
+    
+    double scale = 1.0;
 
+    // skip hkl 000
+    if (hkls.back() == Vector3i())
+    {
+        hkls.pop_back();
+        int_obs.pop_back();
+        sigmas.pop_back();
+    }
+
+    shared_ptr<SfCalculator> sf_calculator = SfCalculator::create_shared_ptr(crystal, string("aspher.json"));
+    vector<complex<double> > f_calc;
+
+    sf_calculator->calculateStructureFactors(crystal.atoms, hkls, f_calc);
+
+
+    vector<double> weights;
+
+    for (auto& f : f_calc)
+        int_calc.push_back(norm(f));
+
+    scattering_utilities::scaleFactorFcalc(int_obs, int_calc, sigmas, scale);
+
+    for(auto &sigma: sigmas)
+        sigma /= scale;
+
+    hkl_io::writeShelxHkl("synthetic.hkl", hkls, int_calc, sigmas, batch, false);
+
+    crystal_structure_utilities::StructureDistortionParameters distortionParams;
+    distortionParams.distort_adps = false;
+    distortionParams.distort_occupancies = false;
+    distortionParams.distort_positions = true;
+
+    crystal_structure_utilities::distort_structure(crystal, crystal_distorted, distortionParams);
+
+    structure_io::write_structure("distorted.cif", crystal_distorted);
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -260,6 +308,11 @@ int main(int argc, char* argv[])
             cout << "aspher.json is missing.\n";
             return 0;
         }
+
+        prepare_synethetic_data(arguments[0],
+            arguments[1]);
+        return 0;
+
         Crystal crystal, crystal_distorted;
         structure_io::read_structure(arguments[0], crystal);
         vector<Vector3i> hkls0, hkls;

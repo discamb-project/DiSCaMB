@@ -68,7 +68,8 @@ namespace discamb {
             LABELED_ATOM, NON_LABELED_ATOM,
             NOT_OF_ATOMIC_NUMBER, LABELED_RING,
             NON_LABELED_RING, ATOM_LIST,
-            ANY_ATOM, ANY_ORTHOGONAL, AVERAGE_DIRECTION, NOT_SET
+            ANY_ATOM, ANY_ORTHOGONAL, AVERAGE_DIRECTION, NOT_SET,
+            MOST_ORTHOGONAL_ATOM
         };
 
         LCS_AxisType lcs_axis_type_1 = LCS_AxisType::ANY_ORTHOGONAL;
@@ -96,10 +97,12 @@ namespace discamb {
                - (if there are any labeled atoms) components 1 to n - indices of the corresponding labeled atoms
                - components n+1 and above - atomic numbers of non-labeled atoms
 
-           Empty in the case of ANY_ATOM and ANY_ORTHOGONAL
+           Empty in the case of ANY_ATOM, ANY_ORTHOGONAL and MOST_ORTHOGONAL_ATOM
         */
 
         std::vector<int> lcs_axis_1_definition, lcs_axis_2_definition;
+        // it is far from being complete
+        bool checkCorrectness(std::string &errorMessage) const;
     };
 
     struct AtomType
