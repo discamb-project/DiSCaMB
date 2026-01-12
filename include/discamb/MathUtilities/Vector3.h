@@ -68,6 +68,7 @@ public:
 
     T norm() const;
     T norm2() const;
+    void normalize();
     
     std::string string() const;
 };	
@@ -366,6 +367,14 @@ const
     return x * x + y * y + z * z;
 }
 
+template<typename T>
+void Vector3<T>::normalize()
+{
+    T n = norm();
+    x /= n;
+    y /= n;
+    z /= n;
+}
 
 // non-member operators
 

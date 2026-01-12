@@ -290,6 +290,48 @@ namespace discamb {
             return;
         }
 
+        if(axisType == AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM)
+        {
+            if(theOtherAxisType != AtomTypeLCS::LCS_AxisType::LABELED_ATOM && theOtherAxisType != AtomTypeLCS::LCS_AxisType::ATOM_LIST)
+                on_error::throwException("MOST_ORTHOGONAL_ATOM can be used only when the other axis is defined by LABELED_ATOM or ATOM_LIST", __FILE__, __LINE__);
+            
+            int centralAtom = matchMap.atomMatch[refPointCode[0]];
+            auto& candidateAtoms = describedStructure.connectivity[centralAtom];
+
+            if (candidateAtoms.empty())
+                on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+            if (theOtherRefPoint.size() == 1)
+                if(candidateAtoms.size()==1)
+                    if(candidateAtoms[0] == matchMap.atomMatch[theOtherRefPoint[0]])
+                        on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+
+            int bestAtom = -1;
+            double maxCosine = -2.0; 
+            Vector3d rCentralAtom = describedStructure.atomDescriptors[matchMap.atomMatch[0]].position;
+            Vector3d rOtherRefPoint; 
+            for(int atomIdx: theOtherRefPoint)
+                rOtherRefPoint += describedStructure.atomDescriptors[atomIdx].position;
+            rOtherRefPoint /= theOtherRefPoint.size();
+            Vector3d vOther = rOtherRefPoint - rCentralAtom;
+            vOther.normalize();
+            Vector3d rCandidate, vCandidate;
+            double cosine;
+            for (int i = 0; i < candidateAtoms.size(); i++)
+            {
+                rCandidate = describedStructure.atomDescriptors[candidateAtoms[i]].position;
+                vCandidate = rCandidate - rCentralAtom;
+                vCandidate.normalize();
+                cosine = fabs(vCandidate * vOther);
+                if (cosine > maxCosine)
+                {
+                    maxCosine = cosine;
+                    bestAtom = candidateAtoms[i];
+                }
+            }
+            referencePointAtoms.push_back(bestAtom);
+            return;
+        }
+
 		if (axisType == AtomTypeLCS::LCS_AxisType::AVERAGE_DIRECTION)
 		{
 			int nLabeledAtoms = refPointCode[0];
@@ -364,10 +406,12 @@ namespace discamb {
 
         candidateAtoms.clear();
         candidateAtomsBondLengths.clear();
-        bool fulfillsCandidateCriteria;
+        if (axisType != AtomTypeLCS::LCS_AxisType::NON_LABELED_ATOM && axisType != AtomTypeLCS::LCS_AxisType::NOT_OF_ATOMIC_NUMBER)
+            on_error::throwException("BUG - please report it.", __FILE__, __LINE__);
 
         for (int i = 0; i < initialCandidateAtoms.size(); i++)
         {
+            bool fulfillsCandidateCriteria = false;
             if (axisType == AtomTypeLCS::LCS_AxisType::NON_LABELED_ATOM)
                 fulfillsCandidateCriteria = (describedStructure.atomDescriptors[initialCandidateAtoms[i]].atomicNumber == refPointCode[0]);
             if (axisType == AtomTypeLCS::LCS_AxisType::NOT_OF_ATOMIC_NUMBER)

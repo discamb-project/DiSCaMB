@@ -64,6 +64,8 @@ namespace discamb {
 
     struct AtomTypeLCS
     {
+        // MOST_ORTHOGONAL_ATOM is used when one wants to define axis along the atom that is most orthogonal to the other axis
+        // it requires that the other axis is defined as LABELED_ATOM or ATOM_LIST
         enum class LCS_AxisType {
             LABELED_ATOM, NON_LABELED_ATOM,
             NOT_OF_ATOMIC_NUMBER, LABELED_RING,

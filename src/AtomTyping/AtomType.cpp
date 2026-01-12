@@ -216,6 +216,22 @@ namespace discamb {
                     return false;
                 }
 
+        //MOST_ORTHOGONAL_ATOM
+        if (lcs_axis_type_1 == AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM)
+            if (lcs_axis_type_2 != AtomTypeLCS::LCS_AxisType::LABELED_ATOM &&
+                lcs_axis_type_2 != AtomTypeLCS::LCS_AxisType::ATOM_LIST)
+            {
+                errorMessage = "local coordinate system definition with MOST_ORTHOGONAL_ATOM requires that the other axis is defined as LABELED_ATOM or ATOM_LIST";
+                return false;
+            }
+        if (lcs_axis_type_2 == AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM)
+            if (lcs_axis_type_1 != AtomTypeLCS::LCS_AxisType::LABELED_ATOM &&
+                lcs_axis_type_1 != AtomTypeLCS::LCS_AxisType::ATOM_LIST)
+            {   
+                errorMessage = "local coordinate system definition with MOST_ORTHOGONAL_ATOM requires that the other axis is defined as LABELED_ATOM or ATOM_LIST";
+                return false;
+            }
+
         return true;
     }
 
