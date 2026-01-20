@@ -295,8 +295,14 @@ namespace discamb {
             if(theOtherAxisType != AtomTypeLCS::LCS_AxisType::LABELED_ATOM && theOtherAxisType != AtomTypeLCS::LCS_AxisType::ATOM_LIST)
                 on_error::throwException("MOST_ORTHOGONAL_ATOM can be used only when the other axis is defined by LABELED_ATOM or ATOM_LIST", __FILE__, __LINE__);
             
-            int centralAtom = matchMap.atomMatch[refPointCode[0]];
-            auto& candidateAtoms = describedStructure.connectivity[centralAtom];
+            int centralAtom = matchMap.atomMatch[0];
+            vector<int> candidateAtoms;
+            if(refPointCode.empty())
+                candidateAtoms = describedStructure.connectivity[centralAtom];
+            else
+                for(int atomIdx: describedStructure.connectivity[centralAtom])
+                    if(find(refPointCode.begin(), refPointCode.end(), describedStructure.atomDescriptors[atomIdx].atomicNumber) != refPointCode.end())
+                        candidateAtoms.push_back(atomIdx);
 
             if (candidateAtoms.empty())
                 on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);

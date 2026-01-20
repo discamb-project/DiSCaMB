@@ -1189,7 +1189,11 @@ namespace discamb {
             if (data.find("lcs") != data.end())
             {
                 string lcsString = data.find("lcs")->get<string>();
-                atomType.setLocalCoordinateSystem(lcsString + " R");
+                vector<string> words;
+                discamb::string_utilities::split(lcsString, words);
+                if (words.size() == 4)
+                    lcsString += " R";
+                atomType.setLocalCoordinateSystem(lcsString);
             }
             else
                 if (!atomType.setDefaultLocalCoordinateSystem())

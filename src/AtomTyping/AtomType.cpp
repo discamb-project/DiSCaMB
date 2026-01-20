@@ -407,10 +407,29 @@ namespace discamb {
             return;
         }
 
-        if (refPoint == string("most_orthogonal_atom"))
+        if (hasBracket)
         {
-            definitionType = AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM;
-            return;
+            if (preBracket == string("most_orthogonal_atom"))
+            {
+                definitionType = AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM;
+
+                vector<string> chemicalElementSymbols;
+
+                string_utilities::split(bracketsContent, chemicalElementSymbols, ',');
+
+                for (auto& symbol : chemicalElementSymbols)
+                    definition.push_back(periodic_table::atomicNumber(symbol));
+
+                return;
+            }
+        }
+        else
+        {
+            if (refPoint == string("most_orthogonal_atom"))
+            {
+                definitionType = AtomTypeLCS::LCS_AxisType::MOST_ORTHOGONAL_ATOM;
+                return;
+            }
         }
 
         if(definitionType == AtomTypeLCS::LCS_AxisType::NOT_SET)
