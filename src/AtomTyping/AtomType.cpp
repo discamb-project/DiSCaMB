@@ -574,6 +574,9 @@ namespace discamb {
     bool AtomType::setDefaultLocalCoordinateSystem()
     {
         localCoordinateSystem = AtomTypeLCS();
+
+        localCoordinateSystem.automaticallyDefined = true;
+
         if (connectivity.empty())
             return false;
         if (connectivity[0].empty())

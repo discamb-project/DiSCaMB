@@ -27,6 +27,8 @@ namespace discamb {
 		void set(const LocalCoordinateSystem<int>& lcs);
 		void calculate(Vector3d &x, Vector3d &y, Vector3d &z,const std::vector<Vector3d> &r) const;
         void calculate(Vector3d &x, Vector3d &y, Vector3d &z, const std::vector<Vector3d>& r, bool &sameChirality) const;
+        // cosAngle is a cosine of the angle between the two directions defining lcs
+        void calculate(Vector3d& x, Vector3d& y, Vector3d& z, const std::vector<Vector3d>& r, bool& sameChirality, double &cosAngle) const;
         /*
               | x[0] y[0] z[0] |
           m = | x[1] y[1] z[1] |

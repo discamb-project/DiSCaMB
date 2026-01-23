@@ -8,6 +8,8 @@ add_example_exec(harBankMaker
                  CalcDensities.h 
                  ChooseStructures.h
                  ChooseStructures.cpp
+                 LcsCheck.cpp 
+                 LcsCheck.h 
                  RunAll.h
                  RunAll.cpp
                  Program.h

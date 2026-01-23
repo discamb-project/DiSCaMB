@@ -202,13 +202,25 @@ namespace discamb {
         */
 	}
 
+    void LocalCoordinateSystemCalculator::calculate(
+        Vector3d& x,
+        Vector3d& y,
+        Vector3d& z,
+        const Crystal& c,
+        bool& sameChirality)
+        const
+    {
+        double cosAngle;
+        calculate(x, y, z, c, sameChirality, cosAngle);
+    }
 
     void LocalCoordinateSystemCalculator::calculate(
         Vector3d &x, 
         Vector3d &y, 
         Vector3d &z, 
         const Crystal &c, 
-        bool &sameChirality) 
+        bool &sameChirality,
+        double & cosAngle)
         const
     {
         if (mLcs.direction1_type == LcsDirectionType::ANY_ORTHOGONAL && mLcs.direction2_type == LcsDirectionType::ANY_ORTHOGONAL)
@@ -247,6 +259,8 @@ namespace discamb {
 
         mCrossProductLcs->calculate(r1, r2, x, y, z);
         
+        cosAngle = (r1 * r2) / (sqrt(r1 * r1) * sqrt(r2 * r2));
+
         takeChiralityIntoAccount(x, y, z, c, sameChirality);
     }
 

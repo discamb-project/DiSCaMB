@@ -3,6 +3,7 @@
 #include "CalcDensities.h"
 #include "ChooseStructures.h"
 #include "FilterStructures.h"
+#include "LcsCheck.h"
 #include "WfnCalc.h"
 #include "RunAll.h"
 
@@ -18,6 +19,8 @@ Program::~Program()
 Program* Program::create(
     const std::string& name)
 {
+    if (name == "lcscheck")
+        return new LcsCheck();
     if (name == "filter")
         return new FilterStructures();
     if (name == "assign")

@@ -185,13 +185,25 @@ namespace discamb {
         */
 	}
 
+    void MolecularLcsCalculator::calculate(
+        Vector3d& x,
+        Vector3d& y,
+        Vector3d& z,
+        const std::vector<Vector3d>& r,
+        bool& sameChirality)
+        const
+    {
+        double cosAngle;
+        calculate(x, y, z, r, sameChirality, cosAngle);
+    }
 
     void MolecularLcsCalculator::calculate(
         Vector3d &x, 
         Vector3d &y, 
         Vector3d &z, 
         const std::vector<Vector3d>& r,
-        bool &sameChirality) 
+        bool &sameChirality,
+        double& cosAngle)
         const
     {
         if (mLcs.direction1_type == LcsDirectionType::NOT_SET || mLcs.direction2_type == LcsDirectionType::NOT_SET)
@@ -230,7 +242,7 @@ namespace discamb {
         }
 
         mCrossProductLcs->calculate(r1, r2, x, y, z);
-        
+        cosAngle = r1 * r2 / (r1.norm() * r2.norm());
         takeChiralityIntoAccount(x, y, z, r, sameChirality);
     }
 

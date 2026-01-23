@@ -2,6 +2,7 @@
 
 #include "discamb/AtomTyping/AtomType.h"
 #include "discamb/AtomTyping/atom_typing_utilities.h"
+#include "discamb/AtomTyping/MolecularLcsCalculator.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
@@ -145,6 +146,8 @@ void AssignAtomTypes::set()
 
     mMolFolder = data.value("mol folder", folder);
 
+    mLcsAbsCosAngleThreshold = data.value("lcs abs cos angle max", mLcsAbsCosAngleThreshold);
+
     // sets mMinNumberOfInstances
 
     //mMinNumberOfInstances = data.value("min n type instances", mMinNumberOfInstances);
@@ -237,11 +240,13 @@ void AssignAtomTypes::run()
 
     mAssigner.setAtomTypes(mAtomTypes);
     mAssigner.setDescriptorsSettings(mDescriptorsSettings);
-
+    std::set<string> typesExceedingLcsAngleThreshold;
+    
     vector<string> resFiles;
     file_system_utilities::find_files("res", mChosenResFolder.string(), resFiles, false);
 
     ofstream out(mOutputFileName);
+    
     vector<int> nOccurences(mAtomTypes.size(), 0);
     vector<int> nOccurencesMultipleAssinment(mAtomTypes.size(), 0);
     vector<int> nContainingMols(mAtomTypes.size(), 0);
@@ -287,6 +292,21 @@ void AssignAtomTypes::run()
         vector<int> typeId;
         vector<LocalCoordinateSystem<int> > lcs;
         mAssigner.assign(structure, typeId, lcs);
+        MolecularLcsCalculator lcsCalculator;
+        //lcsCalculator.set()
+        for(int atomIdx=0; atomIdx<typeId.size(); atomIdx++)
+        {
+            if(typeId[atomIdx]>=0)
+            {
+                lcsCalculator.set(lcs[atomIdx]);
+                Vector3d x,y,z;
+                bool sameChirality;
+                double cosAngle;
+                lcsCalculator.calculate(x,y,z, mol2Data.atomPosition, sameChirality, cosAngle);
+                if(cosAngle> mLcsAbsCosAngleThreshold)
+                    typesExceedingLcsAngleThreshold.insert(mAtomTypes[typeId[atomIdx]].id);
+            }
+        }
         vector< vector<int> > multipleTypesAssignment;
         mAssigner.assign_all_possible(structure, multipleTypesAssignment);
 
@@ -465,6 +485,16 @@ void AssignAtomTypes::run()
         nIndepFormulas_idx.push_back({(int)inludingMolFormulaIdx[i].size(), i});
     auto it2 = min_element(nIndepFormulas_idx.begin(), nIndepFormulas_idx.end());
     out << it2->first << " " << mAtomTypes[it2->second].id << "\n";
+
+    out.close();
+
+    out.open(mLcsCheckFileName);
+
+    out << " Types for which |cos(alpha)| threshold (" << mLcsAbsCosAngleThreshold 
+        << ") is exceeded\n alpha is the angle between two directions defining lcs\n\n";
+
+    for( auto typeId: typesExceedingLcsAngleThreshold)
+        out << typeId << "\n";
 
     out.close();
 }

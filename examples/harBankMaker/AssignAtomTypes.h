@@ -27,6 +27,8 @@ private:
     std::filesystem::path mChosenResFolder = std::filesystem::current_path() / std::string("chosen");
     std::filesystem::path mMolFolder = std::filesystem::current_path() / std::string("mol");
     std::string mOutputFileName = std::string("assignment.log");
+    std::string mLcsCheckFileName = std::string("lcs_angle_check.log");
+    double mLcsAbsCosAngleThreshold = 0.86602540378; // cos(30 degrees)
     std::vector< discamb::AtomType> mAtomTypes;
     discamb::DescriptorsSettings mDescriptorsSettings;
     //int mMinNumberOfInstances = 1;

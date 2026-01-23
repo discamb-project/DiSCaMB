@@ -30,6 +30,8 @@ namespace discamb {
 		void set(const LocalCoordinateSystem<AtomInCrystalID> &lcs, const Crystal &c);
 		virtual void calculate(Vector3d &x, Vector3d &y, Vector3d &z, const Crystal &c) const;
         void calculate(Vector3d &x, Vector3d &y, Vector3d &z, const Crystal &c, bool &sameChirality) const;
+        // cosAngle is a cosine of the angle between the two directions defining lcs
+        void calculate(Vector3d& x, Vector3d& y, Vector3d& z, const Crystal& c, bool& sameChirality, double &cosAngle) const;
 
         /*
               | x[0] y[0] z[0] |

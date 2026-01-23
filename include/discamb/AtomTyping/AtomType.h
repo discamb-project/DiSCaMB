@@ -80,6 +80,7 @@ namespace discamb {
         int lcs_coordinate_1 = 0;
         int lcs_coordinate_2 = 1;
         bool isR = true;
+        bool automaticallyDefined = false;
         /**
            Reference points definition:
 
