@@ -3,11 +3,38 @@
 #include "discamb/Scattering/SF_CalcDataTypes.h"
 
 #include <vector>
+#include <variant>
 
 namespace discamb {
     namespace agreement_factors {
 
         enum AgreementFactor {Relative_L1_Percent, R2, R2_target};
+
+        /**
+        returns a scale factor for i_calc, the value optimizes wR2 agreement factor 
+        */
+
+        double scale_for_wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights);
+
+        double wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights);
+
+        double wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights,
+            double &scale);
+
+        double wR2_predefined_scale(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights,
+            double scale = 1.0);
 
         double value(
             const std::vector<double>& v_calc, 

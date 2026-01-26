@@ -84,7 +84,71 @@ namespace discamb {
 
 
         }
-         
+        
+        double scale_for_wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights)
+        {
+            double scale = 1.0;
+            double numerator = 0.0;
+            double denominator = 0.0;
+
+            for (int i = 0; i < i_obs.size(); i++)
+            {
+                numerator += weights[i] * i_calc[i] * i_obs[i];
+                denominator += weights[i] * i_calc[i] * i_calc[i];
+            }
+
+            scale = numerator / denominator;
+            return scale;
+        }
+
+        double wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights)
+        {
+            double scale;
+            return wR2(i_obs, i_calc, weights, scale);
+        }
+
+        double wR2(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights,
+            double& scale)
+        {
+            scale = scale_for_wR2(i_obs, i_calc, weights);
+            return wR2_predefined_scale(i_obs, i_calc, weights, scale);
+        }
+
+        double wR2_predefined_scale(
+            const std::vector<double>& i_obs,
+            const std::vector<double>& i_calc,
+            const std::vector<double>& weights,
+            double scale)
+        {
+            double numerator = 0.0;
+            double denominator = 0.0;
+
+            for (int i = 0; i < i_obs.size(); i++)
+            {
+                double diff = i_obs[i] - i_calc[i] * scale;
+                numerator += weights[i] * diff * diff;
+                denominator += weights[i] * i_obs[i] * i_obs[i];
+            }
+
+            if (numerator < 0)
+                on_error::throwException("invalid numerator when calculating wR2 agreement factor", __FILE__, __LINE__);
+
+            if (denominator <= 0)
+                on_error::throwException("invalid denominator when calculating wR2 agreement factor", __FILE__, __LINE__);
+
+            return sqrt(numerator / denominator);
+
+        }
+
 
         double value(
             const std::vector<double>& v1, 

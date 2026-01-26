@@ -666,6 +666,76 @@ void test_adps_derivatives(
 
 }
 
+void calc_wR2(
+const string &structureFile,
+const string& tscFile, 
+const string& hklFile,
+double scale)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    nlohmann::json settings;
+    settings["model"] = "tsc";
+    settings["tsc file"] = tscFile;
+    auto calculator = SfCalculator::create_shared_ptr(crystal, settings);
+
+    vector<Vector3i> hkl;
+    vector<double> i_obs, sigma_i_obs;
+    vector<int> batchNumber;
+    hkl_io::readShelxHkl(hklFile, hkl, i_obs, sigma_i_obs, batchNumber, false);
+
+    if (hkl.back() == Vector3i(0, 0, 0))
+    {
+        hkl.pop_back();
+        sigma_i_obs.pop_back();
+        i_obs.pop_back();
+    }
+
+    vector<complex<double> > f_calc;
+    vector<double> i_calc;
+    calculator->calculateStructureFactors(crystal.atoms, hkl, f_calc);
+
+    double scale_calc = 1.0;
+    double numerator = 0.0;
+    double denominator = 0.0;
+
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        double i_calc = norm(f_calc[i]);
+        double weight = 1.0 / (sigma_i_obs[i] * sigma_i_obs[i]);
+        numerator += weight * i_calc * i_obs[i];
+        denominator += weight * i_calc * i_calc;
+    }
+
+    scale_calc = numerator / denominator;
+    cout << "calculated scale factor = " << scale_calc << endl;
+
+    numerator = 0.0;
+    denominator = 0.0;
+
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        double i_calc = norm(f_calc[i]);
+        double weight = 1.0 / (sigma_i_obs[i] * sigma_i_obs[i]);
+        numerator += i_calc * i_obs[i];
+        denominator += i_calc * i_calc;
+    }
+
+    cout << "calculated unweighted scale factor = " << numerator / denominator << endl;
+
+    numerator = 0.0;
+    denominator = 0.0;
+    scale = scale_calc;
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        double i_calc = norm(f_calc[i]);
+        double diff = i_obs[i] - i_calc * scale;
+        double weight = 1.0 / (sigma_i_obs[i] * sigma_i_obs[i]);
+        numerator += weight * diff * diff;
+        denominator += weight * i_obs[i] * i_obs[i];
+    }
+    cout << "wR2=" << sqrt(numerator / denominator) << endl;
+}
 
 int main(int argc, char* argv[])
 {
@@ -679,6 +749,18 @@ int main(int argc, char* argv[])
 
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+        
+        // structureFile tscFile hklFile scale
+
+        if (arguments.size() < 4)
+        {
+            cout << "Usage: pre_lsq <structure file> <tsc_file> <hkl file> <scale>\n";
+            return 0;
+        }
+
+        calc_wR2(arguments[0], arguments[1], arguments[2], stod(arguments[3]));
+
+        return 0;
 
         if (arguments.size() < 2)
         {
