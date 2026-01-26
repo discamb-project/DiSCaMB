@@ -219,6 +219,7 @@ namespace discamb {
             x.set(1, 0, 0);
             y.set(0, 1, 0);
             z.set(0, 0, 1);
+            cosAngle = 0.0;
             return;
         }
         Vector3d r1, r2;

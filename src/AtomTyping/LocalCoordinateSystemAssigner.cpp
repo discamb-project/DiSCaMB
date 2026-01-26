@@ -312,7 +312,7 @@ namespace discamb {
                         on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
 
             int bestAtom = -1;
-            double maxCosine = -2.0; 
+            double minCosine = 2.0; 
             Vector3d rCentralAtom = describedStructure.atomDescriptors[matchMap.atomMatch[0]].position;
             Vector3d rOtherRefPoint; 
             for(int atomIdx: theOtherRefPoint)
@@ -328,9 +328,9 @@ namespace discamb {
                 vCandidate = rCandidate - rCentralAtom;
                 vCandidate.normalize();
                 cosine = fabs(vCandidate * vOther);
-                if (cosine > maxCosine)
+                if (cosine < minCosine)
                 {
-                    maxCosine = cosine;
+                    minCosine = cosine;
                     bestAtom = candidateAtoms[i];
                 }
             }

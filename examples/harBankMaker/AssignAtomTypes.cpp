@@ -240,8 +240,9 @@ void AssignAtomTypes::run()
 
     mAssigner.setAtomTypes(mAtomTypes);
     mAssigner.setDescriptorsSettings(mDescriptorsSettings);
-    std::set<string> typesExceedingLcsAngleThreshold;
-    
+    //std::set<string> typesExceedingLcsAngleThreshold;
+    map<string, vector<string> > typesAndCasesExceedingLcsAngleThreshold;
+    map<string, double> typeDirectionsMaxCos;
     vector<string> resFiles;
     file_system_utilities::find_files("res", mChosenResFolder.string(), resFiles, false);
 
@@ -303,8 +304,26 @@ void AssignAtomTypes::run()
                 bool sameChirality;
                 double cosAngle;
                 lcsCalculator.calculate(x,y,z, mol2Data.atomPosition, sameChirality, cosAngle);
-                if(cosAngle> mLcsAbsCosAngleThreshold)
-                    typesExceedingLcsAngleThreshold.insert(mAtomTypes[typeId[atomIdx]].id);
+                if (cosAngle > mLcsAbsCosAngleThreshold)
+                {
+                    string id = mAtomTypes[typeId[atomIdx]].id;
+                    if (typesAndCasesExceedingLcsAngleThreshold.count(id) > 0)
+                    {
+                        if (typeDirectionsMaxCos[id] < cosAngle)
+                        {
+                            typeDirectionsMaxCos[id] = cosAngle;
+                            typesAndCasesExceedingLcsAngleThreshold[id].push_back(typesAndCasesExceedingLcsAngleThreshold[id][0]);
+                            typesAndCasesExceedingLcsAngleThreshold[id][0] = fileNameCore;
+                        }
+                        if (typesAndCasesExceedingLcsAngleThreshold[id].size() > 6)
+                            typesAndCasesExceedingLcsAngleThreshold[id].pop_back();
+                    }
+                    else
+                    {
+                        typesAndCasesExceedingLcsAngleThreshold[id].push_back(fileNameCore);
+                        typeDirectionsMaxCos[id] = cosAngle;
+                    }
+                }
             }
         }
         vector< vector<int> > multipleTypesAssignment;
@@ -493,8 +512,12 @@ void AssignAtomTypes::run()
     out << " Types for which |cos(alpha)| threshold (" << mLcsAbsCosAngleThreshold 
         << ") is exceeded\n alpha is the angle between two directions defining lcs\n\n";
 
-    for( auto typeId: typesExceedingLcsAngleThreshold)
-        out << typeId << "\n";
+    for (auto item : typesAndCasesExceedingLcsAngleThreshold)
+    {
+        out << item.first << "\nmax(|cos(alpha)|) " << typeDirectionsMaxCos[item.first] << "\n";
+        for(auto & caseName : item.second)
+            out << "   " << caseName << "\n";
+    }
 
     out.close();
 }

@@ -3328,10 +3328,40 @@ void test_taam_typing(const std::string& structure_file)
     }
 }
 
+void compare_adps(const vector<string> &structure_files)
+{
+    if (structure_files.size() < 2)
+        return;
+    vector<Crystal> crystals(structure_files.size()-1);
+    Crystal refCrystal;
+    structure_io::read_structure(structure_files[0], refCrystal);
+    for (int i=1; i< structure_files.size(); i++)
+        structure_io::read_structure(structure_files[i], crystals[i-1]);
+
+    for(int atomIdx=0; atomIdx<refCrystal.atoms.size(); atomIdx++)
+    {
+        cout << refCrystal.atoms[atomIdx].label << "\n";
+        for(int fileIdx=1; fileIdx< structure_files.size(); fileIdx++)
+        {
+            cout << "  " << structure_files[fileIdx] << "  ";
+            const auto& adp = crystals[fileIdx-1].atoms[atomIdx].adp;
+            double s12 = crystal_structure_utilities::s12AdpSimilarityIndex(refCrystal.unitCell, refCrystal.atoms[atomIdx].adp, adp);
+            cout << s12 << " ";
+            cout << "\n";
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
+        vector<string> arguments, options;
+        parse_cmd::get_args_and_options(argc, argv, arguments, options);
+        if (arguments.size() < 2)
+            on_error::throwException("expected at least 2 structure files\n", __FILE__, __LINE__);
+        compare_adps(arguments);
+
         map<int, int> formula;
         basic_chemistry_utilities::string2formula("CaBC6Si4H6O12BB", formula);
 
@@ -3409,7 +3439,7 @@ int main(int argc, char* argv[])
 
         return 0;
 
-        vector<string> arguments, options;
+        //vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
         
         if (arguments.size() != 2)
