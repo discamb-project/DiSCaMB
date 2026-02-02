@@ -3352,12 +3352,34 @@ void compare_adps(const vector<string> &structure_files)
     }
 }
 
+void clean_matts(const string inputFile, const string outputFile)
+{
+
+    ifstream in(inputFile);
+    ofstream out(outputFile);
+    string line;
+    while(getline(in, line))
+    {
+        if(line.find('#') != string::npos)
+            continue;
+        out << line << "\n";
+    }
+    in.close();
+    out.close();
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected input matts file and name for cleaned output\n", __FILE__, __LINE__);
+        clean_matts(arguments[0], arguments[1]);
+        return 0;
+
         if (arguments.size() < 2)
             on_error::throwException("expected at least 2 structure files\n", __FILE__, __LINE__);
         compare_adps(arguments);

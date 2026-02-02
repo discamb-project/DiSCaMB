@@ -18,6 +18,9 @@ namespace discamb {
         virtual ~GenericConnectivityAlgorithm();
         virtual void set(const std::string &bondDetectorSettings);
 
+        bool useAdditionalRules() const;
+        void useAdditionalRules(bool useRules);
+
         virtual void calculateConnectivity(
             const std::vector<Vector3d> &positions,
             const std::vector<int> &atomicNumbers,
