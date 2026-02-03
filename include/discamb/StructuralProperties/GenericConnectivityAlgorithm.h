@@ -48,6 +48,7 @@ namespace discamb {
                  const std::vector<int> &atomicNumbers,
                  const MolecularDisorder &molecularDisorder, 
                  std::vector<std::vector<int> > &connectivity) const;
+        void applyRules() const;
     };
 
     // -------------------- IMPLEMENTATION  ---------------------------------------
