@@ -7,7 +7,6 @@ SET(TARGET_H
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/CovalentRadiousBondDetector.h" 
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/GenericConnectivityAlgorithm.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/MacromolecularStructuralInformation.h"
-             "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/MolecularDisorder.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/RingCalculator.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/SimpleAIF_ScoreCalculator.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/StructuralProperties/structural_properties.h")
@@ -18,7 +17,6 @@ SET(TARGET_SRC
     ConnectivityAlgorithm.cpp
     CovalentRadiousBondDetector.cpp
     MacromolecularStructuralInformation.cpp
-    MolecularDisorder.cpp
     RingCalculator.cpp
     SimpleAIF_ScoreCalculator.cpp
     structural_properties.cpp)
