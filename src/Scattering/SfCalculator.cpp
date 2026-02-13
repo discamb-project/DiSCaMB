@@ -69,7 +69,6 @@ namespace discamb {
         std::map<std::string, std::set<std::string> > names;
         modelNames(names);
 
-
         for (auto& p : names)
             if (find(p.second.begin(), p.second.end(), name1) != p.second.end())
                 if (find(p.second.begin(), p.second.end(), name2) != p.second.end())
