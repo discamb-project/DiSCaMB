@@ -6,6 +6,7 @@
 #include "discamb/Scattering/AnyIamCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
+#include "discamb/Scattering/NumericalDensityIamSfCalculator.h"
 #include "discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
 #include "discamb/Scattering/TscFileBasedSfCalculator.h"
 #include "discamb/Scattering/StockholderAtomSfCalculator.h"
@@ -50,6 +51,7 @@ namespace discamb {
                 {"tham",{"tham"}},
                 {"hc",{"hc"}},
                 {"sab",{"sab"}},
+                {"niam",{"niam"}},
                 {"tsc",{"tsc"}},
                 {"matts",{"matts", "taam", "ubdb"}},
                 {"taam_dis",{"taam_dis"}},
@@ -223,6 +225,8 @@ namespace discamb {
 
         if (string("iam") == type)
             return new AnyIamCalculator(crystal, engineData);
+        if (string("niam")==type)
+            return new NumericalDensityIamSfCalculator(crystal, engineData);
         if (string("gar") == type)
             return new StockholderAtomSfCalculator(crystal, engineData);
         if (string("hc") == type)

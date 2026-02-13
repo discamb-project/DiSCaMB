@@ -3,7 +3,8 @@
 
 namespace discamb {
 
-    class NumericalDensityIamSfCalculator {
+    class NumericalDensityIamSfCalculator: public SfCalculator
+    {
         NumericalDensityIamSfCalculator();
         std::shared_ptr<AnyScattererStructureFactorCalculator2> mSfCalculator;
         std::shared_ptr<AtomicFormFactorCalculationsManager> mFormFactorsCalculator;
