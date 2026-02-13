@@ -8,6 +8,12 @@ using namespace std;
 
 namespace discamb {
 
+    NumericalSphericalAtomFormFactor::NumericalSphericalAtomFormFactor()
+    {
+        mStart = 0.0;
+        mStep = 0.0;
+    }
+
     NumericalSphericalAtomFormFactor::NumericalSphericalAtomFormFactor(
         const SphericalAtomicDensity& sphericalDensity)
     {
@@ -61,6 +67,8 @@ namespace discamb {
         double h)
         const 
     {
+        if (mValues.empty())
+            return 0.0;
         int n = static_cast<int>((h-mStart) / mStep);
         if (n < 0)
             return mValues[0];

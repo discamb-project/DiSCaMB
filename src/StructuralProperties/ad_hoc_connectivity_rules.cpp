@@ -1,6 +1,7 @@
 #include "discamb/StructuralProperties/ad_hoc_connectivity_rules.h"
 #include "discamb/BasicUtilities/utilities.h"
 #include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/string_utilities.h"
 
 #include <algorithm>
 
@@ -9,6 +10,29 @@ using namespace std;
 namespace discamb {
 
     namespace ad_hoc_connectivity_rules {
+
+        Preset preset_from_string(
+            const std::string& s)
+        {
+            string presetString = string_utilities::toLower(s);
+            if (presetString == "all")
+                return Preset::All;
+            if (presetString == "none")
+                return Preset::None;
+            string message = "string '" + s + "' is not a valid name for ad_hoc_connectivity_rules::Preset";
+            on_error::throwException(message, __FILE__, __LINE__);
+            return Preset::None;
+        }
+
+        std::string to_string(
+            const Preset& preset)
+        {
+            if (preset == Preset::All)
+                return "all";
+            if (preset == Preset::None)
+                return "none";
+            return "none";
+        }
 
         void apply_all(
             const std::vector<Vector3d>& positions,

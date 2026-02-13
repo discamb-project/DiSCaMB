@@ -5,6 +5,7 @@
 #include "AtomInStructureDescriptors.h"
 #include "discamb/MathUtilities/Vector3.h"
 #include "discamb/BasicChemistry/MoleculeData.h"
+#include "discamb/StructuralProperties/ad_hoc_connectivity_rules.h"
 //#include "Molecule/Molecule.h"
 
 #include "json.hpp"
@@ -24,6 +25,8 @@ namespace discamb {
         double atomInRingPlanarityThreshold = 0.1;
 		int atomInRingMaxNeighbourCount = 3;
         int maxPlanarRing = 8; // not set by user
+        ad_hoc_connectivity_rules::Preset addHocConnectivityRulesPreset = 
+            ad_hoc_connectivity_rules::Preset::None;
 
         std::map<std::pair<int, int>, double > maxBondLengthAromaticRing;/* = {
             {{6,6}, 1.45},

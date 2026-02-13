@@ -12,6 +12,7 @@ namespace discamb {
 
     class NumericalSphericalAtomFormFactor{
     public:
+        NumericalSphericalAtomFormFactor();
         NumericalSphericalAtomFormFactor(const SphericalAtomicDensity &sphericalDensity);
         virtual ~NumericalSphericalAtomFormFactor();
         void set(const SphericalAtomicDensity& sphericalDensity);

@@ -1,12 +1,16 @@
 #pragma once
 #include "discamb/MathUtilities/Vector3.h"
 #include <vector>
+#include <string>
 
 namespace discamb {
 
     namespace ad_hoc_connectivity_rules {
 
         enum class Preset{All, None};
+
+        Preset preset_from_string(const std::string& s);
+        std::string to_string(const Preset &preset);
 
         void apply_all(const std::vector<Vector3d>& positions,
             const std::vector<int>& atomicNumbers,

@@ -31,6 +31,8 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/multipole_scattering.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactor.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NGaussianFormFactorsTable.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NumericalDensityIamFfCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NumericalDensityIamSfCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/NumericalSphericalAtomFormFactor.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/statistics.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/scattering_utilities.h"
@@ -80,6 +82,8 @@ SET(TARGET_SRC
     multipole_scattering.cpp 
     NGaussianFormFactorsTable.cpp 
     NGaussianFormFactor.cpp 
+    NumericalDensityIamFfCalculator.cpp
+    NumericalDensityIamSfCalculator.cpp
     NumericalSphericalAtomFormFactor.cpp
     scattering_utilities.cpp 
     SF_CalcDataTypes.cpp 

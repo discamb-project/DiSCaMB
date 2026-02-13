@@ -3368,12 +3368,37 @@ void clean_matts(const string inputFile, const string outputFile)
     out.close();
 }
 
+void test_connectivity2(const string& xyzFile)
+{
+    MoleculeData data;
+    xyz_io::readXyz(xyzFile, data);
+    vector<vector<int> > connectivity;
+    structural_properties::calculateConnectivity(data.atomPositions, data.atomicNumbers, connectivity);
+    int nBonds = 0;
+    for (auto& atomConnectivity : connectivity)
+        nBonds += atomConnectivity.size();
+    cout << "n bonds = " << nBonds << endl;
+    ad_hoc_connectivity_rules::apply_all(data.atomPositions, data.atomicNumbers, connectivity);
+    nBonds = 0;
+    for (auto& atomConnectivity : connectivity)
+        nBonds += atomConnectivity.size();
+    cout << "n bonds = " << nBonds << endl;
+
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 1)
+            on_error::throwException("expected xyz file\n", __FILE__, __LINE__);
+        test_connectivity2(arguments[0]);
+        return 0;
+
+        
 
         if (arguments.size() < 2)
             on_error::throwException("expected input matts file and name for cleaned output\n", __FILE__, __LINE__);

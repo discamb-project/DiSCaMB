@@ -35,6 +35,11 @@ void DescriptorsSettings::readFromJson(
     ringPlanarityThreshold = data.value("ring planarity threshold", ringPlanarityThreshold);
     atomInRingPlanarityThreshold = data.value("atom in ring planarity threshold", atomInRingPlanarityThreshold);
     atomInRingMaxNeighbourCount = data.value("atom in ring max neighbour count", atomInRingMaxNeighbourCount);
+    //ad_hoc_connectivity_rules::Preset preset = 
+    string connectivityPeresetStr = ad_hoc_connectivity_rules::to_string(addHocConnectivityRulesPreset);
+    connectivityPeresetStr = data.value("connectivity rules preset", connectivityPeresetStr);
+    addHocConnectivityRulesPreset = ad_hoc_connectivity_rules::preset_from_string(connectivityPeresetStr);
+
     if(data.find("max bond length in aromatic ring")!= data.end())
     {
         maxBondLengthAromaticRing.clear();
@@ -81,7 +86,7 @@ void StructureWithDescriptors::set(
                 connectivity[i].push_back(j);
                 connectivity[j].push_back(i);
             }
-    
+    ad_hoc_connectivity_rules::apply(positions, atomicNumbers, connectivity, settings.addHocConnectivityRulesPreset);
     set(atomicNumbers, positions, connectivity, labels);
 }
 
@@ -264,7 +269,7 @@ void StructureWithDescriptors::setFromCrystalFragment(
                 connectivity[i].push_back(j);
                 connectivity[j].push_back(i);
             }
-
+    ad_hoc_connectivity_rules::apply(positions, atomicNumbers, connectivity, settings.addHocConnectivityRulesPreset);
     setFromCrystalFragment(atomicNumbers, positions, connectivity, data, labels);
 
 

@@ -24,7 +24,6 @@
 
 #include "argedit.h"
 #include "argraph.h"
-#include "argedit.h"
 #include "vf2_state.h"
 #include "match.h"
 
@@ -1040,8 +1039,11 @@ namespace
         vector<vector<UnitCellContent::AtomID> > molecules;
         vector<UnitCellContent::AtomID> uc;
         vector< vector< pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > networkBonds;
-
-        discamb::structural_properties::splitUnitCellIntoMolecules(ucContent, molecules, networkBonds, 0.4);
+        bool eachAtomPresentOnlyOnce = true;
+        double bondThreshold = 0.4;
+        discamb::structural_properties::splitUnitCellIntoMolecules(
+            ucContent, molecules, networkBonds, 
+            bondThreshold, eachAtomPresentOnlyOnce);
 
         //
         // [molecule ndex][atom in molecule index]
@@ -1188,56 +1190,6 @@ namespace
 
 namespace structural_properties {
 
-    /*
-Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
-        const Crystal& crystal,
-        int bondedAtom,
-        const SpaceGroupOperation& bondedAtomSymmOp,
-        int directingAtom,
-        const SpaceGroupOperation& directingAtomSymmOp)
-    {
-        //vector<double> rH{ 1.089, 1.015, 0.993 };
-
-        map<string, double> rH;
-
-        for (int i = 1; i < 113; i++)
-            rH[periodic_table::symbol(i)] = chemical_element_data::covalentRadius(1) + chemical_element_data::covalentRadius(i);
-
-        map<string, double> rH_standrized { {"B", 1.185}, { "C", 1.089 }, { "N",1.015 }, { "O", 0.993 }, { "Si",1.506 }, { "P",1.42 }, { "S",1.338 } };
-
-        for (auto x : rH_standrized)
-            rH[x.first] = x.second;
-
-        double bond_to_H_length;
-        Vector3d a1, a2, a12, norm_a12;
-
-        a1 = atomPosition(bondedAtom, bondedAtomSymmOp, crystal);
-
-        a2 = atomPosition(directingAtom, directingAtomSymmOp, crystal);
-
-        a12 = a2 - a1;
-
-        norm_a12 = a12 / sqrt(a12 * a12);
-
-        string symbol = crystal.atoms[bondedAtom].type;
-
-        bond_to_H_length = 1.0;
-
-        if (rH.find(symbol) != rH.end())
-            bond_to_H_length = rH[symbol];
-        else
-            on_error::throwException("standarized bond length for capped hydrogen atom not available for '" + symbol + "'", __FILE__, __LINE__);
-
-        //int atomicNumber = periodic_table::atomicNumber(crystal.atoms[bondedAtom].type);
-
-        //if (atomicNumber < 6 || atomicNumber > 8)
-        //	on_error::throwException(string("standarized bond length for capped hydrogen atom not available for atomic number ")
-        //		+ to_string(atomicNumber), __FILE__, __LINE__);
-
-        return a1 + norm_a12 * bond_to_H_length;
-
-    }
-    */
 
     Vector3d capping_atom_position(
         const Vector3d& bonded_atom_r,
@@ -1259,12 +1211,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         return bonded_atom_r + bond_direction_normalized * bond_to_H_length;
     }
 
-    /*void asymmetricUnitConnectivity(
-        const Crystal &c,
-        std::vector<std::vector<std::pair<int, std::string> > > &connectivity)
-    {
-
-    }*/
 
     /**
     Algorith for finding plane with minimal rmsd of points' distance from the plane as described
@@ -1353,8 +1299,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
     {
         GenericConnectivityAlgorithm<CovalentRadiousBondDetector> connectivityAlgorithm;
         connectivityAlgorithm.set(to_string(threshold));
-        
-        //MolecularDisorder disorder;
 
         connectivityAlgorithm.calculateConnectivity(positions, atomicNumbers, connectivity);
     }
@@ -1442,18 +1386,12 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         UnitCellContent unitCellContent;
         vector<vector<UnitCellContent::AtomID> > ucConnectivity;
         unitCellContent.set(c);
-        calcUnitCellConnectivity(unitCellContent, ucConnectivity, threshold);
+        calcUnitCellConnectivity(unitCellContent, ucConnectivity, threshold, "boxes");
         int atomIdx, nAtoms = c.atoms.size();
         int neighbourIdx, nNeighbours;
         SpaceGroupOperation spaceGroupOperation, translationSymmOp, neighbourTranslationSymmOp;
         Vector3i latticeTranslation;
         Vector3<CrystallographicRational> translation;
-        /*
-            spaceGroupOperation = unitCellContent.getGeneratingOperation(atomIdx, 0);
-            spaceGroupOperation.getTranslation(translation);
-            latticeTranslation.set(-translation[0].numerator(), -translation[1].numerator(), -translation[2].numerator());
-            asymmetricUnit.push_back(UnitCellContent::AtomID(atomIdx, latticeTranslation));
-        */
         map<string, int> label2index;
         int index = 0;
         for (auto const& a : c.atoms)
@@ -1491,37 +1429,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
     {
         vector<int> shellSizes;
         assymetricUnitWithNeighbours(crystal, asuWithNeighbours, neighbourRange, threshold, shellSizes);
-
-        //asuWithNeighbours.clear();
-
-        //UnitCellContent unitCellContent;
-        //vector<UnitCellContent::AtomID> asymmetricUnit, graph;
-        //unitCellContent.set(crystal);
-        //SpaceGroupOperation spaceGroupOperation;
-        //int atomIdx, nAtoms = crystal.atoms.size();
-        //Vector3<CrystallographicRational> translation;
-        //Matrix3i rotation;
-        //Vector3i latticeTranslation;
-
-        //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //{
-        //    spaceGroupOperation = unitCellContent.getGeneratingOperation(atomIdx, 0);
-        //    spaceGroupOperation.getTranslation(translation);
-        //    latticeTranslation.set(-translation[0].numerator(), -translation[1].numerator(), -translation[2].numerator());
-        //    asymmetricUnit.push_back(UnitCellContent::AtomID(atomIdx, latticeTranslation));
-        //}
-
-        //structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, 8, threshold);
-        //
-        //AtomInCrystal atomInCrystal;
-        //string label, symmetryOperationAsString;
-        //for (auto atom : graph)
-        //{
-        //    atomIdx = unitCellContent.indexOfSymmetryEquivalentAtomInCrystal(atom.atomIndex);
-        //    unitCellContent.interpreteAtomID(atom, label, symmetryOperationAsString);
-        //    asuWithNeighbours.push_back({ atomIdx, symmetryOperationAsString });
-        //}
-
     }
 
     void assymetricUnitWithNeighbours(const Crystal &crystal,
@@ -1550,7 +1457,8 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         }
 
         //structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, 8, threshold, shellSizes);
-        structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, neighbourRange, threshold, shellSizes);
+        structural_properties::graphToNthNeighbour(unitCellContent, asymmetricUnit, graph, neighbourRange, 
+            threshold, shellSizes);
 
         AtomInCrystal atomInCrystal;
         string label, symmetryOperationAsString;
@@ -1575,35 +1483,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         vector<int> shellSizes;
         assymetricUnitWithNeighbours(crystal, atomicNumbers, positions, labels, neighbourRange, threshold, shellSizes);
 
-        //int atomIdx, nAtoms;
-        //Vector3d cartesianXyz, fractionalXyz, fractionalTransformedXyz;
-    
-        //atomicNumbers.clear();
-        //positions.clear();
-        //labels.clear();
-        //SpaceGroupOperation symmetryOperation;
-    
-        //vector< pair<int, string> > asuWithNeighbours;
-        //vector<int> atomsInAsymmetricUnitAtomicNumbers;
-        //
-        //structural_properties::assymetricUnitWithNeighbours(crystal, asuWithNeighbours, neighbourRange, threshold);
-        //crystal_structure_utilities::atomicNumbers(crystal, atomsInAsymmetricUnitAtomicNumbers);
-    
-        //for (int i = 0; i < asuWithNeighbours.size(); i++)
-        //{
-        //    atomicNumbers.push_back(atomsInAsymmetricUnitAtomicNumbers[asuWithNeighbours[i].first]);
-        //    symmetryOperation.set(asuWithNeighbours[i].second);
-        //    //cartesianXyz, fractionalXyz
-        //    fractionalXyz = crystal.atoms[asuWithNeighbours[i].first].coordinates;
-        //    symmetryOperation.apply(fractionalXyz, fractionalTransformedXyz);
-        //    crystal.unitCell.fractionalToCartesian(fractionalTransformedXyz, cartesianXyz);
-        //    positions.push_back(cartesianXyz);
-        //    labels.push_back(crystal.atoms[asuWithNeighbours[i].first].label);
-        //    if (asuWithNeighbours[i].second != string("X,Y,Z"))
-        //        labels.back() += string("(") + asuWithNeighbours[i].second + string(")");
-        //}
-    
-    
     }
     
     void assymetricUnitWithNeighbours(
@@ -1776,7 +1655,7 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         unitCell.fractionalToCartesian(Vector3d(0, 0, 1), cCartesian);
 
         connectivity.resize(nAtomsInUnitCell);
-
+        //vector<
         for (atomIndex = 0; atomIndex < nAtomsInUnitCell; atomIndex++)
         {
             // iterate over atoms in 3x3x3 unit cells box
@@ -1925,26 +1804,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
                             }
                     }
 
-                    //for(int p=0;p<2;p++)
-                    //    for (int q = 0; q < 2; q++)
-                    //        for (int r = 0; r < 2; r++)
-                    //            if (!(p == 0 && q == 0 && r == 0))
-                    //            {
-                    //                auto& atoms2 = boxAtoms[i+p][j+q][k+r];
-                    //                if (atoms2.empty())
-                    //                    continue;
-                    //                for(auto &atom1: atoms1)
-                    //                    for (auto& atom2 : atoms2)
-                    //                    {
-                    //                        Vector3d diff = cartesianCoordinates[atom1] - cartesianCoordinates[atom2];
-                    //                        distance = sqrt(diff * diff);
-                    //                        if (bondDetector.areBonded(atomicNumbers[atom1], atomicNumbers[atom2], distance))
-                    //                        {
-                    //                            connectivity[atoms[atom1].atomIndex].push_back(atoms[atom2]);
-                    //                            connectivity[atoms[atom2].atomIndex].push_back(UnitCellContent::AtomID(atoms[atom1].atomIndex, -atoms[atom2].unitCellPosition));
-                    //                        }
-                    //                    }
-                    //            }
                 }
 
         
@@ -2146,26 +2005,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
             for (auto &neighbour : connectivity[atomIndex])
                 _connectivity[atomIndex].push_back(UnitCellContent::AtomID(ids[neighbour].first, ids[neighbour].second));
 
-        //for (atomIndex = 0; atomIndex < nAtomsInUnitCell; atomIndex++)
-        //{
-        //    // iterate over atoms in 3x3x3 unit cells box
-
-        //    for (a = -1; a < 2; a++)
-        //        for (b = -1; b < 2; b++)
-        //            for (c = -1; c < 2; c++)
-        //                for (i = 0; i < nAtomsInUnitCell; i++)
-        //                {
-        //                    if (atomIndex == i)
-        //                        if (a == 0 && b == 0 && c == 0)
-        //                            continue;
-
-        //                    position = cartesianCoordinates[i] + double(a)*aCartesian + double(b)*bCartesian + double(c)*cCartesian;
-        //                    diff = cartesianCoordinates[atomIndex] - position;
-        //                    distance = sqrt(diff*diff);
-        //                    if (bondDetector.areBonded(atomicNumbers[atomIndex], atomicNumbers[i], distance))
-        //                        connectivity[atomIndex].push_back(UnitCellContent::AtomID(i, Vector3i(a, b, c)));
-        //                }
-        //}
 
     }
 
@@ -2279,25 +2118,7 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
                     " in molecule definition, unable to locate atom ", __FILE__, __LINE__);
             }
             else
-            {
                 molecule.insert(molecule.end(), lastAdded.begin(), lastAdded.end());
-                //vector<Vector3d> positions;
-                //vector<ChemicalElement> elements;
-                //crystal_structure_utilities::convertToXyzAndElementList(ucContent.getCrystal(), ucContent, molecule, elements, positions);
-                //xyz_io::writeXyz("mol_" + to_string(shell) + ".xyz", elements, positions);
-                //ofstream out("mol_" + to_string(shell));
-                //
-                //for (auto atom : molecule)
-                //{
-                //    string label, symmOp;
-                //    ucContent.interpreteAtomID(atom, label, symmOp);
-                //    out << setw(12) << left << label << " " << symmOp << "\n";
-                //}
-                //out.close();
-
-
-                //shell++;
-            }
         }
 
     }
@@ -2446,25 +2267,6 @@ Vector3d StockholderAtomFormFactorCalcManager::capAtomPosition(
         
         connectivityAlgorithm.calculateConnectivity(positionsInAngstroms, atomicNumbers, connectivity);
         graph_algorithms::split(connectivity, molecules);
-        //set<int> notProcessedAtoms;
-        //vector<vector<int> > neighbors;
-        //molecules.clear();
-        //int atomIdx, nAtoms = atomicNumbers.size();
-        //for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //    notProcessedAtoms.insert(atomIdx);
-
-
-        //while (!notProcessedAtoms.empty())
-        //{
-        //    graph_algorithms::breadth_first_search(connectivity, *notProcessedAtoms.begin(), neighbors);
-        //    molecules.resize(molecules.size() + 1);
-        //    for (auto &shell : neighbors)
-        //    {
-        //        molecules.back().insert(molecules.back().end(), shell.begin(), shell.end());
-        //        for (auto &atom : shell)
-        //            notProcessedAtoms.erase(atom);
-        //    }
-        //}
     }
 
 

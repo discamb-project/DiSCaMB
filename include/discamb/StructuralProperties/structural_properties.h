@@ -1,6 +1,8 @@
 #ifndef DISCAMB_STRUCTURALPROPERTIES_STRUCTURAL_PROPERTIES_H_
 #define DISCAMB_STRUCTURALPROPERTIES_STRUCTURAL_PROPERTIES_H_
 
+#include "discamb/StructuralProperties/ad_hoc_connectivity_rules.h"
+
 #include "discamb/BasicUtilities/Tribool.h"
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
@@ -20,17 +22,55 @@ namespace discamb {
 
     namespace structural_properties {
 
-        void planarity(const std::vector<int> atomicNumbers, const std::vector<Vector3d>& positinos, const std::vector<std::vector<int> >& connectivity_matrix, std::vector<Tribool> & _planarity, double threshold = 0.1);
-        void planarity(const std::vector<int> atomicNumbers, const std::vector<Vector3d>& positinos, const std::vector<int>& atoms, const std::vector<std::vector<int> >& connectivity_matrix, std::vector<Tribool>& _planarity, double threshold = 0.1);
-        void planarity(const std::vector<int> atomicNumbers, const std::vector<Vector3d>& positinos, const std::vector<std::vector<int> >& connectivity_matrix, std::vector<Tribool>& _planarity, std::vector<double>& displacement_esd, double threshold = 0.1);
-        void planarity(const std::vector<int> atomicNumbers, const std::vector<Vector3d>& positinos, const std::vector<int>& atoms, const std::vector<std::vector<int> >& connectivity_matrix, std::vector<Tribool>& _planarity, std::vector<double>& displacement_esd, double threshold = 0.1);
+        void planarity(
+            const std::vector<int> atomicNumbers, 
+            const std::vector<Vector3d>& positinos,
+            const std::vector<std::vector<int> >& connectivity_matrix,
+            std::vector<Tribool> & _planarity,
+            double threshold = 0.1);
 
-        Tribool atomPlanarity(int atomIndex, const std::vector<int> atomicNumbers, const std::vector<Vector3d>& positinos, const std::vector<int>& neighbors, double& displacement_esd, double threshold = 0.1, double valence_threshold=180);
+        void planarity(
+            const std::vector<int> atomicNumbers,
+            const std::vector<Vector3d>& positions,
+            const std::vector<int>& atoms, 
+            const std::vector<std::vector<int> >& connectivity_matrix,
+            std::vector<Tribool>& _planarity, 
+            double threshold = 0.1);
+
+        void planarity(
+            const std::vector<int> atomicNumbers,
+            const std::vector<Vector3d>& positions,
+            const std::vector<std::vector<int> >& connectivity_matrix,
+            std::vector<Tribool>& _planarity, 
+            std::vector<double>& displacement_esd,
+            double threshold = 0.1);
+
+        void planarity(
+            const std::vector<int> atomicNumbers,
+            const std::vector<Vector3d>& positions,
+            const std::vector<int>& atoms, 
+            const std::vector<std::vector<int> >& connectivity_matrix, 
+            std::vector<Tribool>& _planarity, 
+            std::vector<double>& displacement_esd, 
+            double threshold = 0.1);
+
+        Tribool atomPlanarity(
+            int atomIndex,
+            const std::vector<int> atomicNumbers,
+            const std::vector<Vector3d>& positinos, 
+            const std::vector<int>& neighbors, 
+            double& displacement_esd, 
+            double threshold = 0.1,
+            double valence_threshold=180);
+
         Tribool planarity(const std::vector<Vector3d>& positinos, double threshold, double& displacement_esd);
 
         
 
-        Vector3d capping_atom_position(const Vector3d& bonded_atom_r, const Vector3d& directing_atom_r, int bonding_atom_atomic_number);
+        Vector3d capping_atom_position(
+            const Vector3d& bonded_atom_r, 
+            const Vector3d& directing_atom_r, 
+            int bonding_atom_atomic_number);
 
         /**
         Algorith for finding plane with minimal rmsd of points' distance from the plane as described
@@ -45,6 +85,7 @@ namespace discamb {
         */
         double planarity_esd(const std::vector<Vector3d>& positions);
         
+        //ad_hoc_connectivity_rules::Preset connectivityPreset = ad_hoc_connectivity_rules::Preset::None
         void calculateConnectivity(
             const std::vector<Vector3d>& positions,
             const std::vector<int>& atomicNumbers,
@@ -56,14 +97,19 @@ namespace discamb {
             const std::vector<int>& atomicNumbers);
 
 
-        void asymmetricUnitConnectivity(const Crystal &c,std::vector<std::vector<std::pair<int, std::string> > > &connectivity, double threshold);
+        void asymmetricUnitConnectivity(
+            const Crystal &c,
+            std::vector<std::vector<std::pair<int, std::string> > > &connectivity,
+            double threshold);
 
-        void assymetricUnitWithNeighbours(const Crystal &c, 
-                                          std::vector< std::pair<int, std::string> > &asuWithNeighbours, 
-                                          int neighbourRange,
-                                          double threshold);
+        void assymetricUnitWithNeighbours(
+            const Crystal &c, 
+            std::vector< std::pair<int, std::string> > &asuWithNeighbours, 
+            int neighbourRange,
+            double threshold);
 
-        void assymetricUnitWithNeighbours(const Crystal &c,
+        void assymetricUnitWithNeighbours(
+            const Crystal &c,
             std::vector< std::pair<int, std::string> > &asuWithNeighbours,
             int neighbourRange,
             double threshold,
@@ -118,15 +164,28 @@ namespace discamb {
             std::vector<std::vector<UnitCellContent::AtomID> >& connectivity);
 
 
-        void graphToNthNeighbour(const UnitCellContent &unitCellContent, const std::vector<UnitCellContent::AtomID> &startingSet,
-            std::vector<UnitCellContent::AtomID> &graph, int n, double threshold);
+        void graphToNthNeighbour(
+            const UnitCellContent &unitCellContent, 
+            const std::vector<UnitCellContent::AtomID> &startingSet,
+            std::vector<UnitCellContent::AtomID> &graph, 
+            int n,
+            double threshold);
 
-        void graphToNthNeighbour(const UnitCellContent &unitCellContent, const std::vector<UnitCellContent::AtomID> &startingSet,
-            std::vector<UnitCellContent::AtomID> &graph, int n, double threshold, std::vector<int> &shellSizes);
+        void graphToNthNeighbour(
+            const UnitCellContent &unitCellContent, 
+            const std::vector<UnitCellContent::AtomID> &startingSet,
+            std::vector<UnitCellContent::AtomID> &graph,
+            int n, 
+            double threshold,
+            std::vector<int> &shellSizes);
 
-        void graphToNthNeighbour(const UnitCellContent& unitCellContent, const std::vector<UnitCellContent::AtomID>& startingSet,
+        void graphToNthNeighbour(
+            const UnitCellContent& unitCellContent,
+            const std::vector<UnitCellContent::AtomID>& startingSet,
             std::vector<std::vector<AtomInCrystalID> > &asymmetric_unit_connectivity,
-            std::vector<UnitCellContent::AtomID>& graph, int n, std::vector<int>& shellSizes);
+            std::vector<UnitCellContent::AtomID>& graph, 
+            int n, 
+            std::vector<int>& shellSizes);
 
         void graphToNthNeighbour(
             const std::vector<std::vector<UnitCellContent::AtomID> > &unitCellConnectivity, 
@@ -171,14 +230,16 @@ namespace discamb {
             const UnitCellContent &uc,
             std::vector<std::vector<UnitCellContent::AtomID> > &molecules,
             std::vector< std::vector< std::pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > &networkBonds,
-            double threshold);
+            double threshold,
+            ad_hoc_connectivity_rules::Preset connectivityPreset);
 
 
         void splitIntoMolecules(
             const std::vector<int> &atomicNumbers,
             const std::vector<Vector3d> &positionsInAngstroms,
             std::vector<std::vector<int> > &molecules,
-            double threshold);
+            double threshold,
+            ad_hoc_connectivity_rules::Preset connectivityPreset);
 
 		/**
 		eachAtomPresentOnlyOnce - 
@@ -195,7 +256,7 @@ namespace discamb {
                  const UnitCellContent &uc,
                  std::vector<std::vector<UnitCellContent::AtomID> > &molecules,
                  std::vector< std::vector< std::pair< UnitCellContent::AtomID, UnitCellContent::AtomID > > > &networkBonds,
-                 double threshold = 0.4,
+                 double threshold = 0.4, 
 			     bool eachAtomPresentOnlyOnce = true);
         //
         void groupSymmetryRelatedMolecules(
