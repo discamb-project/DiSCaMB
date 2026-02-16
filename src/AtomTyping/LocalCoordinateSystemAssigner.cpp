@@ -297,19 +297,52 @@ namespace discamb {
             
             int centralAtom = matchMap.atomMatch[0];
             vector<int> candidateAtoms;
-            if(refPointCode.empty())
-                candidateAtoms = describedStructure.connectivity[centralAtom];
+            int nNeighbours = describedStructure.connectivity[centralAtom].size();
+            if(nNeighbours==0)
+                on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+
+            if (nNeighbours == 1)
+            {
+
+                int firstNeighbor = describedStructure.connectivity[centralAtom][0];
+                if (describedStructure.connectivity[firstNeighbor].size() < 2)
+                    on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+
+                candidateAtoms.clear();
+                vector<int> initialCandidates;
+                for (int idx : describedStructure.connectivity[firstNeighbor])
+                    if (idx != centralAtom)
+                        initialCandidates.push_back(idx);
+
+                if (refPointCode.empty())
+                    candidateAtoms = initialCandidates;
+                else
+                    for (int atomIdx : initialCandidates)
+                        if (find(refPointCode.begin(), refPointCode.end(), describedStructure.atomDescriptors[atomIdx].atomicNumber) != refPointCode.end())
+                            candidateAtoms.push_back(atomIdx);
+
+            }
             else
-                for(int atomIdx: describedStructure.connectivity[centralAtom])
-                    if(find(refPointCode.begin(), refPointCode.end(), describedStructure.atomDescriptors[atomIdx].atomicNumber) != refPointCode.end())
-                        candidateAtoms.push_back(atomIdx);
+            {
+                if (refPointCode.empty())
+                    candidateAtoms = describedStructure.connectivity[centralAtom];
+                else
+                    for (int atomIdx : describedStructure.connectivity[centralAtom])
+                        if (find(refPointCode.begin(), refPointCode.end(), describedStructure.atomDescriptors[atomIdx].atomicNumber) != refPointCode.end())
+                            candidateAtoms.push_back(atomIdx);
+
+            }
+
+            if (theOtherRefPoint.size() == 1)
+                if (candidateAtoms.size() == 1)
+                    if (candidateAtoms[0] == matchMap.atomMatch[theOtherRefPoint[0]])
+                        on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+
 
             if (candidateAtoms.empty())
-                on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
-            if (theOtherRefPoint.size() == 1)
-                if(candidateAtoms.size()==1)
-                    if(candidateAtoms[0] == matchMap.atomMatch[theOtherRefPoint[0]])
-                        on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+                if(describedStructure.connectivity[centralAtom].size()!=1)
+                    on_error::throwException("problem with establishing local coordinate system for multipolar representation of atomic electron density", __FILE__, __LINE__);
+            
 
             int bestAtom = -1;
             double minCosine = 2.0; 

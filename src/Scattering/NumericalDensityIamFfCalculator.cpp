@@ -21,7 +21,10 @@ namespace discamb {
         if (proatomDbFile.empty())
             on_error::throwException("atomic densities file not defined", __FILE__, __LINE__);
 
-        mUnitCell = crystal.unitCell;
+        mNGaussianIamCalculator = shared_ptr<IamFormFactorCalculationsManager>(
+            new IamFormFactorCalculationsManager(crystal, "Waasmeier-Kirfel"));
+
+        mReciprocalLatticeUnitCell.set(crystal.unitCell);
         mElementFormFactor.resize(121);
 
         ProatomDB db;
@@ -56,7 +59,7 @@ namespace discamb {
         const
     {
         Vector3d cart;
-        mUnitCell.fractionalToCartesian(hkl, cart);
+        mReciprocalLatticeUnitCell.fractionalToCartesian(hkl, cart);
         return calculateCart(atomIdx, cart);
     }
 
@@ -65,6 +68,9 @@ namespace discamb {
         const Vector3d& hkl)
         const
     {
+        int z = mAtomicNumber[atomIdx];
+        if (z == 1)
+            return mNGaussianIamCalculator->calculateCart(atomIdx, hkl);
         return mElementFormFactor[mAtomicNumber[atomIdx]].calculate(hkl.norm());
     }
 

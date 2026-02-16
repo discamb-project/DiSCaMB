@@ -1,6 +1,8 @@
 #include "discamb/Scattering/SfCalculator.h"
+#include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
 #include "discamb/Scattering/AnyScattererStructureFactorCalculator2.h"
 #include "discamb/Scattering/NumericalSphericalAtomFormFactor.h"
+#include "discamb/Scattering/IamFormFactorCalculationsManager.h"
 
 namespace discamb {
 
@@ -9,7 +11,8 @@ namespace discamb {
         std::vector<NumericalSphericalAtomFormFactor> mElementFormFactor;
         std::shared_ptr<AnyScattererStructureFactorCalculator2> mSfCalculator;
         std::vector<int> mAtomicNumber;
-        UnitCell mUnitCell;
+        std::shared_ptr<IamFormFactorCalculationsManager> mNGaussianIamCalculator;
+        ReciprocalLatticeUnitCell mReciprocalLatticeUnitCell;
     public:
         NumericalDensityIamFfCalculator(const Crystal& crystal, const nlohmann::json& data);
         ~NumericalDensityIamFfCalculator();
