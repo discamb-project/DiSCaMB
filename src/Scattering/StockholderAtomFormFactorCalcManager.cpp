@@ -1634,7 +1634,8 @@ namespace discamb {
         setElectronDensityPartition(subsystemIdx, wfnFileName, format, edPartitions[0]);
 		//setHirshfeldPartitition(clusterIdx, wfnFileName, format, hPartitions[0]);
 		
-		int nThreads = omp_get_max_threads();
+        int nThreads = min<int>(omp_get_max_threads(), mSettings.hardware.nCores);
+        omp_set_num_threads(nThreads);
 
 		for (int i = 1; i < nThreads; i++)
             edPartitions.push_back(shared_ptr<ElectronDensityPartition>(edPartitions[0]->clone()));

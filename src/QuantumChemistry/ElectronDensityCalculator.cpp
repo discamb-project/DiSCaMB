@@ -529,6 +529,7 @@ namespace discamb
         double z)
         const
     {
+        //return 0;
         if (mEDFsPrimitiveToCenter.empty())
             return 0;
         double d = 0;
