@@ -36,8 +36,17 @@ namespace {
           //  data.qmSystem.spin_multilicity, data.qmSystem.charge, vector<double>(0),
             //vector<discamb::Vector3d>(0), map<int, string>(), true);
 
-        string command = orcaFolder + "\\orca " + inputFileName + " > " + name + ".log";
+        string outputFileName = name + ".log";
+
+        string command = orcaFolder + "\\orca " + inputFileName + " > " + outputFileName;
         system(command.c_str());
+
+        if (!runner.succesfulRun(name))
+        {
+            string errorMessage = "unsuccesful ORCA run, see file '" + outputFileName + "'";
+            discamb::on_error::throwException(errorMessage, __FILE__, __LINE__);
+        }
+        
         system((orcaFolder + "\\orca_2aim " + name).c_str());
         string wfxFile = name + ".wfx";
         if (filesystem::exists(name + ".wfx"))
@@ -51,7 +60,8 @@ namespace {
         }
         else
             discamb::on_error::throwException(data.wfnFileName + " was not created", __FILE__, __LINE__);
-        
+       
+        runner.ecpWfxPostPorcessing(name, wfxFile);
 
         return;
 
@@ -173,6 +183,28 @@ namespace discamb {
         }
     }
     
+    void OrcaRunner::ecpWfxPostPorcessing(
+        const std::string& jobName,
+        const std::string& wfxFile)
+    {
+        printMolden2AimIniFile();
+        vector<string> elementsWithEcp;
+        vector<int> nEcpElectrons;
+
+        string orcaOutput = jobName + ".log";
+
+        if (!checkForEcp(jobName + ".log", elementsWithEcp, nEcpElectrons))
+            return;
+        // make molden file 
+        string command = mExecFolder + "\\orca_2mkl " + jobName + " -emolden";
+        system(command.c_str());
+        string moldenFileNameLong = jobName + ".molden.input";
+        string moldenFileName = jobName + ".molden";
+        filesystem::rename(moldenFileNameLong, moldenFileName);
+        command = mMolden2AimFolder + "\\molden2aim.exe " + " -i " + moldenFileName;
+        system(command.c_str());
+    }
+
     void OrcaRunner::setMolden2AimFolder(
         const std::string& folder)
     {
@@ -182,6 +214,9 @@ namespace discamb {
 
     void OrcaRunner::printMolden2AimIniFile()
     {
+        //if (filesystem::exists(filesystem::path("m2a.ini")))
+          //  return;
+
         vector<string> lines  
         {   "molden= -1", "wfn= -1", "wfncheck= -1",
             "wfx= 1", "wfxcheck= -1", "nbo= -1",
@@ -315,8 +350,8 @@ namespace discamb {
         if (!terminatedNormally)
             return false;
         
-        if(!filesystem::exists(filesystem::current_path()/(jobName+".wfx")))
-            return false;
+        //if(!filesystem::exists(filesystem::current_path()/(jobName+".wfx")))
+        //    return false;
 
         return true;
     }
@@ -383,8 +418,11 @@ namespace discamb {
             orcaTask.data = inputData[fragmentIdx];
             orcaTask.n = inputData[fragmentIdx].hardware.nCores;
             orcaTask.data.hardware.totalMemoryMB = orcaTask.n * memoryPerCore;
-            orcaTask.name = "frag_" + to_string(fragmentIdx + 1);
+            //orcaTask.name = "frag_" + to_string(fragmentIdx + 1);
+            string wfnFile = inputData[fragmentIdx].wfnFileName;
+            orcaTask.name = wfnFile.substr(0, wfnFile.find(".wfx"));
             orcaTask.orcaFolder = mExecFolder;
+            orcaTask.runner = *this;
             scheduler.tasks.push_back({ orcaTask.n, orcaTask.name, true, shared_ptr<Task>(new OrcaTask(orcaTask)) });
         }
         scheduler.nToFinish = scheduler.tasks.size();

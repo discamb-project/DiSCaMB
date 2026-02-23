@@ -40,7 +40,8 @@ namespace discamb {
         virtual void runMultipleJobs(const std::vector<WaveFunctionCalculationData>& inputData, int nCores, int totalMemory, std::vector<bool>& succesful) const;
 
         static bool succesfulRun(const std::string& jobName);
-
+        // fixes file jobName.log
+        void ecpWfxPostPorcessing(const std::string& jobName, const std::string& wfxFile);
     private:
 
         
@@ -72,7 +73,7 @@ namespace discamb {
 
         static void printMolden2AimIniFile();
         static bool checkForEcp(const std::string& orcaOutput, std::vector<std::string>& elementsWithEcp, std::vector<int>& nEcpElectrons);
-
+        
         //
 
         void tryToSetPathToOrcaFromSettingsFile();
