@@ -107,7 +107,7 @@ namespace discamb
         //vector<bool> countEdf(nEdfOld, false);
         
         for (int edfIdx = 0; edfIdx < nEdfOld; edfIdx++)
-            if (countCenter[mEDFsPrimitiveToCenter[edfIdx]])
+            if (countCenter[mEDFsPrimitiveToCenter[edfIdx]-1])
             {
                 edfsPrimitiveToCenter.push_back(old2newCenterIdx[mEDFsPrimitiveToCenter[edfIdx]-1]+1);
                 edfsPrimitiveType.push_back(mEDFsPrimitiveType[edfIdx]);
