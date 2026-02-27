@@ -47,12 +47,21 @@ namespace discamb {
             std::vector<AdditionalElectronDensity> edfs;
         };
 
-        void read_wfn(const std::string &fileName, WfnFileData &data, bool skipNonAtomicCenters=true);
-        void read_wfn(std::istream &input, WfnFileData &data, bool skipNonAtomicCenters=true);
+        void read_wfn(
+            const std::string &fileName, 
+            WfnFileData &data, 
+            bool skipNonAtomicCenters=true);
+        void read_wfn(
+            std::istream &input, 
+            WfnFileData &data, 
+            bool skipNonAtomicCenters=true);
+
         void read_atomic_wfn_database(const std::string &fileName, std::vector<WfnFileData> &data);
 
         void read_wfx(const std::string& fileName, WfnFileData& data);
         void read_wfx(std::istream& input, WfnFileData& data);
+
+        void add_edf_from_library(WfnFileData& data);
 
         void read_wavefunction(const std::string& fileName, WfnFileData& data);
         

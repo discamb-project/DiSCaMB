@@ -44,7 +44,7 @@ namespace discamb {
         void ecpWfxPostPorcessing(const std::string& jobName, const std::string& wfxFile);
     private:
 
-        
+        bool mUseBuildinEcpElectronDensityLibraries = false;
 
         void printInputFileFromTemplate(
             const std::string fileName,

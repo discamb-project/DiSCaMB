@@ -2,6 +2,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/QuantumChemistry/ecp_electron_density_tables.h"
 
 
 #include <fstream>
@@ -497,7 +498,50 @@ namespace discamb {
 
         }
 
+        void add_edf_from_library(
+            WfnFileData& data)
+        {
+            if (data.atomic_numbers.size() != data.center_charge.size())
+                return;
 
+            if (!data.edfs.empty())
+                return;
+
+            AdditionalElectronDensity edf;
+            for (int atomIdx = 0; atomIdx < data.atomic_numbers.size(); atomIdx++)
+            {
+                if (fabs(data.atomic_numbers[atomIdx] - data.center_charge[atomIdx]) > 0.001)
+                {
+                    int nCore = int(fabs(data.atomic_numbers[atomIdx] - data.center_charge[atomIdx] + 0.01));
+                    vector<double> exponents, coefficients;
+
+                    ecp_electron_density_tables::ecp_electron_density(
+                        data.atomic_numbers[atomIdx],
+                        nCore, 
+                        exponents, 
+                        coefficients);
+
+                    edf.primitive_coefficients.insert(
+                        edf.primitive_coefficients.end(),
+                        coefficients.begin(),
+                        coefficients.end());
+
+                    edf.primitive_exponents.insert(
+                        edf.primitive_exponents.end(),
+                        exponents.begin(),
+                        exponents.end());
+
+                    int nPrimitives = exponents.size();
+
+                    for (int primitiveIdx = 0; primitiveIdx < nPrimitives; primitiveIdx++)
+                    {
+                        edf.primitive_to_center.push_back(atomIdx + 1);
+                        edf.primitive_type.push_back(1);
+                    }
+                }
+            }
+            data.edfs.push_back(edf);
+        }
 
         void read_wfn(
             const std::string &fileName,

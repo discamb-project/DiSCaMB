@@ -5,6 +5,7 @@
 #include "discamb/BasicUtilities/Task.h"
 #include "discamb/BasicUtilities/discamb_env.h"
 #include "discamb/BasicChemistry/periodic_table.h"
+#include "discamb/IO/wfn_io.h"
 
 #include <iomanip>
 
@@ -25,6 +26,36 @@ namespace {
         string orcaFolder;
         virtual void run();
     };
+
+    void addBuildInEdfDataToWfx(const std::string& fileName)
+    {
+        discamb::wfn_io::WfnFileData data;
+        discamb::wfn_io::read_wfn(fileName, data);
+
+        if (data.atomic_numbers.size() != data.center_charge.size())
+            return;
+
+        vector<pair<int, int> > siteIdx_nCore;
+        for (int i = 0; i < data.atomic_numbers.size(); i++)
+        {
+            if (fabs(data.atomic_numbers[i] - data.center_charge[i]) > 0.001)
+            {
+                int nCore = int(fabs(data.atomic_numbers[i] - data.center_charge[i] + 0.01));
+                siteIdx_nCore.push_back({ i, nCore });
+            }
+        }
+        ifstream in(fileName);
+        stringstream ss;
+        string line;
+        while (getline(in, line))
+        {
+            ss << line << "\n";
+            if ("</Primitive Exponents>" == line)
+            {
+                ss << "<Additional Electron Density Function (EDF)>\n";
+            }
+        }
+    }
 
     void OrcaTask::run()
     {
@@ -146,7 +177,7 @@ namespace discamb {
             setMolden2AimFolder(settings.find("molden2aim folder").value().get<string>());
         else
             tryToSetPathToMolden2AimFromSettingsFile();
-
+        mUseBuildinEcpElectronDensityLibraries = settings.value("build in ecp", mUseBuildinEcpElectronDensityLibraries);
     }
 
     void OrcaRunner::setExecFolder(

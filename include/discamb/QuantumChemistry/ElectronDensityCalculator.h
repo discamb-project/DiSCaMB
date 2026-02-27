@@ -15,7 +15,7 @@ namespace discamb
     * @{
     */
 
-
+    
     class ElectronDensityCalculator 
     {
     public:
@@ -28,9 +28,9 @@ namespace discamb
             const std::vector<double> &primitive_exponents,
             const std::vector<double> &molecular_orbital_occupancy,
             const std::vector<std::vector<double> > &molecular_orbitals);
-        void setFromWfn(const std::string& wfnFile);
-        void setFromWfx(const std::string& wfxFile);
-        void setFromWavefunctionFile(const std::string& fileName);
+        void setFromWfn(const std::string& wfnFile, bool add_edf_if_missing = true);
+        void setFromWfx(const std::string& wfxFile, bool add_edf_if_missing = true);
+        void setFromWavefunctionFile(const std::string& fileName, bool add_edf_if_missing = true);
         void setAdditionalDensity(
             const std::vector<int> &primitive_to_center,
             const std::vector<int> &primitive_type,

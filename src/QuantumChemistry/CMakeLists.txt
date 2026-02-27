@@ -3,6 +3,7 @@ SET(TARGET_H "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/CrystalFragmentMultipoleCluster.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/CrystalFragmentWfnCalculationSettings.h"
 			 "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/distributed_multipoles.h"
+             "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/ecp_electron_density_tables.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/ElectronDensityCalculator.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/ElectronDensityPartition.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry/ElectronDensityPartitionType.h"
@@ -22,6 +23,7 @@ SET(TARGET_H "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/QuantumChemistry
 SET(TARGET_SRC basis_set_data.cpp
                CrystalFragmentMultipoleCluster.cpp
 			   distributed_multipoles.cpp
+               ecp_electron_density_tables.cpp
                ElectronDensityCalculator.cpp
                ElectronDensityPartition.cpp
                ElectronDensityPartitionType.cpp

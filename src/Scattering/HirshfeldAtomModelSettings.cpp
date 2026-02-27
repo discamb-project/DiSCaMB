@@ -98,6 +98,8 @@ namespace discamb {
                 qmProgramSpecificData["folder"] = data["qm folder"].get<string>();
             if (data.find("molden2aim folder") != data.end())
                 qmProgramSpecificData["molden2aim folder"] = data["molden2aim folder"].get<string>();
+            if (data.find("build in ecp") != data.end())
+                qmProgramSpecificData["build in ecp"] = data["build in ecp"].get<bool>();
             //if (data.find("qm template file") != data.end())
             //{
             //    string templateString;

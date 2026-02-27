@@ -150,6 +150,8 @@ namespace discamb {
             wfn.molecular_orbital_occupancy,
             wfn.molecular_orbitals);
 
+        wfn_io::add_edf_from_library(wfn);
+
         if (!wfn.edfs.empty())
             mEdCalculator->setAdditionalDensity(
                 wfn.edfs[0].primitive_to_center,

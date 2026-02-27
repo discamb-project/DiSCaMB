@@ -3386,12 +3386,198 @@ void test_connectivity2(const string& xyzFile)
 
 }
 
+struct ElementEcpData {
+    int n_cor = 0;
+    int z = 0;
+    vector<double> exponents;
+    vector<double> coefficients;
+};
+
+
+
+void process_ecp_code(const string& inputFile)
+{
+    ifstream in(inputFile);
+    string line;
+    int nCore = 0;
+    vector<string> words;
+    ElementEcpData entry;
+    vector<ElementEcpData> entries;
+    /*
+subroutine EEFLIB02(iz,nfun,alf,coe)
+ implicit real(kinE=8) (a-h,o-z)
+ real(kinE=8) :: alf(*),coe(*)
+
+ select case(iz)
+   case(003)
+     nfun = 20
+     alf(1:nfun)=(  0.15030386867905E+05,  0.55208032572654E+04,  0.20278432533574E+04,  0.12289959111257E+04,
+                     0.74484600674283E+03,  0.45142182226838E+03,  0.27358898319296E+03,  0.16581150496543E+03,
+                     0.10049182119117E+03,  0.60904134055255E+02,  0.36911596397124E+02,  0.22370664483105E+02,
+                     0.13557978474609E+02,  0.82169566512784E+01,  0.49799737280475E+01,  0.30181658957864E+01,
+                     0.18291914519917E+01,  0.11086008799950E+01,  0.67187932120909E+00,  0.40719958861157E+00)
+     coe(1:nfun)=(  0.59098168437034E+02, -0.73559507226801E+02,  0.79880364742890E+02, -0.78659031922391E+02,
+                     0.46940288448568E+02, -0.20834511795143E+02,  0.93109831462316E+01, -0.23476233216170E+01,
+                     0.22109814814812E+01,  0.88454215969932E+00,  0.16139947743152E+01,  0.15501538094844E+01,
+                     0.15559434791409E+01,  0.12773082293172E+01,  0.88908165615561E+00,  0.43764199560012E+00,
+                     0.14967506851648E+00,  0.24536243895726E-01,  0.15356758650373E-02,  0.26249381263888E-04)
+   case(004)
+
+    */
+    bool read_exp = false;
+    bool read_coeff = false;
+    while (getline(in, line))
+    {
+        cout << line << endl;
+        string_utilities::split(line, words);
+        if (words.empty())
+            continue;
+        if (words[0] == "subroutine")
+        {
+            //EEFLIB02(iz,nfun,alf,coe)
+            string n_str = words[1].substr(6, 2);
+            if (n_str[0] == '0')
+                n_str = n_str.substr(1);
+            nCore = stoi(n_str);
+            continue;
+        }
+        if (words[0].substr(0, 4) == "case")
+        {
+            if (!entry.coefficients.empty())
+                entries.push_back(entry);
+            entry = ElementEcpData();
+            entry.n_cor = nCore;
+            //case(003)
+            string s = words[0].substr(5, 3);
+            string z_str;
+            for(char c: s)
+                if ( (c == '0' && z_str.empty()) || c != '0')
+                    z_str += c;
+            entry.z = stoi(z_str);
+            
+        }
+        //alf(1:nfun)=(  0.15030386867905E+05,  0.55208032572654E+04,  0.20278432533574E+04,  0.12289959111257E+04,
+        if (words[0].substr(0, 3) == "alf")
+        {
+            read_exp = true;
+            read_coeff = false;
+            vector<string> w(words.begin() + 1, words.end());
+            words = w;
+        }
+        if (words[0].substr(0, 3) == "coe")
+        {
+            read_exp = false;
+            read_coeff = true;
+            vector<string> w(words.begin() + 1, words.end());
+            words = w;
+        }
+
+        if (words[0][0] == '0' || words[0][0] == '-')
+        {
+            vector<double> v;
+            for (string word : words)
+            {
+                word.pop_back();
+                v.push_back(stod(word));
+            }
+            if (read_exp)
+                entry.exponents.insert(entry.exponents.end(), v.begin(), v.end());
+            else
+            {
+                if (read_coeff)
+                    entry.coefficients.insert(entry.coefficients.end(), v.begin(), v.end());
+                else
+                    on_error::throwException("bug", __FILE__, __LINE__);
+            }
+        }
+
+    }
+    entries.push_back(entry);
+    in.close();
+    set<int> n_core;
+    for (auto& entry : entries)
+        n_core.insert(entry.n_cor);
+    ofstream out("out_ecp_code.txt");
+    for (int n : n_core)
+    {
+        out << "const std::map<int, std::vector<double> > exponents_" << n << "{";
+        bool firstEntry = true;
+        for (auto& entry : entries)
+            if (entry.n_cor == n)
+            {
+                if (firstEntry)
+                    firstEntry = false;
+                else
+                    out << ",";
+
+                out << "\n    { " << entry.z << ", {";
+                for (int i = 0; i < entry.exponents.size(); i++)
+                {
+                    if (i != 0)
+                        out << ", ";
+                    if (i != 0 && i + 1 != entry.exponents.size() && i % 5 == 0)
+                        out << "\n     ";
+                    out<< setprecision(14) << entry.exponents[i];
+                }
+                out << "}}";
+            }
+        out << "\n    };\n";
+
+        firstEntry = true;
+        out << "const std::map<int, std::vector<double> > coefficients_" << n << "{";
+
+        for (auto& entry : entries)
+            if (entry.n_cor == n)
+            {
+                if (firstEntry)
+                    firstEntry = false;
+                else
+                    out << ",";
+
+                out << "\n    { " << entry.z << ", {";
+                for (int i = 0; i < entry.coefficients.size(); i++)
+                {
+                    if (i != 0)
+                        out << ", ";
+                    if (i != 0 && i + 1 != entry.coefficients.size() && i % 5 == 0)
+                        out << "\n     ";
+                    out << setprecision(14) << entry.coefficients[i];
+                }
+                out << "}}";
+            }
+        out << "\n    };\n";
+    }
+
+    //out << "        void ecp_electron_density(\n"
+    //       "            int atomic_number,\n"
+    //       "            int n_core_electrons, \n"
+    //       "            std::vector<double>& exponents, \n"
+    //       "            std::vector<double>& coefficients)\n"
+    //       "        {\n";
+    //cout << "switch(n_core_electrons){\n";
+    //for (int n : n_core)
+    //{
+    //    out<< ""
+    //}
+    //out<< "         }\n";
+        
+
+    //out<< "std::set<int, std::vector<double> exponents_"
+    out.close();
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 1)
+            on_error::throwException("expected EDFLIB file\n", __FILE__, __LINE__);
+
+        process_ecp_code(arguments[0]);
+        return 0;
 
         if (arguments.size() < 1)
             on_error::throwException("expected xyz file\n", __FILE__, __LINE__);

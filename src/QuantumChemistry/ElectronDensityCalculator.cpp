@@ -124,7 +124,8 @@ namespace discamb
     }
 
     void ElectronDensityCalculator::setFromWavefunctionFile(
-        const std::string& fileName)
+        const std::string& fileName,
+        bool add_edf_if_missing)
     {
         wfn_io::WfnFileData wfn;
         wfn_io::read_wavefunction(fileName, wfn);
@@ -137,17 +138,22 @@ namespace discamb
             wfn.molecular_orbital_occupancy,
             wfn.molecular_orbitals);
 
+        if(add_edf_if_missing)
+            wfn_io::add_edf_from_library(wfn);
+
         if (!wfn.edfs.empty())
             setAdditionalDensity(
                 wfn.edfs[0].primitive_to_center,
                 wfn.edfs[0].primitive_type,
                 wfn.edfs[0].primitive_exponents,
                 wfn.edfs[0].primitive_coefficients);
-
+        
+        
     }
 
     void ElectronDensityCalculator::setFromWfn(
-        const std::string& wfnFile)
+        const std::string& wfnFile,
+        bool add_edf_if_missing)
     {
         wfn_io::WfnFileData wfn;
         wfn_io::read_wfn(wfnFile, wfn);
@@ -159,10 +165,20 @@ namespace discamb
             wfn.molecular_orbital_occupancy,
             wfn.molecular_orbitals);
 
+        if (add_edf_if_missing)
+            wfn_io::add_edf_from_library(wfn);
+
+        if (!wfn.edfs.empty())
+            setAdditionalDensity(
+                wfn.edfs[0].primitive_to_center,
+                wfn.edfs[0].primitive_type,
+                wfn.edfs[0].primitive_exponents,
+                wfn.edfs[0].primitive_coefficients);
     }
 
     void ElectronDensityCalculator::setFromWfx(
-        const std::string& wfxFile)
+        const std::string& wfxFile,
+        bool add_edf_if_missing)
     {
         wfn_io::WfnFileData wfn;
         wfn_io::read_wfx(wfxFile, wfn);
@@ -174,6 +190,9 @@ namespace discamb
             wfn.primitive_exponents,
             wfn.molecular_orbital_occupancy,
             wfn.molecular_orbitals);
+
+        if(add_edf_if_missing)
+            wfn_io::add_edf_from_library(wfn);
 
         if (!wfn.edfs.empty())
             setAdditionalDensity(
