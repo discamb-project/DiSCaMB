@@ -3566,12 +3566,58 @@ subroutine EEFLIB02(iz,nfun,alf,coe)
     out.close();
 }
 
+void prepare_taam_disorder_test(
+    const string &res,
+    const string &pdb)
+{
+    ifstream in(pdb);
+    string line;
+    vector<string> words, residue, label;
+    vector<char> altloc;
+    vector<int> resSeq;// residue sequence number
+    while (getline(in, line))
+    {
+        string_utilities::split(line, words);
+        if(words.size()>1)
+            if (words[0] == "ATOM" || words[0] == "HETATM")
+            {
+                altloc.push_back(line[16]);
+                residue.push_back(line.substr(17, 3));
+                label.push_back(line.substr(12, 4));
+                resSeq.push_back(stoi(line.substr(22, 4)));
+            }
+    }
+    in.close();
+    Crystal crystal;
+    structure_io::read_structure(res, crystal);
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+        crystal.atoms[i].label += "_" + to_string(i + 1) + "_" + altloc[i];
+
+    // residueAtoms[i] - atoms of the residue(s) with resSeq=i
+    vector<vector<int> > residueAtoms;
+    for (int i = 0; i < resSeq.size(); i++)
+    {
+        if (resSeq[i] > residueAtoms.size())
+            residueAtoms.resize(resSeq[i]);
+        residueAtoms[resSeq[i] - 1].push_back(i);
+    }
+
+
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
+
+        calc_sf(arguments[0], arguments[1]);
+        return 0;
 
         if (arguments.size() < 1)
             on_error::throwException("expected EDFLIB file\n", __FILE__, __LINE__);
