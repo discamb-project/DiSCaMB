@@ -3833,7 +3833,32 @@ void ordered_connected_to_disordered(
         }
 }
 
+void mix_tsc(
+const string &config,
+const string &hkl)
+{
+    Crystal crystal;
+    
+    // read config
+    ifstream in(config);
+    string line, structureFile;
+    vector<string> words;
+    in >> structureFile;
+    structure_io::read_structure(structureFile, crystal);
+    vector<string> atomLabels;
+    getline(in, line);
+    while (getline(in, line))
+    {
+        string_utilities::split(line, words);
+        if (words.size() == 0)
+            continue;
+        if (words.size() == 1)
+            continue;
+    }
 
+    vector<string> crystalAtomLabels;
+    
+}
 
 
 int main(int argc, char* argv[])
