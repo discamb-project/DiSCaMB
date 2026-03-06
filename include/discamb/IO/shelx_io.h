@@ -13,7 +13,7 @@ namespace discamb {
 
 
     namespace shelx_io {
-        void save(const std::string &fName, const Crystal &crystal);
+        void save(const std::string &fName, const Crystal &crystal, bool free_format = false, int precision = 6);
         void read(const std::string &fName, Crystal &crystal);
         void read(const std::string& fName, Crystal& crystal, std::map<std::string, std::string> &data);
         void read(std::istream& input, Crystal& crystal);

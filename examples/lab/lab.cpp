@@ -17,6 +17,7 @@
 #include "discamb/IO/hkl_io.h"
 #include "discamb/IO/structure_io.h"
 #include "discamb/IO/MATTS_BankReader.h"
+#include "discamb/IO/shelx_io.h"
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/xyz_io.h"
 #include "discamb/MathUtilities/SphConverter.h"
@@ -3566,6 +3567,41 @@ subroutine EEFLIB02(iz,nfun,alf,coe)
     out.close();
 }
 
+void extended_res_with_pdb(
+    const string& res,
+    const string& pdb)
+{
+    ifstream in(pdb);
+    string line;
+    vector<string> words, residue, label;
+    vector<char> altloc;
+    vector<int> resSeq;// residue sequence number
+    while (getline(in, line))
+    {
+        string_utilities::split(line, words);
+        if (words.size() > 1)
+            if (words[0] == "ATOM" || words[0] == "HETATM")
+            {
+                altloc.push_back(line[16]);
+                residue.push_back(line.substr(17, 3));
+                label.push_back(line.substr(12, 4));
+                resSeq.push_back(stoi(line.substr(22, 4)));
+            }
+    }
+    in.close();
+    Crystal crystal;
+    structure_io::read_structure(res, crystal);
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+    {
+        crystal.atoms[i].label = crystal.atoms[i].type + to_string(i + 1);
+        if (altloc[i] != ' ')
+            crystal.atoms[i].label += altloc[i];
+    }
+
+    shelx_io::save("out.res", crystal, true, 12);
+}
+
 void prepare_taam_disorder_test(
     const string &res,
     const string &pdb)
@@ -3592,7 +3628,13 @@ void prepare_taam_disorder_test(
     structure_io::read_structure(res, crystal);
 
     for (int i = 0; i < crystal.atoms.size(); i++)
-        crystal.atoms[i].label += "_" + to_string(i + 1) + "_" + altloc[i];
+    {
+        crystal.atoms[i].label = crystal.atoms[i].type + to_string(i + 1);
+        if (altloc[i] != ' ')
+            crystal.atoms[i].label += altloc[i];
+    }
+
+    shelx_io::save("out.res", crystal, true, 12);
 
     // residueAtoms[i] - atoms of the residue(s) with resSeq=i
     vector<vector<int> > residueAtoms;
@@ -3606,12 +3648,226 @@ void prepare_taam_disorder_test(
 
 }
 
+
+void dTarget_dF(
+const string &structureFile,
+const string &hklFile)
+{
+    Crystal crystal, distorted_crystal;
+    structure_io::read_structure(structureFile, crystal);
+    crystal_structure_utilities::StructureDistortionParameters structureDistortionParameters;
+    structureDistortionParameters.distort_adps = true;
+    structureDistortionParameters.distort_occupancies = true;
+    structureDistortionParameters.distort_positions = true;
+    crystal_structure_utilities::distort_structure(crystal, distorted_crystal, structureDistortionParameters);
+
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+
+
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    SfCalculator* sf_calc_dist = SfCalculator::create(distorted_crystal, string("aspher.json"));
+    vector<complex<double> > sf, sf_dist;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    sf_calc_dist->calculateStructureFactors(crystal.atoms, hkl, sf_dist);
+    double i_obs, i_calc, sigma2;
+    ofstream out("dt_df");
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        i_obs = norm(sf[i]);
+        i_calc = norm(sf_dist[i]);
+        sigma2 = i_obs + 0.1;
+        complex<double> dt_df = -4 * (i_obs - i_calc) * sf_dist[i] / sigma2;
+        out << dt_df.real() << " " << dt_df.imag() << "\n";
+    }
+    delete sf_calc;
+    delete sf_calc_dist;
+    out.close();
+
+
+}
+
+void dTarget_dF_test(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal, distorted_crystal;
+    structure_io::read_structure(structureFile, crystal);
+    crystal_structure_utilities::StructureDistortionParameters structureDistortionParameters;
+    structureDistortionParameters.distort_adps = true;
+    structureDistortionParameters.distort_occupancies = true;
+    structureDistortionParameters.distort_positions = true;
+    crystal_structure_utilities::distort_structure(crystal, distorted_crystal, structureDistortionParameters);
+
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+
+
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    SfCalculator* sf_calc_dist = SfCalculator::create(distorted_crystal, string("aspher.json"));
+    vector<complex<double> > sf, sf_dist;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    sf_calc_dist->calculateStructureFactors(crystal.atoms, hkl, sf_dist);
+    double i_obs, i_calc;
+    ofstream out("dt_df");
+    //vector<double> weight = 
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        // d_re
+
+        double target = 0;
+        for (int j = 0; j < hkl.size(); j++)
+
+        i_obs = norm(sf[i]);
+        i_calc = norm(sf_dist[i]);
+        
+        double sigma2 = i_obs + 0.1;
+        complex<double> dt_df = -4 * (i_obs - i_calc) * sf_dist[i] / sigma2;
+        out << dt_df.real() << " " << dt_df.imag() << "\n";
+    }
+    delete sf_calc;
+    delete sf_calc_dist;
+    out.close();
+
+
+}
+
+void calc_sf_and_grad(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal, distorted_crystal;
+    structure_io::read_structure(structureFile, crystal);
+
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+
+
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    SfCalculator* sf_calc_dist = SfCalculator::create(distorted_crystal, string("aspher.json"));
+    vector<complex<double> > sf, sf_dist;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    sf_calc_dist->calculateStructureFactors(crystal.atoms, hkl, sf_dist);
+    double i_obs, i_calc, sigma2;
+    ofstream out("dt_df");
+    for (int i = 0; i < hkl.size(); i++)
+    {
+        i_obs = norm(sf[i]);
+        i_calc = norm(sf_dist[i]);
+        sigma2 = i_obs + 0.1;
+        complex<double> dt_df = -4 * (i_obs - i_calc) * sf_dist[i] / sigma2;
+        out << dt_df.real() << " " << dt_df.imag() << "\n";
+    }
+    delete sf_calc;
+    delete sf_calc_dist;
+    out.close();
+}
+
+void compare_with_pydiscamb(
+    const string &structureFile,
+    const string& pydiscambResultsFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+
+    vector<Vector3i> hkls;
+    vector<complex<double> > pydiscambSf;
+
+    ifstream in(pydiscambResultsFile);
+    string line;
+    vector<string> words;
+
+    while (getline(in, line))
+    {
+        string_utilities::split(line, words);
+        if (words.size() == 5)
+        {
+            Vector3i hkl(stoi(words[0]), stoi(words[1]), stoi(words[2]));
+            complex<double> f(stod(words[3]), stod(words[4]));
+            hkls.push_back(hkl);
+            pydiscambSf.push_back(f);
+        }
+    }
+
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    vector<complex<double> > sf, sf_dist;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkls, sf);
+
+    cout<< agreement_factors::value(sf, pydiscambSf);
+
+    //sf_calc_dist->calculateStructureFactors(crystal.atoms, hkl, sf_dist);
+    //double i_obs, i_calc, sigma2;
+    //ofstream out("dt_df");
+    //for (int i = 0; i < hkl.size(); i++)
+    //{
+    //    i_obs = norm(sf[i]);
+    //    i_calc = norm(sf_dist[i]);
+    //    sigma2 = i_obs + 0.1;
+    //    complex<double> dt_df = -4 * (i_obs - i_calc) * sf_dist[i] / sigma2;
+    //    out << dt_df.real() << " " << dt_df.imag() << "\n";
+    //}
+    //delete sf_calc;
+    //delete sf_calc_dist;
+    //out.close();
+
+
+}
+
+void ordered_connected_to_disordered(
+    const string& structureFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<vector<pair<int, string> > > connectivity;
+    structural_properties::asymmetricUnitConnectivity(crystal, connectivity, 0.4);
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+        if (crystal.atoms[i].occupancy == 1.0)
+        {
+            for(auto &neighbour: connectivity[i])
+                if (crystal.atoms[neighbour.first].occupancy != 1.0)
+                {
+                    cout << crystal.atoms[i].label << "\n";
+                    break;
+                }
+        }
+}
+
+
+
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        
+        if (arguments.size() < 2)
+            on_error::throwException("expected res and pdb\n", __FILE__, __LINE__);
+
+        extended_res_with_pdb(arguments[0], arguments[1]);
+        return 0;
+
+        if (arguments.size() != 1)
+            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
+
+        ordered_connected_to_disordered(arguments[0]);
+        return 0;
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected res and pdb\n", __FILE__, __LINE__);
+
+        prepare_taam_disorder_test(arguments[0], arguments[1]);
+        return 0; 
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure file and pydiscamb result file\n", __FILE__, __LINE__);
+
+        compare_with_pydiscamb(arguments[0], arguments[1]);
+        return 0;
+
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);

@@ -73,7 +73,9 @@ namespace discamb {
 
         void save(
             const std::string &fName,
-            const Crystal &crystal)
+            const Crystal &crystal,
+            bool free_format,
+            int precision)
         {
             ofstream out(fName);
 
@@ -152,26 +154,32 @@ namespace discamb {
             out << "\n" << std::left;
 
             int nSymmOperations = crystal.spaceGroup.nSymmetryOperations();
+            int labelWidth = 8;
+            if (free_format)
+                for (i = 0; i < nAtoms; i++)
+                    if (crystal.atoms[i].label.size() + 1 > labelWidth)
+                        labelWidth = crystal.atoms[i].label.size() + 1;
 
             for (i = 0; i < nAtoms; i++)
             {
-                out << setw(8) << crystal.atoms[i].label << z2sfacIdx[atomicNumber[i]]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].coordinates[0]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].coordinates[1]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].coordinates[2]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].occupancy * 
+                out << setw(labelWidth) << crystal.atoms[i].label << z2sfacIdx[atomicNumber[i]];
+
+                out << " " << setprecision(precision) << fixed << crystal.atoms[i].coordinates[0]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].coordinates[1]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].coordinates[2]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].occupancy * 
                                                           crystal.atoms[i].multiplicity / static_cast<double>(nSymmOperations);
                 if (crystal.atoms[i].adp.size() == 0)
                     out << " 0.000000\n";
                 if (crystal.atoms[i].adp.size() == 1)
-                    out << " " << setprecision(6) << fixed << crystal.atoms[i].adp[0] << "\n";
+                    out << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[0] << "\n";
                 if (crystal.atoms[i].adp.size() == 6)
-                    out << " " << setprecision(6) << fixed << crystal.atoms[i].adp[0]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].adp[1] << " =\n        "
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].adp[2]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].adp[5]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].adp[4]
-                    << " " << setprecision(6) << fixed << crystal.atoms[i].adp[3] << "\n";
+                    out << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[0]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[1] << " =\n        "
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[2]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[5]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[4]
+                    << " " << setprecision(precision) << fixed << crystal.atoms[i].adp[3] << "\n";
 
             }
 
