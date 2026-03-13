@@ -6,7 +6,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/Timer.h"
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 //#include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/CrystalStructure/LocalCoordinateSystemInCrystal.h"

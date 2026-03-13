@@ -2,7 +2,7 @@
 #ifndef _DISCAMB_BASICUTILITIES_TIMER_H_
 #define _DISCAMB_BASICUTILITIES_TIMER_H_
 
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 #include <string>
 
 //unistd.h

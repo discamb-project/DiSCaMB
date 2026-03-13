@@ -5,7 +5,7 @@
 
 #include "discamb/Scattering/HansenCoppensStructureFactorCalculator.h"
 
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 
 #ifdef BUILD_FOR_GPU
     #include "cuda/HC_SF_GPU.h" 

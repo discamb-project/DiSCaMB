@@ -4,7 +4,7 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/BasicUtilities/discamb_env.h"
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 
 
 

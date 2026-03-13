@@ -78,11 +78,11 @@ ENDIF(DISCAMB_BUILD_DOCS)
     ENDIF(INSTALLATION_PREFIX) 
     
     install(DIRECTORY include/discamb DESTINATION include)
-    install(FILES "${PROJECT_BINARY_DIR}/build/include/discamb/config.h" DESTINATION include/discamb)
+    install(FILES "${PROJECT_BINARY_DIR}/build/include/discamb/discamb_config.h" DESTINATION include/discamb)
 
 #--------
 
-configure_file ("${PROJECT_SOURCE_DIR}/config.h.in" "${PROJECT_BINARY_DIR}/build/include/discamb/config.h")
+configure_file ("${PROJECT_SOURCE_DIR}/discamb_config.h.in" "${PROJECT_BINARY_DIR}/build/include/discamb/discamb_config.h")
 
 set (DISCAMB_BUILD_DIR "${PROJECT_BINARY_DIR}/build")
 

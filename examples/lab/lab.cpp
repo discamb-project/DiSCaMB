@@ -3879,6 +3879,7 @@ void symm_elements(const string& structureFile)
     Crystal crystal;
     structure_io::read_structure(structureFile, crystal);
     vector<SpaceGroupOperation> symmOps;
+    
     SpaceGroupOperation symmOp;
     for (int i = 0; i < crystal.spaceGroup.nSymmetryOperations(); i++)
     {
@@ -3921,7 +3922,28 @@ void symm_elements(const string& structureFile)
             }
         }
         
-        cout << symmOp.string() << " " << type << "\n";
+        vector<double> eigenvalues;
+        double d = 0;
+        for (int p = 0; p < 3; p++)
+            for (int q = 0; q < 3; q++)
+                if (p != q)
+                    d += abs(rotation(p,q) - rotation(q,p));
+        if (d < 0.001)
+        {
+            Matrix3d m = rotation;
+            Vector3d e1, e2, e3;
+            double l1, l2, l3;
+            algebra3d::eigensystemRealSymm(m, e1, e2, e3, l1, l2, l3);
+            eigenvalues.push_back(l1);
+            eigenvalues.push_back(l2);
+            eigenvalues.push_back(l3);
+        }
+
+
+        cout << symmOp.string() << " " << type;
+        for (int p = 0; p < eigenvalues.size(); p++)
+            cout << " " << eigenvalues[p];
+        cout<< "\n";
 
         //symmOps.push_back(crystal.spaceGroup.getSpaceGroupOperation(i));
     }

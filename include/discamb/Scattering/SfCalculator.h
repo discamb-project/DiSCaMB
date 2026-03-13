@@ -2,7 +2,7 @@
 #define _DISCAMB_EXAMPLES_REFINE_SFCALCULATOR_H_
 
 #include "discamb/BasicUtilities/on_error.h"
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 #include "discamb/Scattering/SF_CalcDataTypes.h"
 #include "discamb/CrystalStructure/Crystal.h"
 #include "json.hpp"
