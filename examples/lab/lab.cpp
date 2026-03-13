@@ -20,6 +20,7 @@
 #include "discamb/IO/shelx_io.h"
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/xyz_io.h"
+#include "discamb/MathUtilities/algebra3d.h"
 #include "discamb/MathUtilities/SphConverter.h"
 #include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/Scattering/agreement_factors.h"
@@ -3860,6 +3861,72 @@ const string &hkl)
     
 }
 
+void check_symmetry_operation(
+    const Matrix3i &rotation)
+{
+    //Matrix3i identity(1, 0, 0, 0, 1, 0, 0, 0, 1);
+    //if (rotation == identity)
+    //{
+    //    cout << "identity";
+    //    return;
+    //}
+    //cout<< algebra3d::det3d(rotation);
+    
+}
+
+void symm_elements(const string& structureFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<SpaceGroupOperation> symmOps;
+    SpaceGroupOperation symmOp;
+    for (int i = 0; i < crystal.spaceGroup.nSymmetryOperations(); i++)
+    {
+        symmOp = crystal.spaceGroup.getSpaceGroupOperation(i);
+        Matrix3i rotation, rot_multiplied, identity(1,0,0,0,1,0,0,0,1);
+        symmOp.getRotation(rotation);
+        int det = algebra3d::det3d(rotation);
+        string type;
+        
+
+        if (rotation == identity)
+        {
+            type = "identity";
+        }
+        else {
+
+            int rank = 1;
+            rot_multiplied = rotation;
+            for (int i = 2; i <= 6; i++)
+            {
+                rot_multiplied *= rotation;
+                if (rot_multiplied == identity)
+                {
+                    rank = i;
+                    break;
+                }
+            }
+
+            if (det == 1)
+            {
+                if (rank > 1)
+                    type = "rotation " + to_string(rank);
+            }
+            else
+            {
+                if (rank == 2)
+                    type = "reflection";
+                else
+                    type = "rotoinversion " + to_string(rank);
+            }
+        }
+        
+        cout << symmOp.string() << " " << type << "\n";
+
+        //symmOps.push_back(crystal.spaceGroup.getSpaceGroupOperation(i));
+    }
+    //symmOps[0].getRotation();
+}
 
 int main(int argc, char* argv[])
 {
@@ -3868,7 +3935,13 @@ int main(int argc, char* argv[])
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
 
-        
+        if (arguments.size() != 1)
+            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
+
+        symm_elements(arguments[0]);
+
+        return 0;
+
         if (arguments.size() < 2)
             on_error::throwException("expected res and pdb\n", __FILE__, __LINE__);
 
