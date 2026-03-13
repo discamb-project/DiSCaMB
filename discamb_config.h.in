@@ -3,3 +3,4 @@
     #cmakedefine CMAKE_DETECTED_WIN32
 #endif
 #cmakedefine HAS_SPH_BESSEL
+#cmakedefine HAS_EIGEN

@@ -1,5 +1,12 @@
 #define _CRTDBG_MAP_ALLOC
 
+#include "discamb/discamb_config.h"
+
+#ifdef HAS_EIGEN
+#include <Eigen/Eigenvalues> 
+#endif
+
+
 #include "discamb/AtomTyping/CrystalAtomTypeAssigner.h"
 #include "discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
@@ -3928,7 +3935,8 @@ void symm_elements(const string& structureFile)
             for (int q = 0; q < 3; q++)
                 if (p != q)
                     d += abs(rotation(p,q) - rotation(q,p));
-        if (d < 0.001)
+        bool symmetric = (d < 0.001);
+        if (symmetric)
         {
             Matrix3d m = rotation;
             Vector3d e1, e2, e3;
@@ -3943,8 +3951,26 @@ void symm_elements(const string& structureFile)
         cout << symmOp.string() << " " << type;
         for (int p = 0; p < eigenvalues.size(); p++)
             cout << " " << eigenvalues[p];
-        cout<< "\n";
+        
 
+
+#ifdef HAS_EIGEN
+        Eigen::Matrix3d m;
+        for (int p = 0; p < 3; p++)
+            for (int q = 0; q < 3; q++)
+                m(p, q) = rotation(p, q);
+        Eigen::EigenSolver<Eigen::Matrix3d> eigenSolver(m);
+        Eigen::EigenSolver<Eigen::Matrix3d>::EigenvalueType ev;
+        ev = eigenSolver.eigenvalues();
+        for (int p = 0; p < 3; p++)
+        {
+            cout << " " << ev(p).real();
+            if(!symmetric)
+                cout << "," << ev(p).imag();
+        }
+
+#endif
+        cout << "\n";
         //symmOps.push_back(crystal.spaceGroup.getSpaceGroupOperation(i));
     }
     //symmOps[0].getRotation();

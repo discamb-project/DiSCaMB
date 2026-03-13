@@ -38,9 +38,14 @@ endif()
 
 
 find_package(OpenMP)
+find_package (Eigen3)
+if(Eigen3_FOUND)
+	set(HAS_EIGEN true)
+endif()
 set(CMAKE_DEBUG_POSTFIX "d")
 set(CMAKE_MINSIZEREL_POSTFIX "s")
 set(CMAKE_RELWITHDEBINFO_POSTFIX "rd")
+
 
 
 #SET(DISCAMB_INCLUDE_PATH "" CACHE PATH "dir with discamb headers folder 'discamb'")
