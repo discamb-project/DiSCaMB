@@ -3881,6 +3881,137 @@ void check_symmetry_operation(
     
 }
 
+struct SymmetryElement{
+    string type; // identity, rotation, reflection, rotoinversion
+    int rank;
+    Vector3<CrystallographicRational> direction;
+    Vector3<CrystallographicRational> translation;
+    Vector3<CrystallographicRational> position;
+};
+
+void setSymmElement(
+    const UnitCell& unitCell,
+    const SpaceGroupOperation& symmOp)
+{
+    //symmOp.
+    Matrix3d rotationCart;
+    Vector3d translationCart;
+    crystal_structure_utilities::symmetryOperationCartesian(symmOp, unitCell, rotationCart, translationCart);
+    double d = 0;
+    for (int p = 0; p < 3; p++)
+        for (int q = 0; q < 3; q++)
+            if (p != q)
+                d += abs(rotationCart(p, q) - rotationCart(q, p));
+    bool symmetric = (d < 0.001);
+
+
+#ifdef HAS_EIGEN
+    Eigen::Matrix3d m;
+    for (int p = 0; p < 3; p++)
+        for (int q = 0; q < 3; q++)
+            m(p, q) = rotationCart(p, q);
+    Eigen::EigenSolver<Eigen::Matrix3d> eigenSolver(m);
+    Eigen::EigenSolver<Eigen::Matrix3d>::EigenvalueType ev;
+    ev = eigenSolver.eigenvalues();
+    vector<int> eigenvalue_1_eigvectors, eigenvalue_no_1_eigvectors;
+    for (int p = 0; p < 3; p++)
+    {
+        cout << " " << ev(p).real();
+        if (!symmetric)
+            cout << "," << ev(p).imag();
+        if(abs(ev(p) - 1.0)<0.001)
+            eigenvalue_1_eigvectors.push_back(p);
+        else
+            eigenvalue_no_1_eigvectors.push_back(p);
+    }
+    cout << "\n";
+    //cout << "\neigenvectors\n";
+    auto evec = eigenSolver.eigenvectors();
+    //for (int p = 0; p < 3; p++)
+    //{
+    //    for (int q = 0; q < 3; q++)
+    //        cout << " " << evec(p, q);
+    //    cout << "\n";
+    //}
+
+    Vector3d shift = translationCart;
+    for (auto& p : eigenvalue_no_1_eigvectors)
+    {
+        Vector3d v;
+        for (int q = 0; q < 3; q++)
+            v(q) = evec(p, q).real();
+        shift -= (shift * v) * v;
+    }
+    bool shiftIsZero = (fabs(shift.norm()) < 0.001);
+
+    if (eigenvalue_1_eigvectors.size() == 3)
+    {
+        cout<< "identity\n";
+    }
+    else if (eigenvalue_1_eigvectors.size() == 2)
+    {
+        string plane_type = "mirror";
+        if(!shiftIsZero)
+            plane_type = "glide";
+        cout << plane_type + " plane\n";
+
+        Vector3d v1, v2;
+        for (int p = 0; p < 3; p++)
+        {
+            v1(p) = evec(p, eigenvalue_1_eigvectors[0]).real();
+            v2(p) = evec(p, eigenvalue_1_eigvectors[1]).real();
+        }
+        Vector3d cross_frac, cross = cross_product(v1, v2);
+        cout << plane_type + " plane normal (cart): " << cross << "\n";
+        unitCell.cartesianToFractional(cross, cross_frac);
+        cross_frac.normalize();
+        cout << plane_type + " plane normal (frac): " << setprecision(3) << fixed << cross_frac << "\n";
+            
+    }
+    else if (eigenvalue_1_eigvectors.size() == 1)
+    {
+        if(shiftIsZero)
+            cout << "rotation\n";
+        else
+            cout << "screw axis\n";
+    }
+    else
+    {
+        bool rotoinversion = false;
+        for (int p = 0; p < 3; p++)
+            if (abs(ev(p) + 1.0) > 0.001)
+                rotoinversion = true;
+        if(rotoinversion)
+            cout << "rotoinversion\n";
+        else
+            cout << "inversion\n";
+        
+    }
+    cout << "det " << algebra3d::det3d(rotationCart) << "\n";
+
+    Vector3d position = translationCart;
+    for (auto& p : eigenvalue_1_eigvectors)
+    {
+        Vector3d v;
+        for(int q=0;q<3;q++)
+            v(q) = evec(p, q).real();
+        position -= (position*v)*v;
+    }
+    position /= 2.0;
+    cout << "position cart = " << position << "\n";
+    Vector3d position_frac;
+    unitCell.cartesianToFractional(position, position_frac);
+    cout << "position frac = " << setprecision(3) << fixed << position_frac << "\n";
+    cout << "shift cart = " << shift << "\n";
+    Vector3d shiftCart;
+    unitCell.cartesianToFractional(shift, shiftCart);
+    cout << "shift frac = " << setprecision(3) << fixed << shiftCart << "\n";
+
+#endif
+    cout << "------------------------\n";
+
+}
+
 void symm_elements(const string& structureFile)
 {
     Crystal crystal;
@@ -3949,10 +4080,12 @@ void symm_elements(const string& structureFile)
 
 
         cout << symmOp.string() << " " << type;
-        for (int p = 0; p < eigenvalues.size(); p++)
-            cout << " " << eigenvalues[p];
+        //for (int p = 0; p < eigenvalues.size(); p++)
+        //    cout << " " << eigenvalues[p];
         
+        setSymmElement(crystal.unitCell, symmOp);
 
+/*
 
 #ifdef HAS_EIGEN
         Eigen::Matrix3d m;
@@ -3970,6 +4103,7 @@ void symm_elements(const string& structureFile)
         }
 
 #endif
+*/
         cout << "\n";
         //symmOps.push_back(crystal.spaceGroup.getSpaceGroupOperation(i));
     }

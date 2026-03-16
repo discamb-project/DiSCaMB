@@ -8,6 +8,7 @@ PROJECT(discamb)
 option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
 option(DISCAMB_BUILD_EXAMPLES "Build the example programs" OFF)
 option(DISCAMB_MSVC_MT "An options for MSVC to build multi-threaded statically-linked version" OFF)
+option(USE_EIGEN "incorporate eigen, enables symmetry operation analysis" OFF)
 
 if(DISCAMB_MSVC_MT)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -38,10 +39,14 @@ endif()
 
 
 find_package(OpenMP)
-find_package (Eigen3)
-if(Eigen3_FOUND)
-	set(HAS_EIGEN true)
-endif()
+
+if(USE_EIGEN)
+    find_package (Eigen3)
+    if(Eigen3_FOUND)
+    	set(HAS_EIGEN true)
+    endif(Eigen3_FOUND)
+endif(USE_EIGEN)
+
 set(CMAKE_DEBUG_POSTFIX "d")
 set(CMAKE_MINSIZEREL_POSTFIX "s")
 set(CMAKE_RELWITHDEBINFO_POSTFIX "rd")
