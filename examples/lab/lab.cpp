@@ -4137,12 +4137,106 @@ void test_taam_parallel(
     out.close();
 }
 
+void adp_transformations(const string& structureFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<pair<int, int> > indices;
+    map<pair<int, int>, int> r_indices;
+
+    for(int i=0;i<3;i++)
+        for (int j = 0; j < 3; j++)
+        {
+            indices.push_back({ i,j });
+            r_indices[indices.back()] = indices.size() - 1;
+        }
+
+    for (int atomIdx=0; atomIdx <crystal.atoms.size(); atomIdx++)
+    {
+        vector<vector<SpaceGroupOperation> > symmOpsGroups;
+        crystal_structure_utilities::findAtomSymmetry(crystal, atomIdx, symmOpsGroups, 0.01);
+        auto& atom = crystal.atoms[atomIdx];
+        atom.siteSymetry = symmOpsGroups[0];
+
+        if (atom.siteSymetry.size() > 1)
+        {
+#ifdef HAS_EIGEN
+            Eigen::Matrix<double, 9, 9> total = Eigen::Matrix<double, 9, 9>::Zero();
+            Eigen::Matrix<double, 9, 9> symm_mat;
+            
+#endif
+
+            cout << atom.label << "\n";
+            for (auto& symm : atom.siteSymetry)
+            {
+                cout << symm.string() << endl;
+                Matrix3d rot_cart;
+                Vector3d tran_cart;
+                crystal_structure_utilities::symmetryOperationCartesian(symm, crystal.unitCell, rot_cart, tran_cart);
+#ifdef HAS_EIGEN
+                symm_mat = Eigen::Matrix<double, 9, 9>::Zero();
+
+                for (int m = 0; m < 9; m++)
+                {
+                    int p = indices[m].first;
+                    int q = indices[m].second;
+
+                    for (int n = 0; n < 9; n++)
+                    {
+                        int i = indices[n].first;
+                        int j = indices[n].second;
+
+                        total(m, n) = total(m, n) + rot_cart(p, i) * rot_cart(q, j);
+                    }
+                }
+#endif
+            }
+#ifdef HAS_EIGEN
+
+            for (int m = 0; m < 9; m++)
+                for (int n = 0; n < 9; n++)
+                    total(m, n) = total(m, n) / atom.siteSymetry.size();
+
+            for (int m = 0; m < 9; m++)
+            {
+                for (int n = 0; n < 9; n++)
+                    cout << setw(8) << setprecision(3) << fixed << total(m, n);
+                cout << "\n";
+            }
+
+            Eigen::EigenSolver<Eigen::Matrix<double, 9, 9> > eigenSolver(total);
+            auto eigenvalues = eigenSolver.eigenvalues();
+            auto eigenvectors = eigenSolver.eigenvectors();
+
+            cout << "\n";
+
+            for (int m = 0; m < 9; m++)
+            {
+                cout << eigenvalues(m) << "\n";
+                for (int n = 0; n < 9; n++)
+                    cout << setw(8) << setprecision(3) << fixed << eigenvectors(n, m).real();
+                cout << "\n";
+            }
+
+
+#endif
+
+        }
+
+
+
+    }
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        adp_transformations(arguments[0]);
+        return 0;
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
