@@ -67,9 +67,20 @@ namespace {
           //  data.qmSystem.spin_multilicity, data.qmSystem.charge, vector<double>(0),
             //vector<discamb::Vector3d>(0), map<int, string>(), true);
 
+
+#ifdef CMAKE_DETECTED_WIN32
+        string sysFolderSepareator = "\\";
+        string sysCopy = "copy";
+#else
+        string sysFolderSepareator = "/";
+        string sysCopy = "cp";
+#endif
+
+
         string outputFileName = name + ".log";
 
-        string command = orcaFolder + "\\orca " + inputFileName + " > " + outputFileName;
+        //string command = orcaFolder + "\\orca " + inputFileName + " > " + outputFileName;
+        string command = orcaFolder + sysFolderSepareator + "orca " + inputFileName + " > " + name + ".log";
         system(command.c_str());
 
         if (!runner.succesfulRun(name))
@@ -77,22 +88,23 @@ namespace {
             string errorMessage = "unsuccesful ORCA run, see file '" + outputFileName + "'";
             discamb::on_error::throwException(errorMessage, __FILE__, __LINE__);
         }
-        
-        system((orcaFolder + "\\orca_2aim " + name).c_str());
+        system((orcaFolder + sysFolderSepareator + "orca_2aim " + name).c_str());
+        //system((orcaFolder + "\\orca_2aim " + name).c_str());
         string wfxFile = name + ".wfx";
         if (filesystem::exists(name + ".wfx"))
         {
             if (data.wfnFileName != wfxFile)
             {
-                cout << data.wfnFileName << " " << wfxFile << "\n";
-                command = "copy " + wfxFile + " " + data.wfnFileName;
+                //cout << data.wfnFileName << " " << wfxFile << "\n";
+                command = sysCopy + " " + wfxFile + " " + data.wfnFileName;
+                //command = "copy " + wfxFile + " " + data.wfnFileName;
                 system(command.c_str());
             }
         }
         else
             discamb::on_error::throwException(data.wfnFileName + " was not created", __FILE__, __LINE__);
        
-        runner.ecpWfxPostPorcessing(name, wfxFile);
+        //runner.ecpWfxPostPorcessing(name, wfxFile);
 
         return;
 
@@ -130,7 +142,7 @@ namespace discamb {
         mTryToReadGuess = true;
         //mTemplateHasCharges = false;
         tryToSetPathToOrcaFromSettingsFile();
-        tryToSetPathToMolden2AimFromSettingsFile();
+        //tryToSetPathToMolden2AimFromSettingsFile();
     }
 
     OrcaRunner::OrcaRunner(
@@ -173,10 +185,10 @@ namespace discamb {
                 tryToSetPathToOrcaFromSettingsFile();
         }
         
-        if (settings.find("molden2aim folder") != settings.end())
-            setMolden2AimFolder(settings.find("molden2aim folder").value().get<string>());
-        else
-            tryToSetPathToMolden2AimFromSettingsFile();
+        //if (settings.find("molden2aim folder") != settings.end())
+        //    setMolden2AimFolder(settings.find("molden2aim folder").value().get<string>());
+        //else
+        //    tryToSetPathToMolden2AimFromSettingsFile();
         mUseBuildinEcpElectronDensityLibraries = settings.value("build in ecp", mUseBuildinEcpElectronDensityLibraries);
     }
 
@@ -204,164 +216,164 @@ namespace discamb {
         }
     }
 
-    void OrcaRunner::tryToSetPathToMolden2AimFromSettingsFile()
-    {
-        nlohmann::json defaults = discamb_env::get_discamb_dir_json("settings/settings.json");
-        if (defaults.is_object())
-        {
-            if (defaults.find("molden2aim folder") != defaults.end())
-                setMolden2AimFolder(defaults["molden2aim folder"].get<string>());
-        }
-    }
-    
-    void OrcaRunner::ecpWfxPostPorcessing(
-        const std::string& jobName,
-        const std::string& wfxFile)
-    {
-        printMolden2AimIniFile();
-        vector<string> elementsWithEcp;
-        vector<int> nEcpElectrons;
+    //void OrcaRunner::tryToSetPathToMolden2AimFromSettingsFile()
+    //{
+    //    nlohmann::json defaults = discamb_env::get_discamb_dir_json("settings/settings.json");
+    //    if (defaults.is_object())
+    //    {
+    //        if (defaults.find("molden2aim folder") != defaults.end())
+    //            setMolden2AimFolder(defaults["molden2aim folder"].get<string>());
+    //    }
+    //}
+    //
+    //void OrcaRunner::ecpWfxPostPorcessing(
+    //    const std::string& jobName,
+    //    const std::string& wfxFile)
+    //{
+    //    printMolden2AimIniFile();
+    //    vector<string> elementsWithEcp;
+    //    vector<int> nEcpElectrons;
 
-        string orcaOutput = jobName + ".log";
+    //    string orcaOutput = jobName + ".log";
 
-        if (!checkForEcp(jobName + ".log", elementsWithEcp, nEcpElectrons))
-            return;
-        // make molden file 
-        string command = mExecFolder + "\\orca_2mkl " + jobName + " -emolden";
-        system(command.c_str());
-        string moldenFileNameLong = jobName + ".molden.input";
-        string moldenFileName = jobName + ".molden";
-        filesystem::rename(moldenFileNameLong, moldenFileName);
-        command = mMolden2AimFolder + "\\molden2aim.exe " + " -i " + moldenFileName;
-        system(command.c_str());
-    }
+    //    if (!checkForEcp(jobName + ".log", elementsWithEcp, nEcpElectrons))
+    //        return;
+    //    // make molden file 
+    //    string command = mExecFolder + "\\orca_2mkl " + jobName + " -emolden";
+    //    system(command.c_str());
+    //    string moldenFileNameLong = jobName + ".molden.input";
+    //    string moldenFileName = jobName + ".molden";
+    //    filesystem::rename(moldenFileNameLong, moldenFileName);
+    //    command = mMolden2AimFolder + "\\molden2aim.exe " + " -i " + moldenFileName;
+    //    system(command.c_str());
+    //}
 
-    void OrcaRunner::setMolden2AimFolder(
-        const std::string& folder)
-    {
-        mMolden2AimFolder = folder;
-        string execPath = getMolden2AimExecPath();
-    }
+    //void OrcaRunner::setMolden2AimFolder(
+    //    const std::string& folder)
+    //{
+    //    mMolden2AimFolder = folder;
+    //    string execPath = getMolden2AimExecPath();
+    //}
 
-    void OrcaRunner::printMolden2AimIniFile()
-    {
-        //if (filesystem::exists(filesystem::path("m2a.ini")))
-          //  return;
+    //void OrcaRunner::printMolden2AimIniFile()
+    //{
+    //    //if (filesystem::exists(filesystem::path("m2a.ini")))
+    //      //  return;
 
-        vector<string> lines  
-        {   "molden= -1", "wfn= -1", "wfncheck= -1",
-            "wfx= 1", "wfxcheck= -1", "nbo= -1",
-            "nbocheck= -1", "wbo= -1", "program=1",
-            "edftyp=1", "allmo = 0", "unknown = 1",
-            "nosupp=1", "clear=1"};
+    //    vector<string> lines  
+    //    {   "molden= -1", "wfn= -1", "wfncheck= -1",
+    //        "wfx= 1", "wfxcheck= -1", "nbo= -1",
+    //        "nbocheck= -1", "wbo= -1", "program=1",
+    //        "edftyp=1", "allmo = 0", "unknown = 1",
+    //        "nosupp=1", "clear=1"};
 
-        ofstream out("m2a.ini");
-        if (!out.good())
-            on_error::throwException("it was not possible to write to m2a.ini file needed when processing ORCA output for calculations with ECP", __FILE__, __LINE__);
+    //    ofstream out("m2a.ini");
+    //    if (!out.good())
+    //        on_error::throwException("it was not possible to write to m2a.ini file needed when processing ORCA output for calculations with ECP", __FILE__, __LINE__);
 
-        for (auto& line : lines)
-            out << line << "\n";
-        out.close();
-    }
+    //    for (auto& line : lines)
+    //        out << line << "\n";
+    //    out.close();
+    //}
 
 
-    bool OrcaRunner::checkForEcp(
-        const std::string& orcaOutput,
-        std::vector<std::string>& elementsWithEcp,
-        std::vector<int>& nEcpElectrons)
-    {
-        elementsWithEcp.clear();
-        nEcpElectrons.clear();
+    //bool OrcaRunner::checkForEcp(
+    //    const std::string& orcaOutput,
+    //    std::vector<std::string>& elementsWithEcp,
+    //    std::vector<int>& nEcpElectrons)
+    //{
+    //    elementsWithEcp.clear();
+    //    nEcpElectrons.clear();
 
-        ifstream in(orcaOutput);
-        if (!in.good())
-            on_error::throwException("cannot read ORCA output file '" + orcaOutput + "'", __FILE__, __LINE__);
-        string line;
-        vector<string> words;
-        bool foundWhatExpected;
-        while (in.good())
-        {
-            getline(in, line);
-            if (line.find("#ECP")!=string::npos)
-            {
-                /*
-                NewECP Sb
-                N_core 28
-                */
+    //    ifstream in(orcaOutput);
+    //    if (!in.good())
+    //        on_error::throwException("cannot read ORCA output file '" + orcaOutput + "'", __FILE__, __LINE__);
+    //    string line;
+    //    vector<string> words;
+    //    bool foundWhatExpected;
+    //    while (in.good())
+    //    {
+    //        getline(in, line);
+    //        if (line.find("#ECP")!=string::npos)
+    //        {
+    //            /*
+    //            NewECP Sb
+    //            N_core 28
+    //            */
 
-                foundWhatExpected = false;
-                getline(in, line);
-                string_utilities::split(line, words);
+    //            foundWhatExpected = false;
+    //            getline(in, line);
+    //            string_utilities::split(line, words);
 
-                if (words.size() == 2)
-                    if (words[0] == string("NewECP"))
-                    {
-                        foundWhatExpected = true;
-                        elementsWithEcp.push_back(words[1]);
-                    }
-                if (!foundWhatExpected)
-                    on_error::throwException("problem with processing ECP information from ORCA output, unexpected format", __FILE__, __LINE__);
+    //            if (words.size() == 2)
+    //                if (words[0] == string("NewECP"))
+    //                {
+    //                    foundWhatExpected = true;
+    //                    elementsWithEcp.push_back(words[1]);
+    //                }
+    //            if (!foundWhatExpected)
+    //                on_error::throwException("problem with processing ECP information from ORCA output, unexpected format", __FILE__, __LINE__);
 
-                foundWhatExpected = false;
-                getline(in, line);
-                string_utilities::split(line, words);
-                if (words.size() == 2)
-                    if (words[0] == string("N_core"))
-                    {
-                        foundWhatExpected = true;
-                        nEcpElectrons.push_back(stoi(words[1]));
-                    }
-                if (!foundWhatExpected)
-                    on_error::throwException("problem with processing ECP information from ORCA output, unexpected format", __FILE__, __LINE__);
+    //            foundWhatExpected = false;
+    //            getline(in, line);
+    //            string_utilities::split(line, words);
+    //            if (words.size() == 2)
+    //                if (words[0] == string("N_core"))
+    //                {
+    //                    foundWhatExpected = true;
+    //                    nEcpElectrons.push_back(stoi(words[1]));
+    //                }
+    //            if (!foundWhatExpected)
+    //                on_error::throwException("problem with processing ECP information from ORCA output, unexpected format", __FILE__, __LINE__);
 
-            }
-        }
-        in.close();
-        return (!nEcpElectrons.empty());
-    }
+    //        }
+    //    }
+    //    in.close();
+    //    return (!nEcpElectrons.empty());
+    //}
 
-    std::string OrcaRunner::getMolden2AimExecPath(
-        bool required)
-        const
-    {
-        filesystem::path molden2aimFolderPath(mMolden2AimFolder);
-        filesystem::path molden2aimPath = molden2aimFolderPath / "molden2aim.exe";
+    //std::string OrcaRunner::getMolden2AimExecPath(
+    //    bool required)
+    //    const
+    //{
+    //    filesystem::path molden2aimFolderPath(mMolden2AimFolder);
+    //    filesystem::path molden2aimPath = molden2aimFolderPath / "molden2aim.exe";
 
-        if (!filesystem::exists(molden2aimPath))
-        {
-            if (required)
-                on_error::throwException("cannot find molden2aim at the path provided:\n"+ molden2aimPath.string(), __FILE__, __LINE__);
-            else
-                return string();
-        }
+    //    if (!filesystem::exists(molden2aimPath))
+    //    {
+    //        if (required)
+    //            on_error::throwException("cannot find molden2aim at the path provided:\n"+ molden2aimPath.string(), __FILE__, __LINE__);
+    //        else
+    //            return string();
+    //    }
 
-        return molden2aimPath.string();
-    }
+    //    return molden2aimPath.string();
+    //}
 
-    void OrcaRunner::addEcpIndicatorToMoldenFile(
-        const string& moldenFileName,
-        const string& outputName,
-        vector<string>& elementsWithEcp,
-        vector<int>& nEcpElectrons)
-    {
-        ifstream in(moldenFileName);
-        ofstream out(outputName);
-        string line;
-        
-        while (in.good())
-        {
-            getline(in, line);
-            if (line == string("[GTO]"))
-            {
-                out << "[Core]\n";
-                for (int i = 0; i < elementsWithEcp.size(); i++)
-                    out << elementsWithEcp[i] << ": " << nEcpElectrons[i] << "\n";
-            }
-            out << line << "\n";
-        }
-        in.close();
-        out.close();
-    }
+    //void OrcaRunner::addEcpIndicatorToMoldenFile(
+    //    const string& moldenFileName,
+    //    const string& outputName,
+    //    vector<string>& elementsWithEcp,
+    //    vector<int>& nEcpElectrons)
+    //{
+    //    ifstream in(moldenFileName);
+    //    ofstream out(outputName);
+    //    string line;
+    //    
+    //    while (in.good())
+    //    {
+    //        getline(in, line);
+    //        if (line == string("[GTO]"))
+    //        {
+    //            out << "[Core]\n";
+    //            for (int i = 0; i < elementsWithEcp.size(); i++)
+    //                out << elementsWithEcp[i] << ": " << nEcpElectrons[i] << "\n";
+    //        }
+    //        out << line << "\n";
+    //    }
+    //    in.close();
+    //    out.close();
+    //}
 
     bool OrcaRunner::succesfulRun(
         const std::string& jobName)
@@ -461,84 +473,84 @@ namespace discamb {
 
     }
 
-    void OrcaRunner::correctMoldenFile(
-        const std::string& wfnFile,
-        int nAtoms,
-        int nCharges)
-        const
-    {
-        ifstream in(wfnFile);
-        stringstream ss;
-        if (!in.good())
-            on_error::throwException(string("cannot read file '") + wfnFile + string("'"), __FILE__, __LINE__);
+    //void OrcaRunner::correctMoldenFile(
+    //    const std::string& wfnFile,
+    //    int nAtoms,
+    //    int nCharges)
+    //    const
+    //{
+    //    ifstream in(wfnFile);
+    //    stringstream ss;
+    //    if (!in.good())
+    //        on_error::throwException(string("cannot read file '") + wfnFile + string("'"), __FILE__, __LINE__);
 
-        string line;
-        bool checked = false;
-        bool removedQ = false;
-        bool number_and_0_section_to_remove;
-        vector<string> words;
-        char eol = char(10);
-        while (getline(in, line))
-        {
-            if (checked)
-                ss << line << eol;
-            else
-            {
-                if (!line.empty())
-                {
-                    if (!removedQ)
-                    {
-                        if (line[0] == 'Q')
-                        {
-                            for (int i = 1; i < nCharges; i++)
-                                getline(in, line);
-                            removedQ = true;
-                        }
-                        else
-                            ss << line << eol;
-                    }
-                    else
-                    {
-                        string_utilities::split(line, words);
-                        number_and_0_section_to_remove = false;
-                        if (words.size() == 2)
-                        {
-                            bool digits = true;
-                            for (char c : words[0])
-                                if (!isdigit(c))
-                                    digits = false;
-                            for (char c : words[1])
-                                if (!isdigit(c))
-                                    digits = false;
-                            if (digits)
-                                if(atoi(words[0].c_str())>nAtoms)
-                                    number_and_0_section_to_remove = true;
-                        }
+    //    string line;
+    //    bool checked = false;
+    //    bool removedQ = false;
+    //    bool number_and_0_section_to_remove;
+    //    vector<string> words;
+    //    char eol = char(10);
+    //    while (getline(in, line))
+    //    {
+    //        if (checked)
+    //            ss << line << eol;
+    //        else
+    //        {
+    //            if (!line.empty())
+    //            {
+    //                if (!removedQ)
+    //                {
+    //                    if (line[0] == 'Q')
+    //                    {
+    //                        for (int i = 1; i < nCharges; i++)
+    //                            getline(in, line);
+    //                        removedQ = true;
+    //                    }
+    //                    else
+    //                        ss << line << eol;
+    //                }
+    //                else
+    //                {
+    //                    string_utilities::split(line, words);
+    //                    number_and_0_section_to_remove = false;
+    //                    if (words.size() == 2)
+    //                    {
+    //                        bool digits = true;
+    //                        for (char c : words[0])
+    //                            if (!isdigit(c))
+    //                                digits = false;
+    //                        for (char c : words[1])
+    //                            if (!isdigit(c))
+    //                                digits = false;
+    //                        if (digits)
+    //                            if(atoi(words[0].c_str())>nAtoms)
+    //                                number_and_0_section_to_remove = true;
+    //                    }
 
-                        if (number_and_0_section_to_remove)
-                        {
-                            for (int i = 1; i < nCharges; i++)
-                            {
-                                getline(in, line);
-                                getline(in, line);
-                            }
-                            checked = true;
-                        }
-                        else
-                            ss << line << eol;
-                            
-                    }
-                }
-                else
-                    ss << eol;
+    //                    if (number_and_0_section_to_remove)
+    //                    {
+    //                        for (int i = 1; i < nCharges; i++)
+    //                        {
+    //                            getline(in, line);
+    //                            getline(in, line);
+    //                        }
+    //                        checked = true;
+    //                    }
+    //                    else
+    //                        ss << line << eol;
+    //                        
+    //                }
+    //            }
+    //            else
+    //                ss << eol;
 
-            }
-        }
-        in.close();
-        ofstream out(wfnFile, std::ios_base::binary | std::ios_base::out);
-        out << ss.rdbuf();
-        out.close();
-    }
+    //        }
+    //    }
+    //    in.close();
+    //    ofstream out(wfnFile, std::ios_base::binary | std::ios_base::out);
+    //    out << ss.rdbuf();
+    //    out.close();
+    //}
 
     void OrcaRunner::makeWfnLookGaussianMade(
         const std::string fileName)

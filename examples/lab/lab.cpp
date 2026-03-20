@@ -4110,12 +4110,45 @@ void symm_elements(const string& structureFile)
     //symmOps[0].getRotation();
 }
 
+void test_taam_parallel(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+    
+    std::ifstream f("aspher.json");
+    nlohmann::json config = nlohmann::json::parse(f);
+    f.close();
+    SfCalculator* sf_calc = SfCalculator::create(crystal, config);
+    vector<complex<double> > sf, sf2;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    delete sf_calc;
+    config["n cores"] = 4;
+    SfCalculator* sf_calc2 = SfCalculator::create(crystal, config);
+    sf_calc2->calculateStructureFactors(crystal.atoms, hkl, sf2);
+    delete sf_calc2;
+    int n = sf.size();
+    ofstream out("out");
+    for(int i=0;i<n;i++)
+        out << hkl[i] << " " << sf[i] << " " << sf2[i] << " " << sf[i]-sf2[i] << "\n";
+    out.close();
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
+
+        test_taam_parallel(arguments[0], arguments[1]);
+        return 0;
 
         if (arguments.size() != 1)
             on_error::throwException("expected structure file\n", __FILE__, __LINE__);

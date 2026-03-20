@@ -61,26 +61,26 @@ namespace discamb {
 
         // ECP handling with molden2aim
         
-        bool mHasMolden2Aim = false;
-        std::string mMolden2AimFolder;
-        std::string getMolden2AimExecPath(bool required = true) const;
-
-        static void addEcpIndicatorToMoldenFile(
-            const std::string& moldenFileName, 
-            const std::string& outputName, 
-            std::vector<std::string>& elementsWithEcp, 
-            std::vector<int>& nEcpElectrons);
-
-        static void printMolden2AimIniFile();
-        static bool checkForEcp(const std::string& orcaOutput, std::vector<std::string>& elementsWithEcp, std::vector<int>& nEcpElectrons);
+//        bool mHasMolden2Aim = false;
+//        std::string mMolden2AimFolder;
+//        std::string getMolden2AimExecPath(bool required = true) const;
+//
+//        static void addEcpIndicatorToMoldenFile(
+//            const std::string& moldenFileName, 
+//            const std::string& outputName, 
+//            std::vector<std::string>& elementsWithEcp, 
+//            std::vector<int>& nEcpElectrons);
+//
+//        static void printMolden2AimIniFile();
+//        static bool checkForEcp(const std::string& orcaOutput, std::vector<std::string>& elementsWithEcp, std::vector<int>& nEcpElectrons);
         
         //
 
         void tryToSetPathToOrcaFromSettingsFile();
-        void tryToSetPathToMolden2AimFromSettingsFile();
+//      void tryToSetPathToMolden2AimFromSettingsFile();
 
         void makeWfnLookGaussianMade(const std::string fileName) const;
-        void correctMoldenFile(const std::string &wfnFile, int nAtoms, int nCharges) const;
+//      void correctMoldenFile(const std::string &wfnFile, int nAtoms, int nCharges) const;
 
 
         // print even if pointChargeValue.empty()
