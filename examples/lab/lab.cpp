@@ -3853,7 +3853,7 @@ const string &hkl)
     vector<string> words;
     in >> structureFile;
     structure_io::read_structure(structureFile, crystal);
-    vector<string> atomLabels;
+    vector<string> atomLabels, tsc_files;
     getline(in, line);
     while (getline(in, line))
     {
@@ -3861,7 +3861,7 @@ const string &hkl)
         if (words.size() == 0)
             continue;
         if (words.size() == 1)
-            continue;
+            tsc_files.push_back(words[0]);
     }
 
     vector<string> crystalAtomLabels;
@@ -4150,6 +4150,9 @@ void adp_transformations(const string& structureFile)
             indices.push_back({ i,j });
             r_indices[indices.back()] = indices.size() - 1;
         }
+    // 00 01 02 10 11 12 20 21 22
+    //  0  1  2 -1  3  4 -2 -4  5
+    vector<int> u_indices_map{ 0, 1, 2, -1, 3, 4, -2, -4, 5};
 
     for (int atomIdx=0; atomIdx <crystal.atoms.size(); atomIdx++)
     {
@@ -4163,7 +4166,13 @@ void adp_transformations(const string& structureFile)
 #ifdef HAS_EIGEN
             Eigen::Matrix<double, 9, 9> total = Eigen::Matrix<double, 9, 9>::Zero();
             Eigen::Matrix<double, 9, 9> symm_mat;
-            
+
+            Eigen::Matrix<double, 6, 6> total6 = Eigen::Matrix<double, 6, 6>::Zero();
+            Eigen::Matrix<double, 6, 6> symm_mat6;
+
+            Eigen::Matrix3d total3 = Eigen::Matrix3d::Zero();
+            //Eigen::Matrix3d symm_mat3;
+
 #endif
 
             cout << atom.label << "\n";
@@ -4176,6 +4185,10 @@ void adp_transformations(const string& structureFile)
 #ifdef HAS_EIGEN
                 symm_mat = Eigen::Matrix<double, 9, 9>::Zero();
 
+                for(int m=0;m<3;m++)
+                    for (int n = 0; n < 3; n++)
+                        total3(m, n) = total3(m,n) + rot_cart(m, n);
+
                 for (int m = 0; m < 9; m++)
                 {
                     int p = indices[m].first;
@@ -4187,6 +4200,20 @@ void adp_transformations(const string& structureFile)
                         int j = indices[n].second;
 
                         total(m, n) = total(m, n) + rot_cart(p, i) * rot_cart(q, j);
+                        
+                        int new_m = u_indices_map[m];
+                        int new_n = u_indices_map[n];
+
+                        if (new_m >= 0)
+                            total6(new_m, abs(new_n)) = total6(new_m, abs(new_n)) + rot_cart(p, i) * rot_cart(q, j);
+
+                        //if (new_m >= 0 && new_n >= 0)
+                        //{
+                        //    if (m != n)
+                        //        total6(new_m, new_n) = total6(new_m, new_n) + 2 * rot_cart(p, i) * rot_cart(q, j);
+                        //    else
+                        //        total6(new_m, new_n) = total6(new_m, new_n) + rot_cart(p, i) * rot_cart(q, j);
+                        //}
                     }
                 }
 #endif
@@ -4218,6 +4245,56 @@ void adp_transformations(const string& structureFile)
                 cout << "\n";
             }
 
+// small
+            cout << "6 components \n";
+
+            for (int m = 0; m < 6; m++)
+                for (int n = 0; n < 6; n++)
+                    total6(m, n) = total6(m, n) / atom.siteSymetry.size();
+
+            for (int m = 0; m < 6; m++)
+            {
+                for (int n = 0; n < 6; n++)
+                    cout << setw(8) << setprecision(3) << fixed << total6(m, n);
+                cout << "\n";
+            }
+
+
+            Eigen::EigenSolver<Eigen::Matrix<double, 6, 6> > eigenSolver6(total6);
+            auto eigenvalues6 = eigenSolver6.eigenvalues();
+            auto eigenvectors6 = eigenSolver6.eigenvectors();
+
+            cout << "\n";
+            cout << "   xx      xy      xz      yy      yz      zz   \n";
+            for (int m = 0; m < 6; m++)
+            {
+                cout << eigenvalues6(m) << "\n";
+                for (int n = 0; n < 6; n++)
+                    cout << setw(8) << setprecision(3) << fixed << eigenvectors6(n, m).real();
+                cout << "\n";
+            }
+
+// xyz
+            cout << "xyz \n";
+
+            for (int m = 0; m < 3; m++)
+                for (int n = 0; n < 3; n++)
+                    total3(m, n) = total3(m, n) / atom.siteSymetry.size();
+
+            Eigen::EigenSolver<Eigen::Matrix3d> eigenSolver3(total3);
+            auto eigenvalues3 = eigenSolver3.eigenvalues();
+            auto eigenvectors3 = eigenSolver3.eigenvectors();
+
+            cout << "\n";
+
+            for (int m = 0; m < 3; m++)
+            {
+                cout << eigenvalues3(m) << "\n";
+                for (int n = 0; n < 3; n++)
+                    cout << setw(8) << setprecision(3) << fixed << eigenvectors3(n, m).real();
+                cout << "\n";
+            }
+
 
 #endif
 
@@ -4235,6 +4312,9 @@ int main(int argc, char* argv[])
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
 
+        if (arguments.size() != 1)
+            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
+
         adp_transformations(arguments[0]);
         return 0;
 
@@ -4243,6 +4323,7 @@ int main(int argc, char* argv[])
 
         test_taam_parallel(arguments[0], arguments[1]);
         return 0;
+
 
         if (arguments.size() != 1)
             on_error::throwException("expected structure file\n", __FILE__, __LINE__);
