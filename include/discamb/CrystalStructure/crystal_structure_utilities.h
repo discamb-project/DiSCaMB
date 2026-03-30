@@ -49,6 +49,8 @@ namespace discamb {
         void stringToAtomList(const std::string& str, std::vector<std::pair<std::string, std::string> >& atomList, char separator);
 
 
+        void set_atoms_multiplicity(Crystal& crystal);
+
         /**
         Cartesian position of atom in crystal
         */

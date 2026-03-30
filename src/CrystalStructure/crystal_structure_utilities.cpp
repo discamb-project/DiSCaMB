@@ -205,6 +205,18 @@ namespace discamb {
 
         }*/
 
+        void set_atoms_multiplicity(
+            Crystal& crystal)
+        {
+            vector<vector<SpaceGroupOperation> > atomPointGroups;
+            for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+            {
+                crystal_structure_utilities::findAtomSymmetry(crystal, atomIdx, atomPointGroups, 0.05);
+                crystal.atoms[atomIdx].multiplicity = crystal.spaceGroup.nSymmetryOperations() / atomPointGroups[0].size();
+            }
+
+        }
+
         double u_eq(
             const UnitCell& unit_cell,
             const std::vector<double>& uij_cif)

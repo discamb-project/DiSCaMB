@@ -701,12 +701,14 @@ namespace discamb {
             crystal.adpConvention = structural_parameters_convention::AdpConvention::U_cif;
             crystal.xyzCoordinateSystem = structural_parameters_convention::XyzCoordinateSystem::fractional;
 
-            vector<vector<SpaceGroupOperation> > atomPointGroups;
-            for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
-            {
-                crystal_structure_utilities::findAtomSymmetry(crystal, atomIdx, atomPointGroups, 0.05);
-                crystal.atoms[atomIdx].multiplicity = crystal.spaceGroup.nSymmetryOperations() / atomPointGroups[0].size();
-            }
+            crystal_structure_utilities::set_atoms_multiplicity(crystal);
+
+            //vector<vector<SpaceGroupOperation> > atomPointGroups;
+            //for (int atomIdx = 0; atomIdx < crystal.atoms.size(); atomIdx++)
+            //{
+            //    crystal_structure_utilities::findAtomSymmetry(crystal, atomIdx, atomPointGroups, 0.05);
+            //    crystal.atoms[atomIdx].multiplicity = crystal.spaceGroup.nSymmetryOperations() / atomPointGroups[0].size();
+            //}
 
 
             // _atom_site_type_symbol.

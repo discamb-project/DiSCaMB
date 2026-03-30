@@ -3842,8 +3842,7 @@ void ordered_connected_to_disordered(
 }
 
 void mix_tsc(
-const string &config,
-const string &hkl)
+const string &config)
 {
     Crystal crystal;
     
@@ -3853,19 +3852,84 @@ const string &hkl)
     vector<string> words;
     in >> structureFile;
     structure_io::read_structure(structureFile, crystal);
-    vector<string> atomLabels, tsc_files;
     getline(in, line);
+
+    map<string, int> atomLabelToIndexInCrystal;
+
+    vector<string> crystalAtomLabels;
+    int idx = 0;
+    for (auto& atom : crystal.atoms)
+    {
+        crystalAtomLabels.push_back(atom.label);
+        atomLabelToIndexInCrystal[atom.label] = idx;
+        idx++;
+    }
+
+    vector<string> atomLabels, tsc_files;
+    vector<vector<pair<string, double> > > tsc_weights;
+    
     while (getline(in, line))
     {
         string_utilities::split(line, words);
         if (words.size() == 0)
             continue;
         if (words.size() == 1)
+        {
             tsc_files.push_back(words[0]);
+            tsc_weights.resize(tsc_weights.size() + 1);
+        }
+        if (words.size() == 2)
+        {
+            double wght;
+            if(isdigit(words[1][0]))
+                wght = stod(words[1]);
+            else
+                wght = crystal.atoms[atomLabelToIndexInCrystal[words[1]]].occupancy;
+            tsc_weights.back().push_back({ words[0], wght });
+        }
     }
 
-    vector<string> crystalAtomLabels;
     
+    vector<Vector3i> hkls;
+    vector< vector<complex<double> > > tsc_ff, total_ff;
+    vector<double> weights_sum(crystal.atoms.size(), 0.0);
+    for(int i=0; i<tsc_files.size();i++)
+    {
+        tsc_io::read_tsc(tsc_files[i], atomLabels, hkls, tsc_ff);
+
+        if(i==0)
+        {
+            total_ff.resize(crystal.atoms.size());
+            for (int j = 0; j < crystal.atoms.size(); j++)
+                total_ff[j].resize(hkls.size(), complex<double>(0.0, 0.0));
+        }
+
+        double other_atom_weights = 0.0;
+        map<string, double> atomWeightInTsc;
+        for (auto& p : tsc_weights[i])
+            if(p.first == "other")
+                other_atom_weights = p.second;
+        for(auto &label: atomLabels)
+            atomWeightInTsc[label] = other_atom_weights;
+        for (auto& p : tsc_weights[i])
+            if (p.first != "other")
+                atomWeightInTsc[p.first] = p.second;
+
+        for(int idxInTsc=0; idxInTsc<atomLabels.size(); idxInTsc++)
+        {
+            int idxInCrystal = atomLabelToIndexInCrystal[atomLabels[idxInTsc]];
+            double atom_weight = atomWeightInTsc[atomLabels[idxInTsc]];
+            weights_sum[idxInCrystal] += atom_weight;
+            for (int hklIdx = 0; hklIdx < hkls.size(); hklIdx++)
+                total_ff[idxInCrystal][hklIdx] += tsc_ff[hklIdx][idxInTsc] * atom_weight;
+        }
+    }
+
+    for(int idxInCrystal=0; idxInCrystal<crystal.atoms.size(); idxInCrystal++)
+        for (int hklIdx = 0; hklIdx < hkls.size(); hklIdx++)
+            if (weights_sum[idxInCrystal] > 0.0)
+                total_ff[idxInCrystal][hklIdx] /= weights_sum[idxInCrystal];
+    tsc_io::write_tsc("total_ff.tsc", crystalAtomLabels, hkls, total_ff);
 }
 
 void check_symmetry_operation(
@@ -4311,6 +4375,11 @@ int main(int argc, char* argv[])
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() != 1)
+            on_error::throwException("expected config file for mix_tsc\n", __FILE__, __LINE__);
+        mix_tsc(arguments[0]);
+        return 0;
 
         if (arguments.size() != 1)
             on_error::throwException("expected structure file\n", __FILE__, __LINE__);
