@@ -3899,9 +3899,9 @@ const string &config)
 
         if(i==0)
         {
-            total_ff.resize(crystal.atoms.size());
-            for (int j = 0; j < crystal.atoms.size(); j++)
-                total_ff[j].resize(hkls.size(), complex<double>(0.0, 0.0));
+            total_ff.resize(hkls.size());
+            for (int j = 0; j < hkls.size(); j++)
+                total_ff[j].resize(crystal.atoms.size(), complex<double>(0.0, 0.0));
         }
 
         double other_atom_weights = 0.0;
@@ -3921,14 +3921,14 @@ const string &config)
             double atom_weight = atomWeightInTsc[atomLabels[idxInTsc]];
             weights_sum[idxInCrystal] += atom_weight;
             for (int hklIdx = 0; hklIdx < hkls.size(); hklIdx++)
-                total_ff[idxInCrystal][hklIdx] += tsc_ff[hklIdx][idxInTsc] * atom_weight;
+                total_ff[hklIdx][idxInCrystal] += tsc_ff[hklIdx][idxInTsc] * atom_weight;
         }
     }
 
     for(int idxInCrystal=0; idxInCrystal<crystal.atoms.size(); idxInCrystal++)
         for (int hklIdx = 0; hklIdx < hkls.size(); hklIdx++)
             if (weights_sum[idxInCrystal] > 0.0)
-                total_ff[idxInCrystal][hklIdx] /= weights_sum[idxInCrystal];
+                total_ff[hklIdx][idxInCrystal] /= weights_sum[idxInCrystal];
     tsc_io::write_tsc("total_ff.tsc", crystalAtomLabels, hkls, total_ff);
 }
 
@@ -4200,6 +4200,8 @@ void test_taam_parallel(
         out << hkl[i] << " " << sf[i] << " " << sf2[i] << " " << sf[i]-sf2[i] << "\n";
     out.close();
 }
+
+
 
 void adp_transformations(const string& structureFile)
 {
