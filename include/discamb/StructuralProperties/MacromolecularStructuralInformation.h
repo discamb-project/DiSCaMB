@@ -7,6 +7,7 @@ namespace discamb{
         std::vector<std::vector<std::pair<int, std::string> > > connectivity;
         std::vector<std::vector<std::pair<int, std::string> > > planes;
         std::vector<char> altlocs;
+        std::vector<char> chain_ids;
         std::vector<int> residueSequenceNumbers;
         std::vector<std::string> residueNames;
         /* like in pdb e.g. HB3, CA, OG1 */

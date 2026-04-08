@@ -567,7 +567,7 @@ namespace disordered_structure_fragments{
                 "_" + macromolInfo.atomNames[atomIdx];
             
             if(macromolInfo.altlocs[atomIdx]!=' ')
-                new_label += "." + macromolInfo.altlocs[atomIdx];
+                new_label += string(".") + macromolInfo.altlocs[atomIdx];
 
             crystal.atoms[atomIdx].label = new_label;
         }

@@ -22,7 +22,13 @@ namespace discamb {
                     std::string altloc_str = atom_data["altloc"].get<std::string>();
                     if (!altloc_str.empty())
                         altlocs.push_back(altloc_str[0]);
+                    else
+                        altlocs.push_back(' ');
                 }
+
+                if (atom_data.find("chain_id") != atom_data.end()) 
+                    chain_ids.push_back(atom_data["chain_id"].get<std::string>()[0]);
+
                 if (atom_data.find("r_idx") != atom_data.end() && atom_data["r_idx"].is_number_integer()) {
                     residueSequenceNumbers.push_back(atom_data["r_idx"].get<int>());
                 }
@@ -30,8 +36,8 @@ namespace discamb {
                 if (atom_data.find("r_name") != atom_data.end() && atom_data["r_name"].is_string())
                     residueNames.push_back(atom_data["r_name"].get<std::string>());
 
-                if (atom_data.find("at_name") != atom_data.end() && atom_data["at_name"].is_string())
-                    atomNames.push_back(atom_data["at_name"].get<std::string>());
+                if (atom_data.find("name") != atom_data.end() && atom_data["name"].is_string())
+                    atomNames.push_back(atom_data["name"].get<std::string>());
 
                 if (atom_data.find("plane") != atom_data.end() && atom_data["altloc"].is_array()) {
                     vector<pair<int, string> > plane_list;

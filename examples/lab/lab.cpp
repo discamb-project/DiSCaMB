@@ -4371,12 +4371,74 @@ void adp_transformations(const string& structureFile)
     }
 }
 
+void test_next_gen_taam(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+
+    nlohmann::json json_data;
+    std::ifstream json_file("aspher.json");
+    json_file >> json_data;
+    /*
+    "macromolecular structural information": {
+    "atom data": [
+        {
+            "altloc": "",
+            "bonding": [
+                1,
+                8,
+                9,
+                10
+            ],
+            "chain_id": "B",
+            "name": "N",
+            "plane": null,
+            "r_idx": 1,
+            "r_name": "LEU"
+        },
+    */
+    auto& atom_list = json_data["macromolecular structural information"]["atom data"];
+    int atomIdx = 0;
+    for (auto& atom : atom_list)
+    {
+        string name = atom["name"];
+        string chain_id = atom["chain_id"];
+        string altloc = atom["altloc"];
+        int r_idx = atom["r_idx"];
+        string r_name = atom["r_name"];
+        vector<int> bonding;
+        for (auto& b : atom["bonding"])
+            bonding.push_back(b);
+        cout << "atom " << atomIdx << " " << name << " " << chain_id << " " << altloc << " " << r_idx << " " << r_name << "\n";
+        cout << "bonding with: ";
+        for (auto& b : bonding)
+            cout << b << " ";
+        cout << "\n";
+        atomIdx++;
+    }
+
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    vector<complex<double> > sf;
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
+
+        test_next_gen_taam(arguments[0], arguments[1]);
+        return 0;
 
         if (arguments.size() != 1)
             on_error::throwException("expected config file for mix_tsc\n", __FILE__, __LINE__);
