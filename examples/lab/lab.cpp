@@ -4399,6 +4399,7 @@ void test_next_gen_taam(
             "r_name": "LEU"
         },
     */
+    /*
     auto& atom_list = json_data["macromolecular structural information"]["atom data"];
     int atomIdx = 0;
     for (auto& atom : atom_list)
@@ -4418,13 +4419,18 @@ void test_next_gen_taam(
         cout << "\n";
         atomIdx++;
     }
-
+    */
     vector<Vector3i> hkl;
     hkl_io::readHklIndices(hklFile, hkl);
 
     SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
     vector<complex<double> > sf;
     sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    int i, n = hkl.size();
+    ofstream out("sf");
+    for (i = 0; i < n; i++)
+        out << hkl[i] << " " << sf[i] << "\n";
+    out.close();
 }
 
 int main(int argc, char* argv[])
@@ -4444,6 +4450,7 @@ int main(int argc, char* argv[])
             on_error::throwException("expected config file for mix_tsc\n", __FILE__, __LINE__);
         mix_tsc(arguments[0]);
         return 0;
+
 
         if (arguments.size() != 1)
             on_error::throwException("expected structure file\n", __FILE__, __LINE__);

@@ -558,7 +558,7 @@ namespace disordered_structure_fragments{
             string message = "inconsistent macromolecular structural information provided";
             on_error::throwException(message, __FILE__, __LINE__);
         }
-
+        map<string, int> new_label2idx;
         for(int atomIdx=0; atomIdx<nAtoms; atomIdx++)
         {
             string new_label =
@@ -570,10 +570,15 @@ namespace disordered_structure_fragments{
                 new_label += string(".") + macromolInfo.altlocs[atomIdx];
 
             crystal.atoms[atomIdx].label = new_label;
+            new_label2idx[new_label] = atomIdx;
         }
 
-        
-        split_with_labels(crystal, ordered_parts, macromolInfo.connectivity);
+        vector< vector<pair<string, double> > > ordered_parts_new_labels;
+        split_with_labels(crystal, ordered_parts_new_labels, macromolInfo.connectivity);
+        ordered_parts = ordered_parts_new_labels;
+        for(auto &ordered_part: ordered_parts)
+            for(auto &atom: ordered_part)
+                atom.first = _crystal.atoms[new_label2idx[atom.first]].label;
             
     }
 
