@@ -50,6 +50,16 @@ namespace {
 
 namespace discamb {
 
+
+    template<>
+    void LocalCoordinateSystem<AtomInCrystalID>::set(
+        const std::string& s)
+    {
+        //Z average_direction(C6 C2,-X,-Y+1,Z) X H13 R C6 C2,-X,-Y+1,Z C1
+
+    }
+
+
     void convertUbdbLcs(
         const  LocalCoordinateSystem<int> &lcsMolecule,
         const std::vector<AtomInCrystalID> &atomMap,

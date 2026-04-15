@@ -1,7 +1,9 @@
 #pragma once
 
+#include "discamb/BasicUtilities/on_error.h"
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/CrystalStructure/AtomInCrystalID.h"
+#include "json.hpp"
 
 #include <vector>
 #include <string>
@@ -47,9 +49,19 @@ namespace discamb {
 		// C(1) C(2),C(3),C(4)[-x,-y,z] X any_orthogonal Y R C(2),C(3),C(6)
 		// C(1) average_direction:C(2)[1-x,y,z],C(3) Z C(4) Y L C(2),C(3),C(6)
 
-		//void set(const std::string &s, const Crystal &c);
+		void set(const std::string &s);
+        //void from_json(const nlohmann::json& j);
         
     };
+
+    template<typename T>
+    void LocalCoordinateSystem<T>::set(const std::string & s)
+    {
+        on_error::not_implemented(__FILE__, __LINE__);
+    }
+
+    template<>
+    void LocalCoordinateSystem<AtomInCrystalID>::set(const std::string &s);
 
     void convertUbdbLcs(const  LocalCoordinateSystem<int> &lcsMolecule, const std::vector<AtomInCrystalID> &atomMap, LocalCoordinateSystem<AtomInCrystalID> &lcsCrystal);
     std::string ubdbLcsAsString(const  LocalCoordinateSystem<AtomInCrystalID> &lcs, const std::vector<std::string> &labels);
