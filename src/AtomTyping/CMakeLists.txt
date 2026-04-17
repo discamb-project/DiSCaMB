@@ -11,6 +11,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystem.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystemAssigner.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/LocalCoordinateSystemCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MacromolecularAtomAssignment.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MatchMap.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MolecularAtomTypeAssigner.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/AtomTyping/MolecularLcsCalculator.h"
@@ -31,6 +32,7 @@ SET(TARGET_SRC
     LocalCoordinateSystem.cpp 
     LocalCoordinateSystemAssigner.cpp 
     LocalCoordinateSystemCalculator.cpp 
+    MacromolecularAtomAssignment.cpp
     MolecularAtomTypeAssigner.cpp 
     MolecularLcsCalculator.cpp 
     RingMatchChecker.cpp

@@ -20,7 +20,7 @@ namespace discamb {
     * \addtogroup Scattering Scattering
     * @{
     */
-
+        
 
     struct TaamSfCalculatorSettings {
         void set(const Crystal &crystal, const nlohmann::json& data, const std::string& bankText=std::string());
