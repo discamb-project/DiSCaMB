@@ -1,6 +1,6 @@
 #include "discamb/Scattering/StockholderAtomBankFormFactorCalculationManager.h"
 
-#include "discamb/config.h"
+#include "discamb/discamb_config.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/constants.h"
 #include "discamb/IO/atom_type_io.h"
