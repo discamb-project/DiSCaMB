@@ -37,7 +37,8 @@ namespace discamb {
 			bool implementationForLargeMolecules,
 			int nThreads,
             bool frozenLcs,
-            bool symmDefVal);
+            bool symmDefVal,
+            const std::string &implementation);
 
 
     public:
@@ -49,7 +50,8 @@ namespace discamb {
 			bool implementationForLargeMolecules = false,
 			int nThreads = 1,
             bool frozenLcs = false,
-            bool symmDefVal = false);
+            bool symmDefVal = false,
+            const std::string &implementation = "standard");
         AnyHcCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual ~AnyHcCalculator();
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;

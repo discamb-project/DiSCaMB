@@ -49,6 +49,7 @@ namespace discamb {
         std::vector < std::vector <std::pair<std::string, double> > > orderedSubcrystalAtoms;
         std::vector<disordered_structure_fragments::Fragment> taamFragments;
         MacromolecularStructuralInformation macromolecularInfo;
+        std::string engine = "CPU";
     };
 
 

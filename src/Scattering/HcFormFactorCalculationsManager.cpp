@@ -30,10 +30,11 @@ namespace discamb {
         const Crystal &crystal,
         const HC_ModelParameters &params,
 		const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs,
-        bool frozen_lcs
+        bool frozen_lcs,
+        const std::string implementation
 		//bool newImplementation
         //const std::vector<XdLocalCoordinateSystem> &lcs
-	): mLcs(lcs)
+	): mLcs(lcs), mImplementation(implementation)
     {
         mFrozenLcs = frozen_lcs;
 		//mNewImplementation = newImplementation;
@@ -56,7 +57,9 @@ namespace discamb {
         mCrystal.spaceGroup.set({ string("x,y,z") });
 
         mHcCalculator = new HansenCoppensStructureFactorCalculator(mCrystal, params);
-
+        if(implementation == "standard")
+            mImplementation = "CPU";
+        mHcCalculator->setCalculationMode(implementation);  
         mAuxCrystal = crystal;
     }
 

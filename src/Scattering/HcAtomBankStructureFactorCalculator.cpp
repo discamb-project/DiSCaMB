@@ -68,10 +68,11 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string& algorithm,
-        bool def_val_symm)
+        bool def_val_symm,
+        const std::string& engine)
     {
         set(crystal, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, def_val_symm);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, def_val_symm, engine);
 
     }
 
@@ -315,7 +316,8 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string &algorithm,
-        bool def_val_symm//,
+        bool def_val_symm,
+        const std::string& engine//,
         /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
@@ -445,10 +447,10 @@ namespace discamb {
                 types);
         if(mAlgorithm == "standard")
             mHcCalculator = shared_ptr<SfCalculator>(
-                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs, def_val_symm));
+                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, false, nThreads, frozen_lcs, def_val_symm, engine));
         else
             mHcCalculator = shared_ptr<SfCalculator>(
-                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs, def_val_symm));
+                                new AnyHcCalculator(crystal, multipoleModelPalameters, lcaCalculators, electronScattering, false, true, nThreads, frozen_lcs, def_val_symm, engine));
         mIamCalculator = shared_ptr<SfCalculator>(
             new AnyIamCalculator(crystal, iamElectronScattering, iamTable));
         vector< std::shared_ptr<SfCalculator> > calculators{ mHcCalculator, mIamCalculator };

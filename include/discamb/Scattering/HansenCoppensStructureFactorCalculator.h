@@ -84,6 +84,10 @@ public:
 
     /** Main part of calculations will be run on CPU. */
     void useCPU();
+    /** Main part of calculations will be run on CPU. 
+    Implementation developed in 2026 as a part of student practics.
+    */
+    void useCPU_v4();
     /** Main part of calculations will be run on GPU. */
     void useGPU();
     /** \brief Main part of calculations will be run on CPU with use of spherical atomic form factors.
@@ -246,7 +250,7 @@ public:
                      std::ostream &output);
 
 private:
-
+    
     //std::string mPointGroupSymmetry;
     std::vector<Matrix3i> mPointGroupOperations;
     bool mElectronScattering = false;
@@ -257,7 +261,8 @@ private:
     {            
         CPU = 0, 
         GPU = 1, 
-        CPU_IAM = 2 
+        CPU_IAM = 2,
+        CPU_v4 = 3
     };
 
 	/* some data used by HansenCoppens_SF_Engine, needed for an efficient atomic form factor calculation for one h*/

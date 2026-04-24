@@ -19,9 +19,10 @@ namespace discamb {
 		bool implementationForLargeMolecules,
 		int nThreads,
         bool frozenLcs,
-        bool symmDefVal)
+        bool symmDefVal,
+        const std::string &implementation)
     {
-        set(crystal, parameters, lcs, electronScattering, spherical, implementationForLargeMolecules, nThreads, frozenLcs, symmDefVal);
+        set(crystal, parameters, lcs, electronScattering, spherical, implementationForLargeMolecules, nThreads, frozenLcs, symmDefVal, implementation);
     }
 
     void AnyHcCalculator::getModelInformation(
@@ -70,7 +71,8 @@ namespace discamb {
 			nThreads = data.find("number of threads")->get<int>();
 
         bool frozenLcs = data.value("frozen lcs", false);
-
+        
+        std::string engine = data.value("engine", "standard");
 
         HC_ModelParameters hcModelParameters;
         vector<XdLocalCoordinateSystem> localCoordinateSystems;
@@ -82,7 +84,7 @@ namespace discamb {
 		for (auto &_lcs : localCoordinateSystems)
 			lcs.push_back(shared_ptr<LocalCoordinateSystemInCrystal>(new XdLocalCoordinateSystem(_lcs)));
         
-		set(crystal, hcModelParameters, lcs, electronScattering, hcIam, useMacromolecularImplementation, nThreads, frozenLcs, defValSymm);
+		set(crystal, hcModelParameters, lcs, electronScattering, hcIam, useMacromolecularImplementation, nThreads, frozenLcs, defValSymm, engine);
 
         string multipoleCifFile = data.value("multipole cif", string());
 
@@ -115,7 +117,8 @@ namespace discamb {
 		bool implementationForLargeMolecules,
 		int nThreads,
         bool frozenLcs,
-        bool symmDefVal)
+        bool symmDefVal,
+        const std::string &implementation)
     {
         //AnyScattererStructureFactorCalculator 
         mCrystal = crystal;
@@ -168,7 +171,7 @@ namespace discamb {
 
 			shared_ptr<AtomicFormFactorCalculationsManager> hcManager =
 				shared_ptr<AtomicFormFactorCalculationsManager>(
-                    new HcFormFactorCalculationsManager(crystal, parameters, lcs, frozenLcs));
+                    new HcFormFactorCalculationsManager(crystal, parameters, lcs, frozenLcs, implementation));
 
 
             mManager = shared_ptr<AtomicFormFactorCalculationsManager>(
@@ -181,13 +184,15 @@ namespace discamb {
         }
         else
             mManager = shared_ptr<AtomicFormFactorCalculationsManager>(
-                new HcFormFactorCalculationsManager(crystal, parameters, lcs, frozenLcs));
+                new HcFormFactorCalculationsManager(crystal, parameters, lcs, frozenLcs, implementation));
         mCalculator = new AnyScattererStructureFactorCalculator(crystal);
         mCalculator->setAtomicFormfactorManager(mManager);
 
 		if (implementationForLargeMolecules)
 		{
 			mHcCalculator = new HansenCoppensStructureFactorCalculator(mCrystal, parameters);
+            mHcCalculator->setCalculationMode(implementation);
+            //mHcCalculator->s`
             mHcCalculator->set_def_val_symm(symmDefVal);
             if (electronScattering)
                 mHcCalculator->setElectronScattering(true);

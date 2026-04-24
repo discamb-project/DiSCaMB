@@ -21,6 +21,7 @@
 
 #include "discamb/Scattering/HansenCoppens_SF_Engine2.h"
 #include "discamb/Scattering/HansenCoppens_SF_Engine3.h"
+#include "discamb/Scattering/HansenCoppens_SF_Engine4.h"
 #include "discamb/Scattering/HansenCoppens_SF_EngineSymm.h"
 #include <fstream>
 
@@ -112,7 +113,7 @@ void HansenCoppensStructureFactorCalculator::setEngineSpecificSpaceGroupRepresen
     int symmOpIndex, nSymmOp;
     bool engineHandleInversionCenter; 
     
-    engineHandleInversionCenter = (mEngineType == CPU || mEngineType == CPU_IAM);
+    engineHandleInversionCenter = (mEngineType == CPU || mEngineType == CPU_IAM || mEngineType == CPU_v4);
 
     nSymmOp = mSpaceGroup.nSymmetryOperationsInSubset();
 
@@ -329,6 +330,11 @@ void HansenCoppensStructureFactorCalculator::useCPU()
     setEngineType(CPU);
 }
 
+void HansenCoppensStructureFactorCalculator::useCPU_v4()
+{
+    setEngineType(CPU_v4);
+}
+
 void HansenCoppensStructureFactorCalculator::useGPU()
 {
     setEngineType(GPU);
@@ -348,14 +354,19 @@ void HansenCoppensStructureFactorCalculator::setCalculationMode(
         useCPU();
     else
     {
-        if(engineType == string("GPU"))
-            useGPU();
+        if (engineType == string("CPU_v4"))
+            useCPU_v4();
         else
         {
-            if(engineType == string("CPU_IAM"))
-                useCPU_IAM();
+            if (engineType == string("GPU"))
+                useGPU();
             else
-                on_error::throwException("unknown calculation mode for multipolar structure factor engine", __FILE__, __LINE__);
+            {
+                if (engineType == string("CPU_IAM"))
+                    useCPU_IAM();
+                else
+                    on_error::throwException("unknown calculation mode for multipolar structure factor engine", __FILE__, __LINE__);
+            }
         }
     }
 }
@@ -422,6 +433,17 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
 
         break;
     }
+    case CPU_v4:
+    {
+        HansenCoppens_SF_Engine4 engine;
+
+        engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
+            mAtomic_displacement_parameters, mAtomicOccupancy, mAnomalousDispersionPerAtom, mAtomicMultiplicityWeights,
+            localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
+            mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
+            mElectronScattering, mAtomicNumbers);
+        break;
+    }
     case CPU:
     {
         if (!mDefValSymm)
@@ -444,7 +466,6 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
                 mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
                 mElectronScattering, mAtomicNumbers);
         }
-
         //HansenCoppens_SF_Engine2 engine;
 
         //engine.calculateSF(mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
@@ -948,7 +969,7 @@ const
     for (i = 0; i<n; i++)
         mHKL_Cartesian[i] = a_star*double(hkl[i][0]) + b_star*double(hkl[i][1]) + c_star*double(hkl[i][2]);
 
-    if (mEngineType != CPU && !mPlmWfnNormalized)
+    if (mEngineType != CPU && mEngineType != CPU_v4 && !mPlmWfnNormalized)
     {
         vector<vector<double> > densityToWfnNormalization;
         real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnNormalization);
@@ -967,7 +988,7 @@ const
         mPlmWfnNormalized = true;
     }
 
-    if (mEngineType == CPU && mPlmWfnNormalized)
+    if ( (mEngineType == CPU || mEngineType == CPU_v4) && mPlmWfnNormalized)
     {
         vector<vector<double> > densityToWfnMultipliers;//wfnToDensityNormalization;
         real_spherical_harmonics::getDensityToWfnMultipliers(4, densityToWfnMultipliers);
@@ -1222,7 +1243,7 @@ void HansenCoppensStructureFactorCalculator::saveRawData(
 
 void HansenCoppensStructureFactorCalculator::setDataForCpuEngineCallsForSingleHkl()
 {
-	if (mEngineType != CPU)
+	if (mEngineType != CPU && mEngineType != CPU_v4)
 		on_error::throwException("using functionality available only for CPU calcluations of multipole model form factors", __FILE__, __LINE__);
 	
 	int i, n;

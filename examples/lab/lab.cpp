@@ -2,6 +2,7 @@
 
 #include "discamb/discamb_config.h"
 
+
 #ifdef HAS_EIGEN
 #include <Eigen/Eigenvalues> 
 #endif
@@ -4433,12 +4434,38 @@ void test_next_gen_taam(
     out.close();
 }
 
+void test_taam_new_engine(
+    const string& structureFile,
+    const string& hklFile)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    vector<Vector3i> hkl;
+    hkl_io::readHklIndices(hklFile, hkl);
+    SfCalculator* sf_calc = SfCalculator::create(crystal, string("aspher.json"));
+    vector<complex<double> > sf;
+
+    sf_calc->calculateStructureFactors(crystal.atoms, hkl, sf);
+    int i, n = hkl.size();
+    ofstream out("sf");
+    for (i = 0; i < n; i++)
+        out << hkl[i] << " " << sf[i] << "\n";
+    out.close();
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
+
+        test_taam_new_engine(arguments[0], arguments[1]);
+
+        return 0;
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);

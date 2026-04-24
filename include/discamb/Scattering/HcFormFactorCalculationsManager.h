@@ -27,14 +27,14 @@ namespace discamb {
         Crystal mCrystal, mAuxCrystal;
         ReciprocalLatticeUnitCell mReciprocalLatticeUnitCell;
         bool mFrozenLcs;
-		
+		std::string mImplementation;
     public:
 		HcFormFactorCalculationsManager(
 			const Crystal &crystal,
 			const HC_ModelParameters &params,
 			//const std::vector<XdLocalCoordinateSystem> &lcs);
 			const std::vector < std::shared_ptr <LocalCoordinateSystemInCrystal> > &lcs,
-            bool frozen_lcs=false);
+            bool frozen_lcs=false, const std::string implementation = "standard");
         
         virtual ~HcFormFactorCalculationsManager();
         //virtual void setStructure(const Crystal &crystal);

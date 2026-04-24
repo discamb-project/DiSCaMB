@@ -33,9 +33,11 @@ namespace discamb {
         iamElectronScattering = data.value("iam electron scattering", false); 
         frozen_lcs = data.value("frozen lcs", false);
         algorithm = data.value("algorithm", "standard");
+        engine = data.value("engine", engine);
         def_val_symm = data.value("def-val symmetry", false);
         if(data.find("macromolecular structural information") != data.end())
             macromolecularInfo.set(data["macromolecular structural information"]);
+
 
         //string wfnDataBank = data.value("wavefunction bank", "CR");
         //SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
@@ -267,7 +269,8 @@ namespace discamb {
                 settings.iamElectronScattering,
                 settings.frozen_lcs,
                 settings.algorithm,
-                settings.def_val_symm);
+                settings.def_val_symm,
+                settings.engine);
         }
     }
 

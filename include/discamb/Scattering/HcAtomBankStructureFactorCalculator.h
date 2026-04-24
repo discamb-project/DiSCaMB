@@ -32,6 +32,7 @@ namespace discamb {
         double mTotalCharge = 0.0;
         std::vector<std::pair<std::string, std::string> > mModelInfo;
         std::string mAlgorithm = "standard";
+        std::string mEngine = "CPU";
         //std::string mAssignmentInfo;
     public:
         /**
@@ -55,7 +56,8 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string &algorithm = "standard",
-            bool def_val_symm = false);
+            bool def_val_symm = false,
+            const std::string &engine = "CPU");
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
 
@@ -92,7 +94,8 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string& algorithm = "standard",
-            bool def_val_symm = false/*,
+            bool def_val_symm = false,
+            const std::string& engine = "CPU"/*,
             bool generateAssignmentInfo = false*/);
         
 
