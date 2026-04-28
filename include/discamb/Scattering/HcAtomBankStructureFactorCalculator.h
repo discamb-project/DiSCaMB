@@ -57,7 +57,9 @@ namespace discamb {
             bool frozen_lcs = false,
             const std::string &algorithm = "standard",
             bool def_val_symm = false,
-            const std::string &engine = "CPU");
+            const std::string &engine = "CPU",
+            const std::vector<int>& predefinedTypeID = std::vector<int>(), 
+            const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >());
         
         HcAtomBankStructureFactorCalculator(const Crystal &crystal, const nlohmann::json &data);
 
@@ -95,7 +97,9 @@ namespace discamb {
             bool frozen_lcs = false,
             const std::string& algorithm = "standard",
             bool def_val_symm = false,
-            const std::string& engine = "CPU"/*,
+            const std::string& engine = "CPU",
+            const std::vector<int>& predefinedTypeID = std::vector<int>(),
+            const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >()            /*,
             bool generateAssignmentInfo = false*/);
         
 

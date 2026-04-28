@@ -69,10 +69,13 @@ namespace discamb {
         bool frozen_lcs,
         const std::string& algorithm,
         bool def_val_symm,
-        const std::string& engine)
+        const std::string& engine,
+        const std::vector<int>& predefinedTypeID,
+        const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs)
     {
         set(crystal, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, def_val_symm, engine);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, 
+            algorithm, def_val_symm, engine, predefinedTypeID, predefinedLcs);
 
     }
 
@@ -317,7 +320,9 @@ namespace discamb {
         bool frozen_lcs,
         const std::string &algorithm,
         bool def_val_symm,
-        const std::string& engine//,
+        const std::string& engine,
+        const std::vector<int>& predefinedTypeID,
+        const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs//,
         /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
@@ -330,10 +335,24 @@ namespace discamb {
 
         CrystalAtomTypeAssigner assigner;
         assigner.setAtomTypes(atomTypes);
-        assigner.setDescriptorsSettings(settings);
         vector < LocalCoordinateSystem<AtomInCrystalID> > lcs;
         vector<int> types;
-        assigner.assign(crystal, types, lcs);
+        if(!predefinedTypeID.empty() && predefinedTypeID.size() == crystal.atoms.size())
+        {
+            if(predefinedLcs.size() != crystal.atoms.size())
+                on_error::throwException("predefined local coordinate systems are not provided for all atoms", __FILE__, __LINE__);
+            if(predefinedTypeID.size() != crystal.atoms.size())
+                on_error::throwException("predefined type IDs are not provided for all atoms", __FILE__, __LINE__);
+            
+            types = predefinedTypeID;
+            lcs = predefinedLcs;
+        }
+        else
+        {
+            assigner.setDescriptorsSettings(settings);
+            assigner.assign(crystal, types, lcs);
+        }
+
         if (!assignemntInfoFile.empty())
         {
             if (assignemntInfoFile == string("print_to_discamb2tsc_log_file") || assignemntInfoFile == string("print_to_discambMATTS2tsc_log_file"))
