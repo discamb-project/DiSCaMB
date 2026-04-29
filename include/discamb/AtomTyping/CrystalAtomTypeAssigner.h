@@ -50,6 +50,14 @@ namespace discamb {
             const std::vector< std::vector<AtomRepresentativeInfo> > &atomRepresentatives,
             std::vector< std::vector<int> >& typeID, 
             std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
+        
+        //void assign(
+        //    const Crystal& crystal,
+        //    const std::vector<std::vector<AtomInCrystalID> >& asuConnectivity,
+        //    const std::vector<std::vector<AtomInCrystalID> >& inPlaneWithAtom,
+        //    std::vector< std::vector<int> >& typeID,
+        //    std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > >& lcs) const;
+
 
         void assign_all_possible(const Crystal& crystal, std::vector< std::vector<int> >& typeID) const;
 

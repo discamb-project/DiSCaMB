@@ -369,6 +369,18 @@ namespace discamb {
 
     }
 
+ /*   void CrystalAtomTypeAssigner::assign(
+        const Crystal& crystal,
+        const std::vector<std::vector<AtomInCrystalID> >& asuConnectivity,
+        const std::vector<std::vector<AtomInCrystalID> >& inPlaneWithAtom,
+        std::vector< std::vector<int> >& typeID,
+        std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > >& lcs) 
+        const
+    {
+        
+    }*/
+
+
     void CrystalAtomTypeAssigner::assign(
         const Crystal& crystal,
         bool process_all_types,

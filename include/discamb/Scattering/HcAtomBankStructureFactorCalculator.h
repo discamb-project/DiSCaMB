@@ -58,6 +58,7 @@ namespace discamb {
             const std::string &algorithm = "standard",
             bool def_val_symm = false,
             const std::string &engine = "CPU",
+            const StructureWithDescriptors& structureWithDescriptors = StructureWithDescriptors(),
             const std::vector<int>& predefinedTypeID = std::vector<int>(), 
             const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >());
         
@@ -98,6 +99,7 @@ namespace discamb {
             const std::string& algorithm = "standard",
             bool def_val_symm = false,
             const std::string& engine = "CPU",
+            const StructureWithDescriptors& structureWithDescriptors = StructureWithDescriptors(),
             const std::vector<int>& predefinedTypeID = std::vector<int>(),
             const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >()            /*,
             bool generateAssignmentInfo = false*/);
