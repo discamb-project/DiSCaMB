@@ -25,2874 +25,1781 @@
 #include <omp.h>
 #endif
 
+#include <array>
+#include <iostream>
+#include <ctime>
+
 
 using namespace std;
 
 namespace discamb {
 
-HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4()
-{
-    mUseIAM = false;
-}
-
-HansenCoppens_SF_Engine4::~HansenCoppens_SF_Engine4()
-{
-}
-
-
-
-inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
-    REAL &occupancy_derivative,
-    const complex<REAL> &dTarget_dF,
-    const complex<REAL> &atomic_f_divided_by_occupancy)
-{
-    occupancy_derivative += (dTarget_dF * atomic_f_divided_by_occupancy).real();
-}
-
-inline void HansenCoppens_SF_Engine4::add_contribution_to_position_derivatives(
-    Vector3<REAL> &position_derivatives,
-    const complex<REAL> dTarget_dF,
-    const complex<REAL> &atomic_f,
-    const Vector3<REAL> &h)
-{
-    static const complex<REAL> two_pi_i = REAL(2*REAL(M_PI))*complex<REAL>(0,1);
-    complex<REAL> df_dparam;
-
-    for(int k=0;k<3;k++) {
-        df_dparam = two_pi_i * h[k] * atomic_f;
-        position_derivatives[k] += (dTarget_dF * df_dparam).real();
+    HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4()
+    {
+        mUseIAM = false;
     }
-}
 
-
-inline void HansenCoppens_SF_Engine4::add_contribution_to_adp_derivatives(
-    std::vector<std::complex<REAL> > &adp_derivatives,
-    const std::complex<REAL> &dTarget_dF,
-    const std::complex<REAL> &atomic_f,
-    const Vector3<REAL> &h)
-{
-    complex<REAL> df_dparam;
-    REAL hVectorLength = sqrt(h*h);
-
-    if(adp_derivatives.size() == 1) {
-        df_dparam = -hVectorLength * hVectorLength * atomic_f;
-        adp_derivatives[0] += dTarget_dF * df_dparam;
-
+    HansenCoppens_SF_Engine4::~HansenCoppens_SF_Engine4()
+    {
     }
-    else {
-        for (int k = 0; k < 3; k++) {
-            df_dparam = -h[k] * h[k] * atomic_f;
-            adp_derivatives[k] += dTarget_dF * df_dparam;
+
+
+
+    inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
+        REAL &occupancy_derivative,
+        const complex<REAL> &dTarget_dF,
+        const complex<REAL> &atomic_f_divided_by_occupancy)
+    {
+        occupancy_derivative += (dTarget_dF * atomic_f_divided_by_occupancy).real();
+    }
+
+    inline void HansenCoppens_SF_Engine4::add_contribution_to_position_derivatives(
+        Vector3<REAL> &position_derivatives,
+        const complex<REAL> dTarget_dF,
+        const complex<REAL> &atomic_f,
+        const Vector3<REAL> &h)
+    {
+        static const complex<REAL> two_pi_i = REAL(2*REAL(M_PI))*complex<REAL>(0,1);
+        complex<REAL> df_dparam;
+
+        for(int k=0;k<3;k++) {
+            df_dparam = two_pi_i * h[k] * atomic_f;
+            position_derivatives[k] += (dTarget_dF * df_dparam).real();
+        }
+    }
+
+
+    inline void HansenCoppens_SF_Engine4::add_contribution_to_adp_derivatives(
+        std::vector<std::complex<REAL> > &adp_derivatives,
+        const std::complex<REAL> &dTarget_dF,
+        const std::complex<REAL> &atomic_f,
+        const Vector3<REAL> &h)
+    {
+        complex<REAL> df_dparam;
+        REAL hVectorLength = sqrt(h*h);
+
+        if(adp_derivatives.size() == 1) {
+            df_dparam = -hVectorLength * hVectorLength * atomic_f;
+            adp_derivatives[0] += dTarget_dF * df_dparam;
+
+        }
+        else {
+            for (int k = 0; k < 3; k++) {
+                df_dparam = -h[k] * h[k] * atomic_f;
+                adp_derivatives[k] += dTarget_dF * df_dparam;
+            }
+
+            // U_12
+            df_dparam = -2*h[0] * h[1] * atomic_f;
+            adp_derivatives[3] += dTarget_dF * df_dparam;
+
+            // U_13
+            df_dparam = -2*h[0] * h[2] * atomic_f;
+            adp_derivatives[4] += dTarget_dF * df_dparam;
+
+            // U_23
+            df_dparam = -2*h[1] * h[2] * atomic_f;
+            adp_derivatives[5] += dTarget_dF * df_dparam;
+        }
+    }
+
+    inline void HansenCoppens_SF_Engine4::process_adp_derivatives( std::complex<REAL> *pre_derivatives,
+                                                                   const std::complex<REAL> &atomic_f,
+                                                                   const Vector3<REAL> &h,
+                                                                   REAL h_length,
+                                                                   int n_adp_components)
+    {
+
+        if(n_adp_components==1)
+        {
+            pre_derivatives[0] -= h_length*h_length*atomic_f;
+            return;
         }
 
-        // U_12
-        df_dparam = -2*h[0] * h[1] * atomic_f;
-        adp_derivatives[3] += dTarget_dF * df_dparam;
 
-        // U_13
-        df_dparam = -2*h[0] * h[2] * atomic_f;
-        adp_derivatives[4] += dTarget_dF * df_dparam;
-
-        // U_23
-        df_dparam = -2*h[1] * h[2] * atomic_f;
-        adp_derivatives[5] += dTarget_dF * df_dparam;
+        pre_derivatives[0] -= h[0]*h[0]*atomic_f;
+        pre_derivatives[1] -= h[1]*h[1]*atomic_f;
+        pre_derivatives[2] -= h[2]*h[2]*atomic_f;
+        pre_derivatives[3] -= 2*h[0]*h[1]*atomic_f;
+        pre_derivatives[4] -= 2*h[0]*h[2]*atomic_f;
+        pre_derivatives[5] -= 2*h[1]*h[2]*atomic_f;
     }
-}
 
-inline void HansenCoppens_SF_Engine4::process_adp_derivatives( std::complex<REAL> *pre_derivatives,
-                                     const std::complex<REAL> &atomic_f,
-                                     const Vector3<REAL> &h,
-                                     REAL h_length,
-                                     int n_adp_components)
-{
-
-    if(n_adp_components==1)
-    {
-        pre_derivatives[0] -= h_length*h_length*atomic_f;
-        return;
-    }
-    
-     
-    pre_derivatives[0] -= h[0]*h[0]*atomic_f;
-    pre_derivatives[1] -= h[1]*h[1]*atomic_f;
-    pre_derivatives[2] -= h[2]*h[2]*atomic_f;
-    pre_derivatives[3] -= 2*h[0]*h[1]*atomic_f;
-    pre_derivatives[4] -= 2*h[0]*h[2]*atomic_f;
-    pre_derivatives[5] -= 2*h[1]*h[2]*atomic_f;
-}
-
-std::complex<double> HansenCoppens_SF_Engine4::calculateDeformationValence(
-    const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
+    std::complex<double> HansenCoppens_SF_Engine4::calculateDeformationValence(
+        const std::vector<std::vector<REAL> >& p_lm, // coefficients for multipolar terms (with wavefunction normalization of spherical harmonics)
     const std::vector<REAL>& g_functions_and_slater_normalization,
     //const Matrix3<REAL>& local_coordinates_system,
     int max_l,
     std::vector<std::vector<double> >& sphericalHarmonics)
-{
-    if (max_l < 0)
-        return 0;
-
-    switch (max_l)
     {
-    case 0:
-        return combine_multipolar_terms<0>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
-    case 1:
-        return combine_multipolar_terms<1>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
-    case 2:
-        return combine_multipolar_terms<2>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
-    case 3:
-        return combine_multipolar_terms<3>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
-    case 4:
-        return combine_multipolar_terms<4>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
-    default:
-        return 0;
+        if (max_l < 0)
+            return 0;
+
+        switch (max_l)
+        {
+            case 0:
+                return combine_multipolar_terms<0>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
+            case 1:
+                return combine_multipolar_terms<1>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
+            case 2:
+                return combine_multipolar_terms<2>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
+            case 3:
+                return combine_multipolar_terms<3>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
+            case 4:
+                return combine_multipolar_terms<4>(p_lm, g_functions_and_slater_normalization, sphericalHarmonics);
+            default:
+                return 0;
+        }
+
     }
 
-}
 
-
-std::complex<REAL> HansenCoppens_SF_Engine4::calculateDeformationValence(
-    const std::vector<std::vector<REAL> > &p_lm,
-    const std::vector<REAL> &g_functions_and_slater_normalization,
-    const Matrix3<REAL>  &local_coordinates_system,
-    const Vector3<REAL> &normalized_h_vector,
-    int max_l,
-    std::vector<std::vector<double> > &sphericalHarmonicBuffer)
-{
-    if(max_l<0)
-        return 0;
-
-    const Matrix3<REAL>  &lcs = local_coordinates_system;
-    const REAL x = (lcs(0, 0)*normalized_h_vector(0) + lcs(1, 0)*normalized_h_vector(1) + lcs(2, 0)*normalized_h_vector(2));//hRotated[0];
-    const REAL y = (lcs(0, 1)*normalized_h_vector(0) + lcs(1, 1)*normalized_h_vector(1) + lcs(2, 1)*normalized_h_vector(2));//hRotated[1];
-    const REAL z = (lcs(0, 2)*normalized_h_vector(0) + lcs(1, 2)*normalized_h_vector(1) + lcs(2, 2)*normalized_h_vector(2));//hRotated[2];
-
-    Vector3d h(x,y,z);
-
-    switch(max_l)
+    std::complex<REAL> HansenCoppens_SF_Engine4::calculateDeformationValence(
+        const std::vector<std::vector<REAL> > &p_lm,
+        const std::vector<REAL> &g_functions_and_slater_normalization,
+        const Matrix3<REAL>  &local_coordinates_system,
+        const Vector3<REAL> &normalized_h_vector,
+        int max_l,
+        std::vector<std::vector<double> > &sphericalHarmonicBuffer)
     {
-    case 0:
-        real_spherical_harmonics::getDensityNormalized<0>(h, sphericalHarmonicBuffer);
-        return combine_multipolar_terms<0>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
-    case 1:
-        real_spherical_harmonics::getDensityNormalized<1>(h, sphericalHarmonicBuffer);
-        return combine_multipolar_terms<1>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
-    case 2:
-        real_spherical_harmonics::getDensityNormalized<2>(h, sphericalHarmonicBuffer);
-        return combine_multipolar_terms<2>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
-    case 3:
-        real_spherical_harmonics::getDensityNormalized<3>(h, sphericalHarmonicBuffer);
-        return combine_multipolar_terms<3>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
-    case 4:
-        real_spherical_harmonics::getDensityNormalized<4>(h, sphericalHarmonicBuffer);
-        return combine_multipolar_terms<4>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
-    default:
-        return 0;
-    }
-}
+        if(max_l<0)
+            return 0;
 
+        const Matrix3<REAL>  &lcs = local_coordinates_system;
+        const REAL x = (lcs(0, 0)*normalized_h_vector(0) + lcs(1, 0)*normalized_h_vector(1) + lcs(2, 0)*normalized_h_vector(2));//hRotated[0];
+        const REAL y = (lcs(0, 1)*normalized_h_vector(0) + lcs(1, 1)*normalized_h_vector(1) + lcs(2, 1)*normalized_h_vector(2));//hRotated[1];
+        const REAL z = (lcs(0, 2)*normalized_h_vector(0) + lcs(1, 2)*normalized_h_vector(1) + lcs(2, 2)*normalized_h_vector(2));//hRotated[2];
 
+        Vector3d h(x,y,z);
 
-void HansenCoppens_SF_Engine4::pre_hkl_loop_sf_calc(
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    std::vector<int> &type_2_wfn_type,
-    std::vector<std::vector<REAL> > &def_val_slater_normalization,
-    std::vector<int> &typeMaxL)
-{
-    int nWfnTypes = wfn_parameters.size();
-    int nTypes = type_parameters.size();
-    int nAtoms = atom_to_wfn_map.size();
-    int i,j,nL;
-
-    
-
-    if (mUseIAM)
-    {
-        typeMaxL.assign(nTypes,-1);
-        return;
+        switch(max_l)
+        {
+            case 0:
+                real_spherical_harmonics::getDensityNormalized<0>(h, sphericalHarmonicBuffer);
+                return combine_multipolar_terms<0>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
+            case 1:
+                real_spherical_harmonics::getDensityNormalized<1>(h, sphericalHarmonicBuffer);
+                return combine_multipolar_terms<1>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
+            case 2:
+                real_spherical_harmonics::getDensityNormalized<2>(h, sphericalHarmonicBuffer);
+                return combine_multipolar_terms<2>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
+            case 3:
+                real_spherical_harmonics::getDensityNormalized<3>(h, sphericalHarmonicBuffer);
+                return combine_multipolar_terms<3>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
+            case 4:
+                real_spherical_harmonics::getDensityNormalized<4>(h, sphericalHarmonicBuffer);
+                return combine_multipolar_terms<4>(p_lm,g_functions_and_slater_normalization, sphericalHarmonicBuffer);
+            default:
+                return 0;
+        }
     }
 
-    
-	type_2_wfn_type.resize(nTypes);
-    for( int atomIdx = 0 ; atomIdx < nAtoms ; atomIdx++ )
+
+
+    void HansenCoppens_SF_Engine4::pre_hkl_loop_sf_calc(
+        const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
+        const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
+        const std::vector<int> &atom_to_wfn_map,
+        const std::vector<int> &atom_to_type_map,
+        std::vector<int> &type_2_wfn_type,
+        std::vector<std::vector<REAL> > &def_val_slater_normalization,
+        std::vector<int> &typeMaxL)
     {
+        int nWfnTypes = wfn_parameters.size();
+        int nTypes = type_parameters.size();
+        int nAtoms = atom_to_wfn_map.size();
+        int i,j,nL;
+
+
+
+        if (mUseIAM)
+        {
+            typeMaxL.assign(nTypes,-1);
+            return;
+        }
+
+
+        type_2_wfn_type.resize(nTypes);
+        for( int atomIdx = 0 ; atomIdx < nAtoms ; atomIdx++ )
+        {
             int atomWfnIdx = atom_to_wfn_map[atomIdx];
             int atomTypeIdx = atom_to_type_map[atomIdx];
             type_2_wfn_type[atomTypeIdx] = atomWfnIdx;
-    }
-        
-    def_val_slater_normalization.resize(nWfnTypes);
-
-    
-    
-    for(i=0;i<nWfnTypes;i++)
-    {
-        nL = wfn_parameters[i].def_valence_pow.size();
-        def_val_slater_normalization[i].resize(nL);
-        for(j=0;j<nL;j++)
-            def_val_slater_normalization[i][j] = 
-            sto_atomic_wfn::stoDensityNormalizationFactor(wfn_parameters[i].def_valence_pow[j], wfn_parameters[i].def_valence_exp);
-    }
-
-    typeMaxL.resize(nTypes);
-    int maxL_FromPlm;
-    
-    for(i=0;i<nTypes;i++)
-    {
-        maxL_FromPlm = -1;
-        for(int l=0;l<type_parameters[i].p_lm.size();l++)
-        {
-    
-            for(j=0;j<2*l+1;j++)
-                if(type_parameters[i].p_lm[l][j]!=0.0)
-                    maxL_FromPlm = int(l);
         }
 
-        typeMaxL[i] = std::min(4, int(wfn_parameters[type_2_wfn_type[i]].def_valence_pow.size()) - 1);
-        typeMaxL[i] = std::min(typeMaxL[i],maxL_FromPlm);
-    }
-}
+        def_val_slater_normalization.resize(nWfnTypes);
 
 
-void HansenCoppens_SF_Engine4::calculateSF_IAM(
-    const UnitCell& unitCell,
-    const std::vector<std::string> &atomicType,
-    const std::vector<std::complex<REAL> > &atomTypeAnomalousScattering,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomicPositions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<std::complex<REAL> >& anomalous_dispersion,
-    const std::vector<REAL> &atomic_multiplicity_factor,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symmetryOperations,
-    bool centrosymmetric,
-    const Vector3<REAL> &inversionTranslation,
-    const std::vector<Vector3<REAL> > &hVectors,
-    const std::vector<Vector3i >& hkl_indices,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    int nThreads)
-{
-    mUseIAM = true;
-    mIamAtomType = atomicType;
-    mAtomToIamTypeMap = atom_to_type_map;
 
-    
-    vector<sf_engine_data_types::HC_WfnParam> wfnParams(atomicType.size());
-    vector<sf_engine_data_types::HC_TypeParam> typeParams(1);
-    vector<int> atomToWfnMap = atom_to_type_map;
-    vector<int> atomToTypeMap(atomicPositions.size(),0);
-    Matrix3d idenity;
-    idenity.setToIdentity();
-    vector<Matrix3d> localCoordinateSystems(atomicPositions.size(), idenity);
-
-    int iamTypeIdx,nIamTypes = atomicType.size();
-
-    mIamFormFactors.resize(nIamTypes);
-    
-    for( iamTypeIdx = 0 ; iamTypeIdx < nIamTypes ; iamTypeIdx++ )
-    {
-        wfnParams[iamTypeIdx].anomalous_scattering = atomTypeAnomalousScattering[iamTypeIdx];
-        if(n_gaussian_form_factors_table::hasFormFactor(mIamAtomType[iamTypeIdx]))
-            mIamFormFactors[iamTypeIdx] = n_gaussian_form_factors_table::getFormFactor(mIamAtomType[iamTypeIdx]);
-        else
-            on_error::throwException(
-                string("request for Gaussian type atomic form factor parameter for unknown atom type: ")
-                + mIamAtomType[iamTypeIdx], __FILE__, __LINE__);
-    }
-    
-    
-    DerivativesSelector derivativesSwitch;
-    calculateSF(unitCell, wfnParams, typeParams, atomToWfnMap, atomToTypeMap, atomicPositions,
-                atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion, atomic_multiplicity_factor,
-                localCoordinateSystems, symmetryOperations, centrosymmetric, inversionTranslation, 
-                hVectors, hkl_indices, f, dTarget_dparam, dTarget_df, include_atom_contribution, nThreads, derivativesSwitch);
-    
-    
-}
-
-
-void HansenCoppens_SF_Engine4::pre_atom_loop_sf_calc(
-        //in:
-            const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
-            const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
-            const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
-            const std::vector<int> &type_2_wfn,
-            const std::vector<std::vector<REAL> > &def_val_slater_normalization,
-            const Vector3<REAL> &hVector,
-            REAL hVectorLength,
-        //out:
-            vector<REAL> &wfn_spherical_core_sf,
-            vector<REAL> &wfn_spherical_valence_sf,
-            vector<vector<REAL> > &g_functions_and_slater_norm,
-            vector<Vector3<REAL> > &rotated_h,
-            vector<Vector3<REAL> > &rotated_normalized_h,
-            std::vector<REAL> &translation_factor,
-            std::vector<std::vector<REAL> > &adp_multipliers)
-{
-
-
-    for( int symmOpIdx = 0 ; symmOpIdx< symOps.size() ; symmOpIdx++ )
-    {
-        translation_factor[symmOpIdx] = hVector*symOps[symmOpIdx].translation;
-        rotated_h[symmOpIdx] = hVector*symOps[symmOpIdx].rotation;
-        rotated_normalized_h[symmOpIdx] = rotated_h[symmOpIdx]/hVectorLength;
-
-        // sets mAdpMultipliers
-        Vector3<REAL> &h = rotated_h[symmOpIdx];
-        REAL *adpMultipliers = &adp_multipliers[symmOpIdx][0];
-        
-        adpMultipliers[0] = h.x*h.x;
-        adpMultipliers[1] = h.y*h.y;
-        adpMultipliers[2] = h.z*h.z;
-        adpMultipliers[3] = 2.0*h.x*h.y;
-        adpMultipliers[4] = 2.0*h.x*h.z;
-        adpMultipliers[5] = 2.0*h.y*h.z;
-    }
-
-    if (mUseIAM)
-    {
-
-        for (int i = 0, n = wfn_spherical_core_sf.size(); i < n; i++)
-            wfn_spherical_core_sf[i] = mIamFormFactors[i].calculate_h(hVectorLength);
-        return;
-    }
-    else
-        for (int wfnTypeIdx = 0; wfnTypeIdx < wfnParams.size(); wfnTypeIdx++)
-            wfn_spherical_core_sf[wfnTypeIdx] = 
-                sto_scattering::scatteringSphericalDensity( wfnParams[wfnTypeIdx].core_coeff,
-                                                        wfnParams[wfnTypeIdx].core_exp,
-                                                        wfnParams[wfnTypeIdx].core_pow,
-                                                        hVectorLength);
-
-
-    int nTypes = typeParams.size();
-
-    for( int typeIdx = 0 ; typeIdx < nTypes ; typeIdx++)
-    {
-        int wfnTypeIdx = type_2_wfn[ typeIdx ];
-        
-        wfn_spherical_valence_sf[typeIdx] = 
-            sto_scattering::scatteringSphericalDensity( wfnParams[wfnTypeIdx].valence_coeff,
-                                                        wfnParams[wfnTypeIdx].valence_exp,
-                                                        wfnParams[wfnTypeIdx].valence_pow,
-                                                        hVectorLength / typeParams[typeIdx].kappa_spherical);
-        
-        int nL = wfnParams[wfnTypeIdx].def_valence_pow.size();
-
-        const vector<int>& def_valence_pow = wfnParams[wfnTypeIdx].def_valence_pow;
-        
-        if (nL > 0)
-            g_functions_and_slater_norm[typeIdx][0] =  def_val_slater_normalization[wfnTypeIdx][0] *
-                                                      sto_scattering::gFunction<0>(int(def_valence_pow[0])+2,
-                                                                   hVectorLength / typeParams[typeIdx].kappa_def_valence,
-                                                                   wfnParams[wfnTypeIdx].def_valence_exp);
-        if (nL > 1)
-            g_functions_and_slater_norm[typeIdx][1] =  def_val_slater_normalization[wfnTypeIdx][1] *
-                                                      sto_scattering::gFunction<1>(int(def_valence_pow[1])+2,
-                                                                   hVectorLength / typeParams[typeIdx].kappa_def_valence,
-                                                                   wfnParams[wfnTypeIdx].def_valence_exp);
-
-        if (nL > 2)
-            g_functions_and_slater_norm[typeIdx][2] = def_val_slater_normalization[wfnTypeIdx][2] * 
-                                                      sto_scattering::gFunction<2>(int(def_valence_pow[2])+2,
-                                                                   hVectorLength / typeParams[typeIdx].kappa_def_valence,
-                                                                   wfnParams[wfnTypeIdx].def_valence_exp);
-        if (nL > 3)
-            g_functions_and_slater_norm[typeIdx][3] = def_val_slater_normalization[wfnTypeIdx][3] * 
-                                                      sto_scattering::gFunction<3>(int(def_valence_pow[3])+2,
-                                                                   hVectorLength / typeParams[typeIdx].kappa_def_valence,
-                                                                   wfnParams[wfnTypeIdx].def_valence_exp);
-        if (nL > 4)
-            g_functions_and_slater_norm[typeIdx][4] = def_val_slater_normalization[wfnTypeIdx][4] * 
-                                                      sto_scattering::gFunction<4>(int(def_valence_pow[4])+2,
-                                                                   hVectorLength / typeParams[typeIdx].kappa_def_valence,
-                                                                   wfnParams[wfnTypeIdx].def_valence_exp);
-
-    }
-
-}
-
-
-void HansenCoppens_SF_Engine4::calculateFormFactors(
-    const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
-    const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
-    const std::vector<double>& f_spherical, // for each type spherical valence + core
-    const std::vector<int>& atom_to_wfn_map,
-    const std::vector<int>& atom_to_type_map,
-    const std::vector<Matrix3<REAL> >& local_coordinate_systems,
-    const Vector3<REAL>& h_vector,
-    std::vector<std::complex<REAL> >& form_factors,
-    const std::vector<bool>& include_atom,
-	const std::vector<int> &type_2_wfn_type,
-	const std::vector<std::vector<REAL> > &def_val_slater_normalization,
-	const std::vector<int> &typeMaxL)
-{
-	//--------
-
-	mSphericalHarmonicsData.resize(1);
-	mSphericalHarmonicsData[0].resize(5);
-	for (int i = 0; i < 5; i++)
-		mSphericalHarmonicsData[0][i].resize(2 * i + 1);
-
-	//--------
-
-
-	REAL hVectorLength;
-	
-	//hVectorLength2 = h_vector * h_vector;
-	hVectorLength = sqrt(h_vector * h_vector);
-	Vector3<REAL> normalized_h = h_vector/ hVectorLength;
-	
-
-	int atomWfnIdx, atomTypeIdx;
-	complex<REAL> atom_f_def_val, aux;
-
-	//--
-
-	vector<vector<REAL> > g_functions_and_slater_norm(type_parameters.size(), vector<REAL>(5));
-	
-	int nAtoms;
-	nAtoms = atom_to_type_map.size();
-
-	form_factors.resize(nAtoms);
-
-	//
-
-	bool hkl000  = (hVectorLength < 1e-10);
-
-	int nTypes = type_parameters.size();
-
-	for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
-	{
-		int wfnTypeIdx = type_2_wfn_type[typeIdx];
-
-		int nL = wfn_parameters[wfnTypeIdx].def_valence_pow.size();
-
-        const vector<int>& def_valence_pow = wfn_parameters[wfnTypeIdx].def_valence_pow;
-
-		if (nL > 0)
-			g_functions_and_slater_norm[typeIdx][0] = def_val_slater_normalization[wfnTypeIdx][0] *
-			sto_scattering::gFunction<0>(int(def_valence_pow[0]) + 2,
-				hVectorLength / type_parameters[typeIdx].kappa_def_valence,
-				wfn_parameters[wfnTypeIdx].def_valence_exp);
-		if (nL > 1)
-			g_functions_and_slater_norm[typeIdx][1] = def_val_slater_normalization[wfnTypeIdx][1] *
-			sto_scattering::gFunction<1>(int(def_valence_pow[1]) + 2,
-				hVectorLength / type_parameters[typeIdx].kappa_def_valence,
-				wfn_parameters[wfnTypeIdx].def_valence_exp);
-
-		if (nL > 2)
-			g_functions_and_slater_norm[typeIdx][2] = def_val_slater_normalization[wfnTypeIdx][2] *
-			sto_scattering::gFunction<2>(int(def_valence_pow[2]) + 2,
-				hVectorLength / type_parameters[typeIdx].kappa_def_valence,
-				wfn_parameters[wfnTypeIdx].def_valence_exp);
-		if (nL > 3)
-			g_functions_and_slater_norm[typeIdx][3] = def_val_slater_normalization[wfnTypeIdx][3] *
-			sto_scattering::gFunction<3>(int(def_valence_pow[3]) + 2,
-				hVectorLength / type_parameters[typeIdx].kappa_def_valence,
-				wfn_parameters[wfnTypeIdx].def_valence_exp);
-		if (nL > 4)
-			g_functions_and_slater_norm[typeIdx][4] = def_val_slater_normalization[wfnTypeIdx][4] *
-			sto_scattering::gFunction<4>(int(def_valence_pow[4]) + 2,
-				hVectorLength / type_parameters[typeIdx].kappa_def_valence,
-				wfn_parameters[wfnTypeIdx].def_valence_exp);
-
-	}
-
-	//------------- end of pre_atom_loop_sf_calc
-
-	for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-	{
-
-		if (!include_atom[atomIdx])
-		{
-			form_factors[atomIdx] = 0;
-			continue;
-		}
-
-		atomWfnIdx = atom_to_wfn_map[atomIdx];
-		atomTypeIdx = atom_to_type_map[atomIdx];
-
-        if (hkl000)
-            atom_f_def_val = 0;
-        else
-            atom_f_def_val = calculateDeformationValence(type_parameters[atomTypeIdx].p_lm,
-				g_functions_and_slater_norm[atomTypeIdx],
-				local_coordinate_systems[atomIdx],
-				normalized_h,
-				typeMaxL[atomTypeIdx], mSphericalHarmonicsData[0]);
-
-		form_factors[atomIdx] = atom_f_def_val + f_spherical[atomTypeIdx];
-
-		} 
-
-}
-
-void HansenCoppens_SF_Engine4::calculateSphericalTermsInFormFactors(
-	const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
-	const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
-	const std::vector <double> h,
-	std::vector< std::vector<REAL> >& f_core,
-	std::vector< std::vector<REAL> >& f_sph_valence,
-	const std::vector<int>& type_2_wfn_type,
-	const std::vector<std::vector<REAL> >& def_val_slater_normalization,
-	const std::vector<int>& typeMaxL)
-{
-
-	//--
-	int nTypes, nWfnTypes;
-	nTypes = type_parameters.size();
-	nWfnTypes = wfn_parameters.size();
-	vector<REAL> wfn_spherical_core_sf(nWfnTypes);
-	vector<REAL> wfn_spherical_valence_sf(nTypes);
-	vector<vector<REAL> > g_functions_and_slater_norm(nTypes, vector<REAL>(5));
-
-	int nH = h.size();
-	
-
-	f_core.resize(nWfnTypes,vector<double>(nH));
-	f_sph_valence.resize(nTypes,vector<double>(nH));
-
-	for (int hIndex = 0; hIndex < nH; hIndex++)
-	{
-
-		for (int wfnTypeIdx = 0; wfnTypeIdx < nWfnTypes; wfnTypeIdx++)
-			//wfn_spherical_core_sf[wfnTypeIdx] =
-			f_core[wfnTypeIdx][hIndex]=
-			sto_scattering::scatteringSphericalDensity(wfn_parameters[wfnTypeIdx].core_coeff,
-				wfn_parameters[wfnTypeIdx].core_exp,
-				wfn_parameters[wfnTypeIdx].core_pow,
-				h[hIndex]);
-
-		for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
-		{
-			int wfnTypeIdx = type_2_wfn_type[typeIdx];
-
-			//wfn_spherical_valence_sf[typeIdx] =
-			f_sph_valence[typeIdx][hIndex] = 
-				sto_scattering::scatteringSphericalDensity(wfn_parameters[wfnTypeIdx].valence_coeff,
-					wfn_parameters[wfnTypeIdx].valence_exp,
-					wfn_parameters[wfnTypeIdx].valence_pow,
-					h[hIndex] / type_parameters[typeIdx].kappa_spherical);
-
-			//wfn_spherical_valence_sf[typeIdx] *= type_parameters[typeIdx].p_val;
-			f_sph_valence[typeIdx][hIndex] *= type_parameters[typeIdx].p_val;
-		}
-
-	}
-
-
-}
-
-
-
-void HansenCoppens_SF_Engine4::calculateGlobalCoordinatesPlm(
-    const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
-    const std::vector<int>& atom_to_type_map,
-    const std::vector<Matrix3<REAL> >& local_coordinate_systems,// rows are vectors
-    std::vector< std::vector<std::vector<double> > > & atomPlms)
-{
-    int maxL = 4;
-    vector<vector<double> > den2wfn;
-    real_spherical_harmonics::getDensityToWfnMultipliers(maxL, den2wfn);
-
-    int nTypes = type_parameters.size();
-    vector<vector<vector<double> > > typePlmWfn(nTypes);
-    for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
-    {
-        int typeMaxL = type_parameters[typeIdx].p_lm.size() - 1;
-        typePlmWfn[typeIdx] = type_parameters[typeIdx].p_lm;
-        for (int l = 0; l <= typeMaxL; l++)
-            for (int i = 0; i < 2 * l + 1; i++)
-            {
-                int abs_m = abs(l - i);
-                typePlmWfn[typeIdx][l][i] *= den2wfn[l][abs_m];
-            }
-
-    }
-
-    SphConverter sphConverter;
-    vector<vector<vector<double> > > conversionMatrices;
-    sphConverter.setMaxL(maxL);
-    
-    vector<vector<double> > localCoordinates(3, vector<double>(3));
-    vector<vector<double> > cartesianCoordinates{ {1.0,0.0,0.0}, {0.0,1.0,0.0},{0.0,0.0,1.0} }; 
-    
-
-    int nAtoms = atom_to_type_map.size();
-    atomPlms.resize(nAtoms);
-
-    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    {
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                localCoordinates[i][j] = local_coordinate_systems[atomIdx](i, j);
-
-        sphConverter.convert(localCoordinates, cartesianCoordinates, conversionMatrices);
-        int atomType = atom_to_type_map[atomIdx];
-        int typeMaxL = type_parameters[atomType].p_lm.size() - 1;
-        atomPlms[atomIdx].resize(typeMaxL + 1);
-        for (int l = 0; l <= typeMaxL; l++)
+        for(i=0;i<nWfnTypes;i++)
         {
-            atomPlms[atomIdx][l].resize(2 * l + 1);
-            for (int i = 0; i < 2 * l + 1; i++)
-            {
-                atomPlms[atomIdx][l][i] = 0.0;
-                for (int j = 0; j < 2 * l + 1; j++)
-                    atomPlms[atomIdx][l][i] += conversionMatrices[l][i][j] * typePlmWfn[atomType][l][j];
-
-                int abs_m = abs(l - i);
-                atomPlms[atomIdx][l][i] /= den2wfn[l][abs_m];
-            }
+            nL = wfn_parameters[i].def_valence_pow.size();
+            def_val_slater_normalization[i].resize(nL);
+            for(j=0;j<nL;j++)
+                def_val_slater_normalization[i][j] =
+                sto_atomic_wfn::stoDensityNormalizationFactor(wfn_parameters[i].def_valence_pow[j], wfn_parameters[i].def_valence_exp);
         }
-    }
-}
-/*
-void calculateSF(
-    const UnitCell &unitCell,
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomicPositions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<REAL> &atomic_multiplicity_factor,
-    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
-    bool centrosymmetric,
-    const Vector3<REAL> &inversionTranslation,
-    const std::vector<Vector3<REAL> > &h_vectors,
-    const std::vector<Vector3i >& hkl_indices,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    int nThreads);
-*/
-void HansenCoppens_SF_Engine4::calculateSF(
-    const UnitCell &unitCell,
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomicPositions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<std::complex<REAL> >& anomalous_dispersion,
-    const std::vector<REAL> &atomic_multiplicity_factor,
-    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
-    bool centrosymmetric,
-    const Vector3<REAL> &inversionTranslation,
-    const std::vector<Vector3<REAL> > &hVectors,
-    const std::vector<Vector3i >& hkl_indices,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    int nThreads,
-    const DerivativesSelector& derivativesSwitch,
-    bool electron,
-    const std::vector<int>& atomic_numbers)
-{
-    cout << "using engine version 4\n";
-    return;
-    int atomIdx, nAtoms = atom_to_wfn_map.size();
-    if (nAtoms == 0)
-    {
-        dTarget_dparam.clear();
-        f.assign(hkl_indices.size(), 0.0);
-        return;
-    }
-    int threadIdx;
-    //WallClockTimer timer;
-    //timer.start();
-    if( nThreads<1 )
-        on_error::throwException(string("wrong number of cores/thread specified: ")+string_utilities::convertToString(nThreads),
-                                 __FILE__,__LINE__);
-    //timer.start();
-    vector<vector<vector<double> > > atomPlms;
-    calculateGlobalCoordinatesPlm(typeParams, atom_to_type_map, local_coordinate_systems, atomPlms);
-    //cout << "calculateGlobalCoordinatesPlm time = " << timer.stop() << "\n";
-#ifndef _OPENMP   
-    nThreads = 1;
-#endif
-    // allocate memory buffers for spherical harmonics calculations
 
-    mSphericalHarmonicsData.resize(nThreads);
-    int maxNL,nL,typeIdx,nTypes = typeParams.size();
-    maxNL = 0;
-    for(typeIdx=0;typeIdx<nTypes;typeIdx++)
-    {
-        nL = typeParams[typeIdx].p_lm.size();
-        if(nL>maxNL)
-            maxNL = nL;
-    }
+        typeMaxL.resize(nTypes);
+        int maxL_FromPlm;
 
-    for(threadIdx=0;threadIdx<nThreads;threadIdx++)
-    {
-        mSphericalHarmonicsData[threadIdx].resize(maxNL);
-        for(int l=0;l<maxNL;l++)
-            mSphericalHarmonicsData[threadIdx][l].resize(2*l+1);
-    }
-    
-    //
-
-    vector<vector<REAL> > def_val_slater_normalization;
-    vector<int> type_2_wfn(typeParams.size(), 100);
-    vector<int> type_max_L;
-    pre_hkl_loop_sf_calc(wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                         type_2_wfn, def_val_slater_normalization, type_max_L);
-
-
-
-    //
-
-    int nHklVectors = hVectors.size();
-
-    // set structure factors and derivatives to zero
-
-    f.assign(nHklVectors,0.0);
-
-    dTarget_dparam.resize(nAtoms);
-
-    for (atomIdx = 0; atomIdx < nAtoms; ++atomIdx)
-    {
-        dTarget_dparam[atomIdx].adp_derivatives.assign(atomic_displacement_parameters[atomIdx].size(), 0.0);
-        dTarget_dparam[atomIdx].atomic_position_derivatives = Vector3d(0, 0, 0);
-        dTarget_dparam[atomIdx].occupancy_derivatives = 0.0;
-    }
-
-
-    // declare arrays for storing partial results for each thread
-
-    vector< vector< complex< REAL > > > perThreadSF;
-    vector< vector< Vector3< REAL > > > perThreadHklVectors;
-    vector< vector< complex< REAL > > > perThreadTarget_dF;
-    vector<vector<TargetFunctionAtomicParamDerivatives> > perThread_dTarget_dParam;
-
-
-    // assign HKL vectors to threads
-
-    perThreadSF.resize(nThreads,f);
-    perThreadHklVectors.resize(nThreads);
-    perThread_dTarget_dParam.resize(nThreads, dTarget_dparam);
-    perThreadTarget_dF.resize(nThreads);
-
-    //-----  hkl ordereing
-    int nSymmOps = symOps.size();
-    
-    vector<vector<Vector3d> > r_atom_symm(nAtoms,vector<Vector3d>(nSymmOps));
-    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-            r_atom_symm[atomIdx][symmOpIdx] = symOps[symmOpIdx].rotation*atomicPositions[atomIdx] + symOps[symmOpIdx].translation;
-
-
-
-    vector<vector<Vector3i> > orderedHklLines;
-    vector<vector<int> > mapToOriginalSetIndices;
-
-    int lineDirection = scattering_utilities::findPreferredHklOrderingDirection(hkl_indices, orderedHklLines, mapToOriginalSetIndices);
-
-
-
-    vector<vector<vector<Vector3i> > > splitOrderedLines;
-    vector < vector < vector <pair<int, int> > > > splitOrderedIndices;
-    vector<vector<vector<int> > > subsetDataHklIdxInOryginalSet;
-    
-    scattering_utilities::splitHklLines(nThreads, orderedHklLines, mapToOriginalSetIndices, splitOrderedLines, splitOrderedIndices, subsetDataHklIdxInOryginalSet);
-
-
-
-    vector < vector< vector< Vector3< REAL > > > > perThreadHklVector_lines(nThreads);
-    vector < vector< vector< Vector3i > > > perThreadHklVector_lines_int(nThreads);
-    vector < vector< vector< complex< REAL > > > > perThreadTarget_dF_lines(nThreads);
-
-    Vector3d step, step_frac(0.0, 0.0, 0.0);
-    step_frac[lineDirection] = 1.0;
-    ReciprocalLatticeUnitCell recUnitCell(unitCell);
-    recUnitCell.fractionalToCartesian(step_frac, step);
-
-
-
-    for (int threadIdx = 0; threadIdx < nThreads; threadIdx++)
-    {
-        int lineIdx, nLines = splitOrderedLines[threadIdx].size();
-        perThreadTarget_dF_lines[threadIdx].resize(nLines);
-        perThreadHklVector_lines[threadIdx].resize(nLines);
-        perThreadHklVector_lines_int[threadIdx].resize(nLines);
-        for (lineIdx = 0; lineIdx < nLines; lineIdx++)
+        for(i=0;i<nTypes;i++)
         {
-            int nHklInLine = splitOrderedLines[threadIdx][lineIdx].size();
-            perThreadHklVector_lines[threadIdx][lineIdx].resize(nHklInLine);
-            perThreadTarget_dF_lines[threadIdx][lineIdx].resize(nHklInLine);
-            perThreadHklVector_lines_int[threadIdx][lineIdx].resize(nHklInLine);
-            for (int hklIdx = 0; hklIdx < nHklInLine; hklIdx++)
+            maxL_FromPlm = -1;
+            for(int l=0;l<type_parameters[i].p_lm.size();l++)
             {
-                int orgHklIdx = subsetDataHklIdxInOryginalSet[threadIdx][lineIdx][hklIdx];
-                
-                perThreadHklVector_lines[threadIdx][lineIdx][hklIdx] = hVectors[orgHklIdx];
-                perThreadHklVector_lines_int[threadIdx][lineIdx][hklIdx]  = hkl_indices[orgHklIdx];
-                perThreadTarget_dF_lines[threadIdx][lineIdx][hklIdx] = dTarget_df[orgHklIdx];
+
+                for(j=0;j<2*l+1;j++)
+                    if(type_parameters[i].p_lm[l][j]!=0.0)
+                        maxL_FromPlm = int(l);
             }
+
+            typeMaxL[i] = std::min(4, int(wfn_parameters[type_2_wfn_type[i]].def_valence_pow.size()) - 1);
+            typeMaxL[i] = std::min(typeMaxL[i],maxL_FromPlm);
         }
     }
 
 
-
-    //-----
-    
-    scattering_utilities::divideSet(hVectors, nThreads, perThreadHklVectors);
-    scattering_utilities::divideSet(dTarget_df, nThreads, perThreadTarget_dF);
-    vector<int> time_per_thread(nThreads);
-    //cout << "before parallel time = " << timer.stop() << "\n";
-    
-    // set number of threads 
-#if defined(_OPENMP)
-    omp_set_dynamic(0);
-    omp_set_num_threads(int(nThreads));
-#endif
-    
-
-
-
-    // run parallel calculations 
-    //timer.start();
-#pragma omp parallel
+    void HansenCoppens_SF_Engine4::calculateSF_IAM(
+        const UnitCell& unitCell,
+        const std::vector<std::string> &atomicType,
+        const std::vector<std::complex<REAL> > &atomTypeAnomalousScattering,
+        const std::vector<int> &atom_to_type_map,
+        const std::vector<Vector3<REAL> > &atomicPositions,
+        const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
+        const std::vector<REAL> &atomic_occupancy,
+        const std::vector<std::complex<REAL> >& anomalous_dispersion,
+        const std::vector<REAL> &atomic_multiplicity_factor,
+        const std::vector<sf_engine_data_types::SymmetryOperation> &symmetryOperations,
+        bool centrosymmetric,
+        const Vector3<REAL> &inversionTranslation,
+        const std::vector<Vector3<REAL> > &hVectors,
+        const std::vector<Vector3i >& hkl_indices,
+        std::vector<std::complex<REAL> > &f,
+        std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
+        const std::vector<std::complex<REAL> > &dTarget_df,
+        const std::vector<bool> &include_atom_contribution,
+        int nThreads)
     {
-        int threadId;
-#if defined(_OPENMP)
-        threadId = omp_get_thread_num();
-#else
-        threadId = 0;
-#endif
+        mUseIAM = true;
+        mIamAtomType = atomicType;
+        mAtomToIamTypeMap = atom_to_type_map;
 
-        if(centrosymmetric)
+
+        vector<sf_engine_data_types::HC_WfnParam> wfnParams(atomicType.size());
+        vector<sf_engine_data_types::HC_TypeParam> typeParams(1);
+        vector<int> atomToWfnMap = atom_to_type_map;
+        vector<int> atomToTypeMap(atomicPositions.size(),0);
+        Matrix3d idenity;
+        idenity.setToIdentity();
+        vector<Matrix3d> localCoordinateSystems(atomicPositions.size(), idenity);
+
+        int iamTypeIdx,nIamTypes = atomicType.size();
+
+        mIamFormFactors.resize(nIamTypes);
+
+        for( iamTypeIdx = 0 ; iamTypeIdx < nIamTypes ; iamTypeIdx++ )
         {
-            if(inversionTranslation == Vector3<REAL>(0, 0, 0))
-                calculateSF_SerialCentrosymmetric_ordered_hkl2(
-                    wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                    atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
-                    atomic_multiplicity_factor, local_coordinate_systems, symOps,
-                    perThreadHklVector_lines[threadId], perThreadHklVector_lines_int[threadId], subsetDataHklIdxInOryginalSet[threadId],
-                    lineDirection, step, perThreadSF[threadId],
-                    perThread_dTarget_dParam[threadId], perThreadTarget_dF_lines[threadId], include_atom_contribution,
-                    type_2_wfn, def_val_slater_normalization, mSphericalHarmonicsData[threadId], type_max_L, atomPlms, derivativesSwitch, electron,
-                    atomic_numbers);
-                /*calculateSF_SerialCentrosymmetric(
-                    wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                    atomicPositions, atomic_displacement_parameters, atomic_occupancy,
-                    atomic_multiplicity_factor, local_coordinate_systems, symOps,
-                    perThreadHklVectors[threadId], perThreadSF[threadId],
-                    perThread_dTarget_dParam[threadId], perThreadTarget_dF[threadId], include_atom_contribution,
-                    type_2_wfn, def_val_slater_normalization, mSphericalHarmonicsData[threadId], type_max_L);*/
+            wfnParams[iamTypeIdx].anomalous_scattering = atomTypeAnomalousScattering[iamTypeIdx];
+            if(n_gaussian_form_factors_table::hasFormFactor(mIamAtomType[iamTypeIdx]))
+                mIamFormFactors[iamTypeIdx] = n_gaussian_form_factors_table::getFormFactor(mIamAtomType[iamTypeIdx]);
             else
-                calculateSF_SerialSymmetryCenterNotAtOrigin(
-                    wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                    atomicPositions, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
-                    atomic_multiplicity_factor, local_coordinate_systems, symOps, inversionTranslation,
-                    perThreadHklVectors[threadId], perThreadSF[threadId],
-                    perThread_dTarget_dParam[threadId], perThreadTarget_dF[threadId], include_atom_contribution,
-                    type_2_wfn, def_val_slater_normalization, mSphericalHarmonicsData[threadId], type_max_L, derivativesSwitch, electron,
-                    atomic_numbers);
+                on_error::throwException(
+                    string("request for Gaussian type atomic form factor parameter for unknown atom type: ")
+                    + mIamAtomType[iamTypeIdx], __FILE__, __LINE__);
+        }
 
+
+        DerivativesSelector derivativesSwitch;
+        calculateSF(unitCell, wfnParams, typeParams, atomToWfnMap, atomToTypeMap, atomicPositions,
+                    atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion, atomic_multiplicity_factor,
+                    localCoordinateSystems, symmetryOperations, centrosymmetric, inversionTranslation,
+                    hVectors, hkl_indices, f, dTarget_dparam, dTarget_df, include_atom_contribution, nThreads, derivativesSwitch);
+
+
+    }
+
+
+    void HansenCoppens_SF_Engine4::pre_atom_loop_sf_calc(
+        //in:
+        const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
+        const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
+        const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
+        const std::vector<int> &type_2_wfn,
+        const std::vector<std::vector<REAL> > &def_val_slater_normalization,
+        const Vector3<REAL> &hVector,
+        REAL hVectorLength,
+        //out:
+        vector<REAL> &wfn_spherical_core_sf,
+        vector<REAL> &wfn_spherical_valence_sf,
+        vector<vector<REAL> > &g_functions_and_slater_norm,
+        vector<Vector3<REAL> > &rotated_h,
+        vector<Vector3<REAL> > &rotated_normalized_h,
+        std::vector<REAL> &translation_factor,
+        std::vector<std::vector<REAL> > &adp_multipliers)
+    {
+
+
+        for( int symmOpIdx = 0 ; symmOpIdx< symOps.size() ; symmOpIdx++ )
+        {
+            translation_factor[symmOpIdx] = hVector*symOps[symmOpIdx].translation;
+            rotated_h[symmOpIdx] = hVector*symOps[symmOpIdx].rotation;
+            rotated_normalized_h[symmOpIdx] = rotated_h[symmOpIdx]/hVectorLength;
+
+            // sets mAdpMultipliers
+            Vector3<REAL> &h = rotated_h[symmOpIdx];
+            REAL *adpMultipliers = &adp_multipliers[symmOpIdx][0];
+
+            adpMultipliers[0] = h.x*h.x;
+            adpMultipliers[1] = h.y*h.y;
+            adpMultipliers[2] = h.z*h.z;
+            adpMultipliers[3] = 2.0*h.x*h.y;
+            adpMultipliers[4] = 2.0*h.x*h.z;
+            adpMultipliers[5] = 2.0*h.y*h.z;
+        }
+
+        if (mUseIAM)
+        {
+
+            for (int i = 0, n = wfn_spherical_core_sf.size(); i < n; i++)
+                wfn_spherical_core_sf[i] = mIamFormFactors[i].calculate_h(hVectorLength);
+            return;
         }
         else
-            calculateSF_SerialAcentric(
-                wfnParams, typeParams, atom_to_wfn_map, atom_to_type_map,
-                atomicPositions, r_atom_symm, atomic_displacement_parameters, atomic_occupancy, anomalous_dispersion,
-                atomic_multiplicity_factor, local_coordinate_systems, symOps,
-                perThreadHklVector_lines[threadId], perThreadHklVector_lines_int[threadId], subsetDataHklIdxInOryginalSet[threadId],
-                lineDirection, step, perThreadSF[threadId],
-                perThread_dTarget_dParam[threadId], perThreadTarget_dF_lines[threadId], include_atom_contribution,
-                type_2_wfn, def_val_slater_normalization, mSphericalHarmonicsData[threadId], type_max_L, atomPlms, time_per_thread[threadId], derivativesSwitch, electron,
-                atomic_numbers);
-
-    }
+            for (int wfnTypeIdx = 0; wfnTypeIdx < wfnParams.size(); wfnTypeIdx++)
+                wfn_spherical_core_sf[wfnTypeIdx] =
+                sto_scattering::scatteringSphericalDensity( wfnParams[wfnTypeIdx].core_coeff,
+                                                            wfnParams[wfnTypeIdx].core_exp,
+                                                            wfnParams[wfnTypeIdx].core_pow,
+                                                            hVectorLength);
 
 
+                int nTypes = typeParams.size();
 
-    //for (int i = 0; i < nThreads; i++)
-    //    cout << i + 1 << " " << time_per_thread[i] << "\n";
-    //double t = timer.stop();
-    //cout << "parallel time = " << t << "\n";
-    //timer.start();
-    //scattering_utilities::combineScatteringFactorsSets(perThreadSF, f);
-    if (centrosymmetric && (inversionTranslation != Vector3<REAL>(0, 0, 0)))
-    {
-        int idx = 0;
-
-        for (int threadIdx = 0; threadIdx < nThreads; threadIdx++)
-        {
-            int nHklInThread = perThreadSF[threadIdx].size();
-            for(int i=0;i< nHklInThread;i++)
-                f[idx++] = perThreadSF[threadIdx][i];
-        }
-
-    }
-    else
-    {
-        for (int hklIdx = 0; hklIdx < nHklVectors; hklIdx++)
-        {
-            f[hklIdx] = 0;
-            for (int threadIdx = 0; threadIdx < nThreads; threadIdx++)
-                f[hklIdx] += perThreadSF[threadIdx][hklIdx];
-        }
-    }
-    scattering_utilities::merge_dTarget_dParameterSets(perThread_dTarget_dParam, dTarget_dparam);
-    
-    //cout << "HansenCoppens_SF_Engine4::calculateSF time = " << timer.stop() << "\n";
-
-} //calculateSF_parallel_2
-
-void HansenCoppens_SF_Engine4::electronScatteringAt000(
-    const std::vector<int>& atomic_numbers,
-    std::vector<double>& f)
-{
-    map<int, int> z_2_ff_idx;
-    set<int> unique_z(atomic_numbers.begin(), atomic_numbers.end());
-    vector<int> unique_z_vec(unique_z.begin(), unique_z.end());
-    for (int i = 0; i < unique_z_vec.size(); i++)
-        z_2_ff_idx[unique_z_vec[i]] = i;
-
-    vector<double> ff_type;
-    for (int i = 0; i < unique_z_vec.size(); i++)
-        ff_type.push_back(n_gaussian_form_factors_table::getFormFactor(periodic_table::symbol(unique_z_vec[i]), "electron-IT").calculate_h(0.0));
-
-    int atomIdx, nAtoms = atomic_numbers.size();
-    f.resize(nAtoms);
-    for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        f[atomIdx] = ff_type[z_2_ff_idx[atomic_numbers[atomIdx]]];
-}
-
-
-
-
-//---------------
-/*
-void calculateSF(
-    const UnitCell &unitCell,
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomicPositions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<REAL> &atomic_multiplicity_factor,
-    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
-    bool centrosymmetric,
-    const Vector3<REAL> &inversionTranslation,
-    const std::vector<Vector3<REAL> > &h_vectors,
-    const std::vector<Vector3i >& hkl_indices,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    int nThreads);
-
-*/
-
-void HansenCoppens_SF_Engine4::select_P10P20_atoms(
-    const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
-    const std::vector<int>& atom_to_type_map,
-    std::vector<bool>& atom_selection)
-{ 
-    int nTypes = type_parameters.size();
-    int nAtoms = atom_to_type_map.size();
-    vector<bool> pz_dz_type(nTypes, false);
-    for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
-    {
-        auto const& plms = type_parameters[typeIdx].p_lm;
-        if (plms.size() == 3)
-            if (plms[0][0] == 0.0)
+            for( int typeIdx = 0 ; typeIdx < nTypes ; typeIdx++)
             {
-                pz_dz_type[typeIdx] = true;
-                for (int l = 1; l <= 2; l++)
-                    for (int i = 0; i < 2 * l + 1; i++)
-                        if (plms[l][i] != 0.0)
-                            if (l != i)
-                                pz_dz_type[typeIdx] = false;
-            }
-    }
-    atom_selection.resize(nAtoms);
-    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        atom_selection[atomIdx] = pz_dz_type[atom_to_type_map[atomIdx]];
+                int wfnTypeIdx = type_2_wfn[ typeIdx ];
 
-}
+                wfn_spherical_valence_sf[typeIdx] =
+                sto_scattering::scatteringSphericalDensity( wfnParams[wfnTypeIdx].valence_coeff,
+                                                            wfnParams[wfnTypeIdx].valence_exp,
+                                                            wfnParams[wfnTypeIdx].valence_pow,
+                                                            hVectorLength / typeParams[typeIdx].kappa_spherical);
 
+                int nL = wfnParams[wfnTypeIdx].def_valence_pow.size();
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialAcentric(
-    const std::vector<sf_engine_data_types::HC_WfnParam>& _wfnParams,
-    const std::vector<sf_engine_data_types::HC_TypeParam>& _typeParams,
-    const std::vector<int>& _atom_to_wfn_map,
-    const std::vector<int>& _atom_to_type_map,
-    const std::vector<Vector3<REAL> >& _atomic_positions,
-    const std::vector< std::vector<Vector3d> >& r_atom_symm,
-    const std::vector<std::vector<REAL> >& _atomic_displacement_parameters,
-    const std::vector<REAL>& _atomic_occupancy,
-    const std::vector<std::complex<REAL> >& anomalous_dispersion,
-    const std::vector<REAL>& _atomic_multiplicity_weight,
-    const std::vector<Matrix3<REAL> >& _local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation>& _symOps,
-    const std::vector<std::vector<Vector3<REAL> > >& _hVector_lines,
-    const std::vector< std::vector< Vector3i > >& h_vector_lines_int,
-    const std::vector < std::vector <int> >& line_to_orginal_hkl_list_idx,
-    int line_direction,
-    const Vector3d& lineStepCart,
-    std::vector<std::complex<REAL> >& f,
-    std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
-    const std::vector< std::vector<std::complex<REAL> > >& _dTarget_df_lines,
-    const std::vector<bool>& _include_atom_contribution,
-    const std::vector<int>& _type_2_wfn_type,
-    const std::vector<std::vector<REAL> >& _def_val_slater_normalization,
-    std::vector<std::vector<double> >& _sphericalHarmonicsData,
-    const std::vector<int>& _typeMaxL,
-    const std::vector< std::vector<std::vector<double> > >& atomPlms,
-    int &executionTime,
-    const DerivativesSelector & derivativesSwitch,
-    bool electron,
-    const std::vector<int>& atomic_number)
-{
-    bool useLineAlgorithm = true;
-    WallClockTimer timer;
-    timer.start();
-    bool no_derivatives = !(derivativesSwitch.d_adp || derivativesSwitch.d_anom || derivativesSwitch.d_occ || derivativesSwitch.d_xyz);
-    // local copies
-    //return;
-    vector<sf_engine_data_types::HC_WfnParam> wfnParams = _wfnParams;
-    vector<sf_engine_data_types::HC_TypeParam> typeParams = _typeParams;
-    vector<int> atom_to_wfn_map = _atom_to_wfn_map;
-    vector<int> atom_to_type_map = _atom_to_type_map;
-    vector<Vector3<REAL> > atomic_positions = _atomic_positions;
-    vector<std::vector<REAL> > atomic_displacement_parameters = _atomic_displacement_parameters;
-    vector<REAL> atomic_occupancy = _atomic_occupancy;
-    vector<REAL> atomic_multiplicity_weight = _atomic_multiplicity_weight;
-    vector<Matrix3<REAL> > local_coordinate_systems = _local_coordinate_systems;
-    vector<sf_engine_data_types::SymmetryOperation> symOps = _symOps;
-    vector<vector<Vector3<REAL> > > hVector_lines = _hVector_lines;
-    vector<vector<std::complex<REAL> > > dTarget_df_lines = _dTarget_df_lines;
-    vector<bool> include_atom_contribution = _include_atom_contribution;
-    vector<int> type_2_wfn_type = _type_2_wfn_type;
-    vector<std::vector<REAL> > def_val_slater_normalization = _def_val_slater_normalization;
-    vector<std::vector<double> > sphericalHarmonicsData = _sphericalHarmonicsData;
-    vector<int> typeMaxL = _typeMaxL;
+                const vector<int>& def_valence_pow = wfnParams[wfnTypeIdx].def_valence_pow;
 
-    //--
-    Matrix3d cartesianCoordinateSystem(1, 0, 0,
-        0, 1, 0,
-        0, 0, 1);
+                if (nL > 0)
+                    g_functions_and_slater_norm[typeIdx][0] =  def_val_slater_normalization[wfnTypeIdx][0] *
+                    sto_scattering::gFunction<0>(int(def_valence_pow[0])+2,
+                                                 hVectorLength / typeParams[typeIdx].kappa_def_valence,
+                                                 wfnParams[wfnTypeIdx].def_valence_exp);
+                    if (nL > 1)
+                        g_functions_and_slater_norm[typeIdx][1] =  def_val_slater_normalization[wfnTypeIdx][1] *
+                        sto_scattering::gFunction<1>(int(def_valence_pow[1])+2,
+                                                     hVectorLength / typeParams[typeIdx].kappa_def_valence,
+                                                     wfnParams[wfnTypeIdx].def_valence_exp);
 
-    const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
-    complex<REAL> fAtomSphericalAndAnomalous;
-    const REAL two_pi = 2 * REAL(M_PI);
-    const REAL two_pi_sqare = 2 * REAL(M_PI * M_PI);
-    REAL temperature_factor, hVectorLength, hVectorLength2, multiplier;
-    REAL const* adps;
-    vector<Vector3<REAL> > rotated_h(symOps.size());
-    vector<Vector3<REAL> > rotated_normalized_h(symOps.size());
-    vector<REAL> translation_factor(symOps.size());
-    complex<REAL> unweightedTransformedAtomFF, unweightedTransformedAtomFF_Sum, dTargetDf;
+                        if (nL > 2)
+                            g_functions_and_slater_norm[typeIdx][2] = def_val_slater_normalization[wfnTypeIdx][2] *
+                            sto_scattering::gFunction<2>(int(def_valence_pow[2])+2,
+                                                         hVectorLength / typeParams[typeIdx].kappa_def_valence,
+                                                         wfnParams[wfnTypeIdx].def_valence_exp);
+                            if (nL > 3)
+                                g_functions_and_slater_norm[typeIdx][3] = def_val_slater_normalization[wfnTypeIdx][3] *
+                                sto_scattering::gFunction<3>(int(def_valence_pow[3])+2,
+                                                             hVectorLength / typeParams[typeIdx].kappa_def_valence,
+                                                             wfnParams[wfnTypeIdx].def_valence_exp);
+                                if (nL > 4)
+                                    g_functions_and_slater_norm[typeIdx][4] = def_val_slater_normalization[wfnTypeIdx][4] *
+                                    sto_scattering::gFunction<4>(int(def_valence_pow[4])+2,
+                                                                 hVectorLength / typeParams[typeIdx].kappa_def_valence,
+                                                                 wfnParams[wfnTypeIdx].def_valence_exp);
 
-    complex<REAL> adp_derivatives[6];
-    complex<REAL> xyz_derivatives[3];
-    REAL atomic_phase_factor_real, atomic_phase_factor_im, atomic_phase_factor_phase;
-    REAL realFContrib, imagFContrib;
-
-    int atomWfnIdx, atomTypeIdx;
-    REAL atomWeight; // = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-    REAL atom_f_core, atom_f_sph_val;
-    complex<REAL> anomalousScattering, atom_f_def_val, aux;
-
-    //--
-
-    vector<REAL> wfn_spherical_core_sf(wfnParams.size());
-    vector<REAL> wfn_spherical_valence_sf(typeParams.size());
-    vector<vector<REAL> > g_functions_and_slater_norm(typeParams.size(), vector<REAL>(5));
-    int nSymmOps = symOps.size();
-    int n_adp_components, nAtoms;// , nHklVectors = hVector_lines.size();
-    vector<vector<REAL> > adpMultipliers(nSymmOps, vector<double>(6));
-    nAtoms = atomic_positions.size();
-
-
-    // set dTarget_dparam to zero ..
-
-    //f.assign(nHklVectors, 0.0);
-    if (!no_derivatives)
-    {
-        dTarget_dparam.resize(atomic_positions.size());
-        if (derivativesSwitch.d_adp)
-            for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-                dTarget_dparam[atom_index].adp_derivatives.assign(atomic_displacement_parameters[atom_index].size(), 0.0);
-        if (derivativesSwitch.d_xyz)
-            for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-                dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
-        if (derivativesSwitch.d_occ)
-            for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-                dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
-    }   
-
-    // find atoms with deformation valence terms only with y_{1,0} and y_{2,0}
-
-    vector<bool> atom_pz_dz;
-    select_P10P20_atoms(_typeParams, atom_to_type_map, atom_pz_dz);
-    
-    // sets z coordinate of atoms local coordinate system, needed for calculation of Y10 and Y20 spherical harmonics
-    // 
-
-    vector<Vector3d> atom_z(nAtoms);
-    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    {
-        auto const& lcs = local_coordinate_systems[atomIdx];
-        atom_z[atomIdx].set(lcs(0, 2), lcs(1, 2), lcs(2, 2));
-    }
-    //
-
-    bool hkl000;
-    //vector<double> spherical_harmonics(25);
-    vector< vector<vector<double> > > spherical_harmonics(nSymmOps, vector<vector<double> >(5));
-    for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-        for (int l = 0; l <= 4; l++)
-            spherical_harmonics[symmOpIdx][l].resize(2 * l + 1);
-
-    //########################
-    // hkl lines
-    //########################
-
-    int nLines = hVector_lines.size();
-
-    //[atom][symmOp]
-    vector<vector<complex<double> > > phase_factor_multiplier(nAtoms, vector<complex<double> >(nSymmOps));
-    vector<vector<complex<double> > > line_phase_factor(nAtoms, vector<complex<double> >(nSymmOps));
-    vector<vector<double> > temp_factor(nAtoms, vector<double>(nSymmOps));
-    vector<vector<double> > temp_factor_multiplier_iter(nAtoms, vector<double>(nSymmOps));
-    vector<vector<double> > temp_factor_multiplier_multiplier(nAtoms, vector<double>(nSymmOps));
-
-    if (useLineAlgorithm)
-    {
-        vector<Matrix3d> symmOpRotationCart;
-        for (auto const& symmOp : symOps)
-            symmOpRotationCart.push_back(symmOp.rotation);
-
-        scattering_utilities::init_line_multipliers(lineStepCart, r_atom_symm, atomic_displacement_parameters, symmOpRotationCart,
-                                                    phase_factor_multiplier, temp_factor_multiplier_multiplier);
-
-        //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-        //    {
-        //        double phase_angle = two_pi * r_atom_symm[atomIdx][symOpIdx] * lineStepCart;
-        //        phase_factor_multiplier[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
-        //    }
-
-        ////temp_factor_multiplier_multiplier
-        //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-        //{
-        //    vector<double>& adp = atomic_displacement_parameters[atomIdx];
-        //    int nADPComponents = atomic_displacement_parameters[atomIdx].size();
-        //    if (nADPComponents == 1)
-        //        temp_factor_multiplier_multiplier[atomIdx][0] = exp(-2.0 * lineStepCart * lineStepCart * adp[0]);
-        //    else if (nADPComponents == 6)
-        //    {
-
-        //        for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-        //        {
-
-        //            Vector3d step_rot = lineStepCart * symOps[symOpIdx].rotation;
-        //            double exponent = step_rot[0] * step_rot[0] * adp[0] +
-        //                step_rot[1] * step_rot[1] * adp[1] +
-        //                step_rot[2] * step_rot[2] * adp[2] +
-        //                2.0 * (step_rot[0] * step_rot[1] * adp[3] +
-        //                    step_rot[0] * step_rot[2] * adp[4] +
-        //                    step_rot[1] * step_rot[2] * adp[5]);
-        //            temp_factor_multiplier_multiplier[atomIdx][symOpIdx] = exp(-2.0 * exponent);
-        //        }
-        //    }
-        //}
-    }
-    //########################
-    // eof hkl lines
-    //########################
-
-    bool anomalous_per_atom = !anomalous_dispersion.empty();
-
-    for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
-    {
-        
-        auto& hklLine = _hVector_lines[lineIdx];
-        //auto& mapToOriginalSet = mapToOriginalSetIndices[lineIdx];
-        int nHklLine = hklLine.size();
-
-        for (int hklIndex = 0; hklIndex < nHklLine; hklIndex++)
-        {
-            hVectorLength2 = hklLine[hklIndex] * hklLine[hklIndex];
-            hVectorLength = sqrt(hVectorLength2);
-
-            hkl000 = (hVectorLength < 1e-10);
-            vector<double> f000_electron;
-
-            if (hkl000)
-            {
-                if (electron)
-                    electronScatteringAt000(atomic_number, f000_electron);
             }
 
-            dTargetDf = _dTarget_df_lines[lineIdx][hklIndex];
-
-            pre_atom_loop_sf_calc(
-                //in:
-                wfnParams, typeParams, symOps, type_2_wfn_type, def_val_slater_normalization, hklLine[hklIndex], hVectorLength,
-                //out:
-                wfn_spherical_core_sf, wfn_spherical_valence_sf, g_functions_and_slater_norm,
-                rotated_h, rotated_normalized_h, translation_factor, adpMultipliers);
-
-            realFContrib = 0;
-            imagFContrib = 0;
-
-            for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-                real_spherical_harmonics::getDensityNormalized<4>(rotated_normalized_h[symmOpIdx], spherical_harmonics[symmOpIdx]);
-            if (useLineAlgorithm)
-            {
-                scattering_utilities::calculate_line_temperature_factors(
-                    //in:
-                    atomic_positions,
-                    atomic_displacement_parameters,
-                    hklLine,
-                    hklIndex,
-                    h_vector_lines_int[lineIdx],
-                    hklIndex,
-                    line_direction,
-                    rotated_h,
-                    temp_factor_multiplier_iter,
-                    temp_factor_multiplier_multiplier,
-                    adpMultipliers,
-                    //out:
-                    temp_factor);
-
-                scattering_utilities::calculate_line_phase_factors(
-                    //in:
-                    r_atom_symm,
-                    hklLine,
-                    hklIndex,
-                    h_vector_lines_int[lineIdx],
-                    hklIndex,
-                    line_direction,
-                    rotated_h,
-                    phase_factor_multiplier,
-                    //out:
-                    line_phase_factor);
-            }
-
-            for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-            {
-
-                if (!include_atom_contribution[atomIdx])
-                    continue;
-
-                atomWfnIdx = atom_to_wfn_map[atomIdx];
-                atomTypeIdx = atom_to_type_map[atomIdx];
-
-                atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-                atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
-                atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
-                atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-                anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx]: anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-                fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
-
-                n_adp_components = atomic_displacement_parameters[atomIdx].size();
-
-                if (!atomic_displacement_parameters[atomIdx].empty())
-                    adps = &atomic_displacement_parameters[atomIdx][0];
-
-                if (derivativesSwitch.d_adp)
-                    if (n_adp_components == 6)
-                        for (int i = 0; i < 6; i++)
-                            adp_derivatives[i] = 0.0;
-
-                xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
-
-                unweightedTransformedAtomFF_Sum = 0.0;
-
-                for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-                {
-
-                    const Vector3<REAL>& rotated_h_ref = rotated_h[symOpIdx];
-                    //
-                    //atomic_phase_factor_phase = two_pi * (rotated_h_ref * atomic_positions[atomIdx] +
-                    //    translation_factor[symOpIdx]);
-                    //
-                    //atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                    //atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-                    //
-                    complex<REAL> atomic_position_phase_factor;
-                    if(useLineAlgorithm)
-                        atomic_position_phase_factor = line_phase_factor[atomIdx][symOpIdx];
-                    else
-                    {
-                        atomic_phase_factor_phase = two_pi * (rotated_h_ref * atomic_positions[atomIdx] +
-                            translation_factor[symOpIdx]);
-                        
-                        atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                        atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-
-                        atomic_position_phase_factor = complex<double>(atomic_phase_factor_real, atomic_phase_factor_im);
-                    }
-
-                    if (hkl000)
-                        atom_f_def_val = 0;
-                    else
-                    {
-                        /* auto atom_f_def_val0 =
-                             calculateDeformationValence(
-                                 typeParams[atomTypeIdx].p_lm,
-                                 g_functions_and_slater_norm[atomTypeIdx],
-                                 local_coordinate_systems[atomIdx],
-                                 rotated_normalized_h[symOpIdx],
-                                 typeMaxL[atomTypeIdx], sphericalHarmonicsData);*/
-                                 //cartesianCoordinateSystem
-                                 //atom_f_def_val =
-                                 //    calculateDeformationValence(
-                                 //        atomPlms[atomIdx],
-                                 //        g_functions_and_slater_norm[atomTypeIdx],
-                                 //        cartesianCoordinateSystem,
-                                 //        rotated_normalized_h[symOpIdx],
-                                 //        typeMaxL[atomTypeIdx], sphericalHarmonicsData);
-
-                                 //spherical_harmonics
-
-                        atom_f_def_val = 0.0;
-                        if (atom_pz_dz[atomIdx])
-                        {
-                            double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
-                            //4 * M_PI* std::complex<REAL>(resultReal, resultImag)
-                            //atom_f_def_val = typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 *z +
-                              //  typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.7500000000000036 * (3.0*z*z-1.0);
-                            atom_f_def_val.real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
-                            atom_f_def_val.imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
-                        }
-                        else
-                            atom_f_def_val = 
-                            calculateDeformationValence(
-                                atomPlms[atomIdx],
-                                g_functions_and_slater_norm[atomTypeIdx],
-                                typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
-
-                    }
-
-                    complex<double> atomic_ff = fAtomSphericalAndAnomalous + atom_f_def_val;
-                    if (electron)
-                    {
-                        if (hkl000)
-                            atomic_ff = f000_electron[atomIdx] + anomalousScattering;
-                        else
-                        {
-                            complex<double> nuclear = 0.023934 * atomic_number[atomIdx] / (0.25 * hVectorLength2);
-                            complex<double> electron = -0.023934 * (atomic_ff - anomalousScattering) / (0.25 * hVectorLength2);
-                            atomic_ff = nuclear + electron + anomalousScattering;
-                        }
-
-                    }
-                    //anomalousScattering
-                        /*
-                                complex<double> fx = mManager->calculateCart(atomIdx, hklCart);
-
-		complex<double> nuclear = 0.023934 * mNuclearCharge[atomIdx] / (0.25 * h * h);
-		complex<double> electron = -0.023934 * fx / (0.25 * h * h);
-        return nuclear + electron;
-
-                        */
-
-                    if (n_adp_components == 6)
-                    {
-                        double* multipliers = &adpMultipliers[symOpIdx][0];
-                        if (useLineAlgorithm)
-                            temperature_factor = temp_factor[atomIdx][symOpIdx];
-                        else
-                            temperature_factor =
-                            exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
-                            - multipliers[2] * adps[2] - multipliers[3] * adps[3]
-                            - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
-
-                        unweightedTransformedAtomFF = atomic_ff //(fAtomSphericalAndAnomalous + atom_f_def_val)
-                            * atomic_position_phase_factor * temperature_factor;
-                        if (derivativesSwitch.d_adp)
-                        {
-                            adp_derivatives[0] -= multipliers[0] * unweightedTransformedAtomFF;
-                            adp_derivatives[1] -= multipliers[1] * unweightedTransformedAtomFF;
-                            adp_derivatives[2] -= multipliers[2] * unweightedTransformedAtomFF;
-                            adp_derivatives[3] -= multipliers[3] * unweightedTransformedAtomFF;
-                            adp_derivatives[4] -= multipliers[4] * unweightedTransformedAtomFF;
-                            adp_derivatives[5] -= multipliers[5] * unweightedTransformedAtomFF;
-                        }
-
-                    }
-                    else
-                        unweightedTransformedAtomFF = atomic_ff //(fAtomSphericalAndAnomalous + atom_f_def_val)
-                        * atomic_position_phase_factor;
-
-                    unweightedTransformedAtomFF_Sum += unweightedTransformedAtomFF;
-                    if (derivativesSwitch.d_xyz)
-                    {
-                        xyz_derivatives[0] += rotated_h_ref[0] * unweightedTransformedAtomFF;
-                        xyz_derivatives[1] += rotated_h_ref[1] * unweightedTransformedAtomFF;
-                        xyz_derivatives[2] += rotated_h_ref[2] * unweightedTransformedAtomFF;
-                    }
-
-                } // symmetry operations
-
-
-                if (n_adp_components == 1)
-                {
-                    if (useLineAlgorithm)
-                        temperature_factor = temp_factor[atomIdx][0];
-                    else
-                        temperature_factor = exp(-hVectorLength * hVectorLength * (*adps));
-                    unweightedTransformedAtomFF_Sum *= temperature_factor;
-                    if (derivativesSwitch.d_adp)
-                        dTarget_dparam[atomIdx].adp_derivatives[0] -= hVectorLength2 * (dTargetDf.real() * unweightedTransformedAtomFF_Sum.real() -
-                            dTargetDf.imag() * unweightedTransformedAtomFF_Sum.imag());
-                }
-                else
-                    if (n_adp_components == 6)
-                        if (derivativesSwitch.d_adp)
-                            for (int i = 0; i < 6; ++i)
-                                dTarget_dparam[atomIdx].adp_derivatives[i] += dTargetDf.real() * adp_derivatives[i].real() -
-                                dTargetDf.imag() * adp_derivatives[i].imag();
-
-                if (derivativesSwitch.d_occ)
-                    dTarget_dparam[atomIdx].occupancy_derivatives += unweightedTransformedAtomFF_Sum.real() * dTargetDf.real() -
-                    unweightedTransformedAtomFF_Sum.imag() * dTargetDf.imag();
-
-                realFContrib += unweightedTransformedAtomFF_Sum.real() * atomWeight;
-                imagFContrib += unweightedTransformedAtomFF_Sum.imag() * atomWeight;
-
-                n_adp_components == 1 ? aux = temperature_factor * dTargetDf : aux = dTargetDf;
-
-                if (derivativesSwitch.d_xyz)
-                    for (int i = 0; i < 3; ++i)
-                        dTarget_dparam[atomIdx].atomic_position_derivatives[i] -= aux.real() * xyz_derivatives[i].imag() +
-                        aux.imag() * xyz_derivatives[i].real();
-
-            } // symmetrically independent atoms
-            //hklIndex = 
-            f[line_to_orginal_hkl_list_idx[lineIdx][hklIndex]] = complex<REAL>(realFContrib, imagFContrib);
-
-        } // h vectors
-
     }
 
-    if (!no_derivatives)
-        for(int atomIdx=0; atomIdx<nAtoms ; atomIdx++)
-        {
-            atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-            if(derivativesSwitch.d_occ)
-                dTarget_dparam[atomIdx].occupancy_derivatives *= atomic_multiplicity_weight[atomIdx];
-            if (derivativesSwitch.d_adp)
-            {
-                multiplier = two_pi_sqare * atomWeight;
-                for (int i = 0; i < dTarget_dparam[atomIdx].adp_derivatives.size(); i++)
-                    dTarget_dparam[atomIdx].adp_derivatives[i] *= multiplier;
-            }
-            if (derivativesSwitch.d_xyz)
-            {
-                multiplier = two_pi * atomWeight;
-                dTarget_dparam[atomIdx].atomic_position_derivatives.x *= multiplier;
-                dTarget_dparam[atomIdx].atomic_position_derivatives.y *= multiplier;
-                dTarget_dparam[atomIdx].atomic_position_derivatives.z *= multiplier;
-            }
-        }
-    executionTime = timer.stop();
-} // calculateSF_SerialAcentric
 
-void  HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl2(
-    const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
-    const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
-    const std::vector<int>& atom_to_wfn_map,
-    const std::vector<int>& atom_to_type_map,
-    const std::vector<Vector3<REAL> >& atomicPositions,
-    const std::vector< std::vector<Vector3d> >& r_atom_symm,
-    const std::vector<std::vector<REAL> >& atomic_displacement_parameters,
-    const std::vector<REAL>& _atomic_occupancy,
-    const std::vector<std::complex<REAL> >& anomalous_dispersion,
-    const std::vector<REAL>& _atomic_multiplicity_weight,
-    const std::vector<Matrix3<REAL> >& _local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation>& symmetry_operations,
-
-    const std::vector<std::vector<Vector3<REAL> > >& h_vector_lines,
-    const std::vector< std::vector< Vector3i > >& h_vector_lines_int,
-    const std::vector < std::vector <int> >& line_to_orginal_hkl_list_idx,
-    int line_direction,
-    const Vector3d& lineStepCart,
-
-    std::vector<std::complex<REAL> >& f,
-    std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
-    //const std::vector<std::complex<REAL> >& dTarget_df,
-    const std::vector< std::vector<std::complex<REAL> > >& dTarget_df_lines,
-    const std::vector<bool>& include_atom_contribution,
-    const std::vector<int>& type_2_wfn_type,
-    const std::vector<std::vector<REAL> >& def_val_slater_normalization,
-    std::vector<std::vector<double> >& sphericalHarmonicsData,// memory for spherical harmonics data
-    const std::vector<int>& typeMaxL,
-    const std::vector< std::vector<std::vector<double> > >& atomPlms,
-    const DerivativesSelector& derivativesSwitch,
-    bool electron,
-    const std::vector<int>& atomic_number)
-{
-    bool anomalous_per_atom = !anomalous_dispersion.empty();
-    
-    //cout << "calling HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl2\n";
-    bool useLineAlgorithm = true;
-//WallClockTimer timer;
-//timer.start();
-bool no_derivatives = !(derivativesSwitch.d_adp || derivativesSwitch.d_anom || derivativesSwitch.d_occ || derivativesSwitch.d_xyz);
-// local copies
-//return;
-vector<sf_engine_data_types::HC_WfnParam> wfnParams = wfn_parameters;
-vector<sf_engine_data_types::HC_TypeParam> typeParams = type_parameters;
-vector<Vector3<REAL> > atomic_positions = atomicPositions;
-//vector<std::vector<REAL> > atomic_displacement_parameters = atomic_displacement_parameters;
-vector<REAL> atomic_occupancy = _atomic_occupancy;
-vector<REAL> atomic_multiplicity_weight = _atomic_multiplicity_weight;
-vector<Matrix3<REAL> > local_coordinate_systems = _local_coordinate_systems;
-vector<sf_engine_data_types::SymmetryOperation> symOps = symmetry_operations;
-vector<vector<Vector3<REAL> > > hVector_lines = h_vector_lines;
-//vector<vector<std::complex<REAL> > > dTarget_df_lines = dTarget_df_lines;
-//vector<bool> include_atom_contribution = _include_atom_contribution;
-//vector<int> type_2_wfn_type = _type_2_wfn_type;
-//vector<std::vector<REAL> > def_val_slater_normalization = _def_val_slater_normalization;
-//vector<std::vector<double> > sphericalHarmonicsData = _sphericalHarmonicsData;
-//vector<int> typeMaxL = _typeMaxL;
-
-//--
-Matrix3d cartesianCoordinateSystem(1, 0, 0,
-    0, 1, 0,
-    0, 0, 1);
-
-const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
-complex<REAL> fAtomSphericalAndAnomalous;
-const REAL two_pi = 2 * REAL(M_PI);
-const REAL two_pi_sqare = 2 * REAL(M_PI * M_PI);
-REAL temperature_factor, hVectorLength, hVectorLength2, multiplier;
-REAL const* adps;
-vector<Vector3<REAL> > rotated_h(symOps.size());
-vector<Vector3<REAL> > rotated_normalized_h(symOps.size());
-vector<REAL> translation_factor(symOps.size());
-complex<REAL> unweightedTransformedAtomFF, unweightedTransformedAtomFF_Sum, dTargetDf;
-
-complex<REAL> adp_derivatives[6];
-complex<REAL> xyz_derivatives[3];
-REAL atomic_phase_factor_real, atomic_phase_factor_im, atomic_phase_factor_phase;
-REAL realFContrib, imagFContrib;
-
-int atomWfnIdx, atomTypeIdx;
-REAL atomWeight; // = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-REAL atom_f_core, atom_f_sph_val;
-complex<REAL> anomalousScattering, atom_f_def_val, aux;
-
-//--
-
-vector<REAL> wfn_spherical_core_sf(wfnParams.size());
-vector<REAL> wfn_spherical_valence_sf(typeParams.size());
-vector<vector<REAL> > g_functions_and_slater_norm(typeParams.size(), vector<REAL>(5));
-int nSymmOps = symOps.size();
-int n_adp_components, nAtoms;// , nHklVectors = hVector_lines.size();
-vector<vector<REAL> > adpMultipliers(nSymmOps, vector<double>(6));
-nAtoms = atomic_positions.size();
-
-
-// set dTarget_dparam to zero ..
-
-//f.assign(nHklVectors, 0.0);
-if (!no_derivatives)
-{
-    dTarget_dparam.resize(atomic_positions.size());
-    if (derivativesSwitch.d_adp)
-        for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-            dTarget_dparam[atom_index].adp_derivatives.assign(atomic_displacement_parameters[atom_index].size(), 0.0);
-    if (derivativesSwitch.d_xyz)
-        for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-            dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
-    if (derivativesSwitch.d_occ)
-        for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-            dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
-}
-
-// find atoms with deformation valence terms only with y_{1,0} and y_{2,0}
-
-vector<bool> atom_pz_dz;
-select_P10P20_atoms(typeParams, atom_to_type_map, atom_pz_dz);
-
-// sets z coordinate of atoms local coordinate system, needed for calculation of Y10 and Y20 spherical harmonics
-// 
-
-vector<Vector3d> atom_z(nAtoms);
-for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-{
-    auto const& lcs = local_coordinate_systems[atomIdx];
-    atom_z[atomIdx].set(lcs(0, 2), lcs(1, 2), lcs(2, 2));
-}
-//
-
-bool hkl000;
-//vector<double> spherical_harmonics(25);
-vector< vector<vector<double> > > spherical_harmonics(nSymmOps, vector<vector<double> >(5));
-for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-    for (int l = 0; l <= 4; l++)
-        spherical_harmonics[symmOpIdx][l].resize(2 * l + 1);
-
-//########################
-// hkl lines
-//########################
-
-int nLines = hVector_lines.size();
-
-//[atom][symmOp]
-vector<vector<complex<double> > > phase_factor_multiplier(nAtoms, vector<complex<double> >(nSymmOps));
-vector<vector<complex<double> > > line_phase_factor(nAtoms, vector<complex<double> >(nSymmOps));
-vector<vector<double> > temp_factor(nAtoms, vector<double>(nSymmOps));
-vector<vector<double> > temp_factor_multiplier_iter(nAtoms, vector<double>(nSymmOps));
-vector<vector<double> > temp_factor_multiplier_multiplier(nAtoms, vector<double>(nSymmOps));
-
-if (useLineAlgorithm)
-{
-    vector<Matrix3d> symmOpRotationCart;
-    for (auto const& symmOp : symOps)
-        symmOpRotationCart.push_back(symmOp.rotation);
-
-    scattering_utilities::init_line_multipliers(lineStepCart, r_atom_symm, atomic_displacement_parameters, symmOpRotationCart,
-        phase_factor_multiplier, temp_factor_multiplier_multiplier);
-
-    //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    //    for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-    //    {
-    //        double phase_angle = two_pi * r_atom_symm[atomIdx][symOpIdx] * lineStepCart;
-    //        phase_factor_multiplier[atomIdx][symOpIdx] = { cos(phase_angle), sin(phase_angle) };
-    //    }
-
-    ////temp_factor_multiplier_multiplier
-    //for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    //{
-    //    vector<double>& adp = atomic_displacement_parameters[atomIdx];
-    //    int nADPComponents = atomic_displacement_parameters[atomIdx].size();
-    //    if (nADPComponents == 1)
-    //        temp_factor_multiplier_multiplier[atomIdx][0] = exp(-2.0 * lineStepCart * lineStepCart * adp[0]);
-    //    else if (nADPComponents == 6)
-    //    {
-
-    //        for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-    //        {
-
-    //            Vector3d step_rot = lineStepCart * symOps[symOpIdx].rotation;
-    //            double exponent = step_rot[0] * step_rot[0] * adp[0] +
-    //                step_rot[1] * step_rot[1] * adp[1] +
-    //                step_rot[2] * step_rot[2] * adp[2] +
-    //                2.0 * (step_rot[0] * step_rot[1] * adp[3] +
-    //                    step_rot[0] * step_rot[2] * adp[4] +
-    //                    step_rot[1] * step_rot[2] * adp[5]);
-    //            temp_factor_multiplier_multiplier[atomIdx][symOpIdx] = exp(-2.0 * exponent);
-    //        }
-    //    }
-    //}
-}
-//########################
-// eof hkl lines
-//########################
-
-
-for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
-{
-
-    auto& hklLine = hVector_lines[lineIdx];
-    //auto& mapToOriginalSet = mapToOriginalSetIndices[lineIdx];
-    int nHklLine = hklLine.size();
-
-    for (int hklIndex = 0; hklIndex < nHklLine; hklIndex++)
+    void HansenCoppens_SF_Engine4::calculateFormFactors(
+        const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
+        const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
+        const std::vector<double>& f_spherical, // for each type spherical valence + core
+        const std::vector<int>& atom_to_wfn_map,
+        const std::vector<int>& atom_to_type_map,
+        const std::vector<Matrix3<REAL> >& local_coordinate_systems,
+        const Vector3<REAL>& h_vector,
+        std::vector<std::complex<REAL> >& form_factors,
+        const std::vector<bool>& include_atom,
+        const std::vector<int> &type_2_wfn_type,
+        const std::vector<std::vector<REAL> > &def_val_slater_normalization,
+        const std::vector<int> &typeMaxL)
     {
-        hVectorLength2 = hklLine[hklIndex] * hklLine[hklIndex];
-        hVectorLength = sqrt(hVectorLength2);
+        //--------
 
-        hkl000 = (hVectorLength < 1e-10);
-        vector<double> f000_electron;
+        mSphericalHarmonicsData.resize(1);
+        mSphericalHarmonicsData[0].resize(5);
+        for (int i = 0; i < 5; i++)
+            mSphericalHarmonicsData[0][i].resize(2 * i + 1);
 
-        if (hkl000)
+        //--------
+
+
+        REAL hVectorLength;
+
+        //hVectorLength2 = h_vector * h_vector;
+        hVectorLength = sqrt(h_vector * h_vector);
+        Vector3<REAL> normalized_h = h_vector/ hVectorLength;
+
+
+        int atomWfnIdx, atomTypeIdx;
+        complex<REAL> atom_f_def_val, aux;
+
+        //--
+
+        vector<vector<REAL> > g_functions_and_slater_norm(type_parameters.size(), vector<REAL>(5));
+
+        int nAtoms;
+        nAtoms = atom_to_type_map.size();
+
+        form_factors.resize(nAtoms);
+
+        //
+
+        bool hkl000  = (hVectorLength < 1e-10);
+
+        int nTypes = type_parameters.size();
+
+        for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
         {
-            if (electron)
-                electronScatteringAt000(atomic_number, f000_electron);
+            int wfnTypeIdx = type_2_wfn_type[typeIdx];
+
+            int nL = wfn_parameters[wfnTypeIdx].def_valence_pow.size();
+
+            const vector<int>& def_valence_pow = wfn_parameters[wfnTypeIdx].def_valence_pow;
+
+            if (nL > 0)
+                g_functions_and_slater_norm[typeIdx][0] = def_val_slater_normalization[wfnTypeIdx][0] *
+                sto_scattering::gFunction<0>(int(def_valence_pow[0]) + 2,
+                                             hVectorLength / type_parameters[typeIdx].kappa_def_valence,
+                                             wfn_parameters[wfnTypeIdx].def_valence_exp);
+                if (nL > 1)
+                    g_functions_and_slater_norm[typeIdx][1] = def_val_slater_normalization[wfnTypeIdx][1] *
+                    sto_scattering::gFunction<1>(int(def_valence_pow[1]) + 2,
+                                                 hVectorLength / type_parameters[typeIdx].kappa_def_valence,
+                                                 wfn_parameters[wfnTypeIdx].def_valence_exp);
+
+                    if (nL > 2)
+                        g_functions_and_slater_norm[typeIdx][2] = def_val_slater_normalization[wfnTypeIdx][2] *
+                        sto_scattering::gFunction<2>(int(def_valence_pow[2]) + 2,
+                                                     hVectorLength / type_parameters[typeIdx].kappa_def_valence,
+                                                     wfn_parameters[wfnTypeIdx].def_valence_exp);
+                        if (nL > 3)
+                            g_functions_and_slater_norm[typeIdx][3] = def_val_slater_normalization[wfnTypeIdx][3] *
+                            sto_scattering::gFunction<3>(int(def_valence_pow[3]) + 2,
+                                                         hVectorLength / type_parameters[typeIdx].kappa_def_valence,
+                                                         wfn_parameters[wfnTypeIdx].def_valence_exp);
+                            if (nL > 4)
+                                g_functions_and_slater_norm[typeIdx][4] = def_val_slater_normalization[wfnTypeIdx][4] *
+                                sto_scattering::gFunction<4>(int(def_valence_pow[4]) + 2,
+                                                             hVectorLength / type_parameters[typeIdx].kappa_def_valence,
+                                                             wfn_parameters[wfnTypeIdx].def_valence_exp);
+
         }
 
-
-        dTargetDf = dTarget_df_lines[lineIdx][hklIndex];
-
-        pre_atom_loop_sf_calc(
-            //in:
-            wfnParams, typeParams, symOps, type_2_wfn_type, def_val_slater_normalization, hklLine[hklIndex], hVectorLength,
-            //out:
-            wfn_spherical_core_sf, wfn_spherical_valence_sf, g_functions_and_slater_norm,
-            rotated_h, rotated_normalized_h, translation_factor, adpMultipliers);
-
-        realFContrib = 0;
-        imagFContrib = 0;
-
-        for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-            real_spherical_harmonics::getDensityNormalized<4>(rotated_normalized_h[symmOpIdx], spherical_harmonics[symmOpIdx]);
-        if (useLineAlgorithm)
-        {
-            scattering_utilities::calculate_line_temperature_factors(
-                //in:
-                atomic_positions,
-                atomic_displacement_parameters,
-                hklLine,
-                hklIndex,
-                h_vector_lines_int[lineIdx],
-                hklIndex,
-                line_direction,
-                rotated_h,
-                temp_factor_multiplier_iter,
-                temp_factor_multiplier_multiplier,
-                adpMultipliers,
-                //out:
-                temp_factor);
-
-            scattering_utilities::calculate_line_phase_factors(
-                //in:
-                r_atom_symm,
-                hklLine,
-                hklIndex,
-                h_vector_lines_int[lineIdx],
-                hklIndex,
-                line_direction,
-                rotated_h,
-                phase_factor_multiplier,
-                //out:
-                line_phase_factor);
-        }
+        //------------- end of pre_atom_loop_sf_calc
 
         for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
 
-            if (!include_atom_contribution[atomIdx])
+            if (!include_atom[atomIdx])
+            {
+                form_factors[atomIdx] = 0;
                 continue;
+            }
 
             atomWfnIdx = atom_to_wfn_map[atomIdx];
             atomTypeIdx = atom_to_type_map[atomIdx];
 
-            atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-            atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
-            atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
-            atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-            anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx] : anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-            //anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-            fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
-
-            n_adp_components = atomic_displacement_parameters[atomIdx].size();
-
-            if (!atomic_displacement_parameters[atomIdx].empty())
-                adps = &atomic_displacement_parameters[atomIdx][0];
-
-            if (derivativesSwitch.d_adp)
-                if (n_adp_components == 6)
-                    for (int i = 0; i < 6; i++)
-                        adp_derivatives[i] = 0.0;
-
-            xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
-
-            unweightedTransformedAtomFF_Sum = 0.0;
-
-            for (int symOpIdx = 0; symOpIdx < nSymmOps; symOpIdx++)
-            {
-
-                const Vector3<REAL>& rotated_h_ref = rotated_h[symOpIdx];
-                //
-                //atomic_phase_factor_phase = two_pi * (rotated_h_ref * atomic_positions[atomIdx] +
-                //    translation_factor[symOpIdx]);
-                //
-                //atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                //atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-                //
-                complex<REAL> atomic_position_phase_factor;
-                if (useLineAlgorithm)
-                    atomic_position_phase_factor = line_phase_factor[atomIdx][symOpIdx];
-                else
-                {
-                    atomic_phase_factor_phase = two_pi * (rotated_h_ref * atomic_positions[atomIdx] +
-                        translation_factor[symOpIdx]);
-
-                    atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                    atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-
-                    atomic_position_phase_factor = complex<double>(atomic_phase_factor_real, atomic_phase_factor_im);
-                }
-
-                if (hkl000)
-                    atom_f_def_val = 0;
-                else
-                {
-                    /* auto atom_f_def_val0 =
-                         calculateDeformationValence(
-                             typeParams[atomTypeIdx].p_lm,
-                             g_functions_and_slater_norm[atomTypeIdx],
-                             local_coordinate_systems[atomIdx],
-                             rotated_normalized_h[symOpIdx],
-                             typeMaxL[atomTypeIdx], sphericalHarmonicsData);*/
-                             //cartesianCoordinateSystem
-                             //atom_f_def_val =
-                             //    calculateDeformationValence(
-                             //        atomPlms[atomIdx],
-                             //        g_functions_and_slater_norm[atomTypeIdx],
-                             //        cartesianCoordinateSystem,
-                             //        rotated_normalized_h[symOpIdx],
-                             //        typeMaxL[atomTypeIdx], sphericalHarmonicsData);
-
-                             //spherical_harmonics
-
-                    atom_f_def_val = 0.0;
-                    if (atom_pz_dz[atomIdx])
-                    {
-                        double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
-                        //4 * M_PI* std::complex<REAL>(resultReal, resultImag)
-                        //atom_f_def_val = typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 *z +
-                          //  typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.7500000000000036 * (3.0*z*z-1.0);
-                        atom_f_def_val.real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
-                        atom_f_def_val.imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
-                    }
-                    else
-                        atom_f_def_val =
-                        calculateDeformationValence(
-                            atomPlms[atomIdx],
-                            g_functions_and_slater_norm[atomTypeIdx],
-                            typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
-
-                }
-
-                complex<double> atomic_ff = fAtomSphericalAndAnomalous + atom_f_def_val;
-                if (electron)
-                {
-                    if (hkl000)
-                        atomic_ff = f000_electron[atomIdx] + anomalousScattering;
-                    else
-                    {
-                        complex<double> nuclear = 0.023934 * atomic_number[atomIdx] / (0.25 * hVectorLength2);
-                        complex<double> electron = -0.023934 * (atomic_ff - anomalousScattering) / (0.25 * hVectorLength2);
-                        atomic_ff = nuclear + electron + anomalousScattering;
-                    }
-
-                }
-
-                if (n_adp_components == 6)
-                {
-                    double* multipliers = &adpMultipliers[symOpIdx][0];
-                    if (useLineAlgorithm)
-                        temperature_factor = temp_factor[atomIdx][symOpIdx];
-                    else
-                        temperature_factor =
-                        exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
-                            - multipliers[2] * adps[2] - multipliers[3] * adps[3]
-                            - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
-
-                    unweightedTransformedAtomFF = atomic_ff //(fAtomSphericalAndAnomalous + atom_f_def_val)
-                        * atomic_position_phase_factor * temperature_factor;
-                    if (derivativesSwitch.d_adp)
-                    {
-                        adp_derivatives[0] -= multipliers[0] * unweightedTransformedAtomFF;
-                        adp_derivatives[1] -= multipliers[1] * unweightedTransformedAtomFF;
-                        adp_derivatives[2] -= multipliers[2] * unweightedTransformedAtomFF;
-                        adp_derivatives[3] -= multipliers[3] * unweightedTransformedAtomFF;
-                        adp_derivatives[4] -= multipliers[4] * unweightedTransformedAtomFF;
-                        adp_derivatives[5] -= multipliers[5] * unweightedTransformedAtomFF;
-                    }
-
-                }
-                else
-                    unweightedTransformedAtomFF = atomic_ff //(fAtomSphericalAndAnomalous + atom_f_def_val)
-                    * atomic_position_phase_factor;
-
-                unweightedTransformedAtomFF_Sum += unweightedTransformedAtomFF;
-                if (derivativesSwitch.d_xyz)
-                {
-                    xyz_derivatives[0] += rotated_h_ref[0] * unweightedTransformedAtomFF;
-                    xyz_derivatives[1] += rotated_h_ref[1] * unweightedTransformedAtomFF;
-                    xyz_derivatives[2] += rotated_h_ref[2] * unweightedTransformedAtomFF;
-                }
-
-            } // symmetry operations
-
-
-            if (n_adp_components == 1)
-            {
-                if (useLineAlgorithm)
-                    temperature_factor = temp_factor[atomIdx][0];
-                else
-                    temperature_factor = exp(-hVectorLength * hVectorLength * (*adps));
-                unweightedTransformedAtomFF_Sum *= temperature_factor;
-                if (derivativesSwitch.d_adp)
-                    dTarget_dparam[atomIdx].adp_derivatives[0] -= 2 * hVectorLength2 * (dTargetDf.real() * unweightedTransformedAtomFF_Sum.real());// -
-                        //dTargetDf.imag() * unweightedTransformedAtomFF_Sum.imag());
-            }
+            if (hkl000)
+                atom_f_def_val = 0;
             else
-                if (n_adp_components == 6)
-                    if (derivativesSwitch.d_adp)
-                        for (int i = 0; i < 6; ++i)
-                            dTarget_dparam[atomIdx].adp_derivatives[i] += 2 * dTargetDf.real() * adp_derivatives[i].real(); //-
-                            //dTargetDf.imag() * adp_derivatives[i].imag();
+                atom_f_def_val = calculateDeformationValence(type_parameters[atomTypeIdx].p_lm,
+                                                             g_functions_and_slater_norm[atomTypeIdx],
+                                                             local_coordinate_systems[atomIdx],
+                                                             normalized_h,
+                                                             typeMaxL[atomTypeIdx], mSphericalHarmonicsData[0]);
 
-            if (derivativesSwitch.d_occ)
-                dTarget_dparam[atomIdx].occupancy_derivatives += 2 * unweightedTransformedAtomFF_Sum.real() * dTargetDf.real();// -
-                //unweightedTransformedAtomFF_Sum.imag() * dTargetDf.imag();
+                form_factors[atomIdx] = atom_f_def_val + f_spherical[atomTypeIdx];
 
-            realFContrib += unweightedTransformedAtomFF_Sum.real() * atomWeight;
-            imagFContrib += unweightedTransformedAtomFF_Sum.imag() * atomWeight;
-
-            n_adp_components == 1 ? aux = temperature_factor * dTargetDf : aux = dTargetDf;
-
-            if (derivativesSwitch.d_xyz)
-                for (int i = 0; i < 3; ++i)
-                    dTarget_dparam[atomIdx].atomic_position_derivatives[i] -= 2 * aux.real() * xyz_derivatives[i].imag();// +
-                    //aux.imag() * xyz_derivatives[i].real();
-
-        } // symmetrically independent atoms
-        //hklIndex = 
-        f[line_to_orginal_hkl_list_idx[lineIdx][hklIndex]] = 2 * realFContrib;// complex<REAL>(realFContrib, imagFContrib);
-
-    } // h vectors
-
-}
-
-if (!no_derivatives)
-for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-{
-    atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-    if (derivativesSwitch.d_occ)
-        dTarget_dparam[atomIdx].occupancy_derivatives *= atomic_multiplicity_weight[atomIdx];
-    if (derivativesSwitch.d_adp)
-    {
-        multiplier = two_pi_sqare * atomWeight;
-        for (int i = 0; i < dTarget_dparam[atomIdx].adp_derivatives.size(); i++)
-            dTarget_dparam[atomIdx].adp_derivatives[i] *= multiplier;
-    }
-    if (derivativesSwitch.d_xyz)
-    {
-        multiplier = two_pi * atomWeight;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.x *= multiplier;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.y *= multiplier;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.z *= multiplier;
-        dTarget_dparam[atomIdx].atomic_position_derivatives.x *= multiplier;
-        dTarget_dparam[atomIdx].atomic_position_derivatives.y *= multiplier;
-        dTarget_dparam[atomIdx].atomic_position_derivatives.z *= multiplier;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.x *= multiplier;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.y *= multiplier;
-        //dTarget_dparam[atomIdx].atomic_position_derivatives.z *= multiplier;
+        }
 
     }
-}
-//executionTime = timer.stop();
-} // 
 
-void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl(
-    const std::vector<sf_engine_data_types::HC_WfnParam>& wfnParams,
-    const std::vector<sf_engine_data_types::HC_TypeParam>& typeParams,
-    const std::vector<int>& atom_to_wfn_map,
-    const std::vector<int>& atom_to_type_map,
-    const std::vector<Vector3<REAL> >& atomic_positions,
-    const std::vector< std::vector<Vector3d> >& r_atom_symm,
-    const std::vector<std::vector<REAL> >& atomic_displacement_parameters,
-    const std::vector<REAL>& atomic_occupancy,
-    const std::vector<REAL>& atomic_multiplicity_weight,
-    const std::vector<Matrix3<REAL> >& local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation>& symOps,
-
-    const std::vector<std::vector<Vector3<REAL> > >& hVector_lines,
-    const std::vector< std::vector< Vector3i > >& h_vector_lines_int,
-    const std::vector < std::vector <int> >& line_to_orginal_hkl_list_idx,
-    int line_direction,
-    const Vector3d& lineStepCart,
-
-    std::vector<std::complex<REAL> >& f,
-    std::vector<TargetFunctionAtomicParamDerivatives>& dTarget_dparam,
-    //const std::vector<std::complex<REAL> >& dTarget_df,
-    const std::vector< std::vector<std::complex<REAL> > >& dTarget_df_lines,
-    const std::vector<bool>& include_atom_contribution,
-    const std::vector<int>& type_2_wfn_type,
-    const std::vector<std::vector<REAL> >& def_val_slater_normalization,
-    std::vector<std::vector<double> >& sphericalHarmonicsData,// memory for spherical harmonics data
-    const std::vector<int>& typeMaxL,
-    const std::vector< std::vector<std::vector<double> > >& atomPlms,
-    const DerivativesSelector& derivativesSwitch)
-{                                                       
-    //cout << "calling HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric_ordered_hkl\n";
-    bool no_derivatives = !(derivativesSwitch.d_adp || derivativesSwitch.d_anom || derivativesSwitch.d_occ || derivativesSwitch.d_xyz);
-    const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
-    complex<REAL> fAtomSphericalAndAnomalous, f0, f_dispersion;
-    const REAL two_pi = 2 * REAL(M_PI);
-    const REAL two_pi_sqare = 2 * REAL(M_PI * M_PI);
-    vector<Vector3<REAL> > rotated_h(symOps.size());
-    vector<Vector3<REAL> > rotated_normalized_h(symOps.size());
-    vector<REAL> translation_factor(symOps.size());
-
-    vector<REAL> wfn_spherical_core_sf(wfnParams.size());
-    vector<REAL> wfn_spherical_valence_sf(typeParams.size());
-    vector<vector<REAL> > g_functions_and_slater_norm(typeParams.size(), vector<REAL>(5));
-    int nSymmOps = symOps.size();
-    //int nHklVectors = hVectors.size();
-    vector<vector<REAL> > adpMultipliers(nSymmOps, vector<REAL>(6));
-    REAL sumTeperatureRealPartPhase;
-    complex<REAL> transformedAtomContribWithoutWeight, xyzDerivativesMultiplier;
-    // set dTarget_dparam to zero ..
-
-    //f.assign(nHklVectors, 0.0);
-
-    int nAtoms = atom_to_wfn_map.size();
-
-    //########################
-    // hkl lines
-    //########################
-
-    int nLines = hVector_lines.size();
-
-    //[atom][symmOp]
-    vector<vector<complex<double> > > phase_factor_multiplier(nAtoms, vector<complex<double> >(nSymmOps));
-    vector<vector<complex<double> > > line_phase_factor(nAtoms, vector<complex<double> >(nSymmOps));
-    vector<vector<double> > temp_factor(nAtoms, vector<double>(nSymmOps));
-    vector<vector<double> > temp_factor_multiplier_iter(nAtoms, vector<double>(nSymmOps));
-    vector<vector<double> > temp_factor_multiplier_multiplier(nAtoms, vector<double>(nSymmOps));
-
-    vector<Matrix3d> symmOpRotationCart;
-    for (auto const& symmOp : symOps)
-        symmOpRotationCart.push_back(symmOp.rotation);
-
-    scattering_utilities::init_line_multipliers(lineStepCart, r_atom_symm, atomic_displacement_parameters, symmOpRotationCart,
-        phase_factor_multiplier, temp_factor_multiplier_multiplier);
-
-    //########################
-    // eof hkl lines
-    //########################
-
-    // find atoms with deformation valence terms only with y_{1,0} and y_{2,0}
-
-    vector<bool> atom_pz_dz;
-    select_P10P20_atoms(typeParams, atom_to_type_map, atom_pz_dz);
-
-    // sets z coordinate of atoms local coordinate system, needed for calculation of Y10 and Y20 spherical harmonics
-    // 
-
-    vector<Vector3d> atom_z(nAtoms);
-    for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-    {
-        auto const& lcs = local_coordinate_systems[atomIdx];
-        atom_z[atomIdx].set(lcs(0, 2), lcs(1, 2), lcs(2, 2));
-    }
-    //
-
-    vector< vector<vector<double> > > spherical_harmonics(nSymmOps, vector<vector<double> >(5));
-    for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-        for (int l = 0; l <= 4; l++)
-            spherical_harmonics[symmOpIdx][l].resize(2 * l + 1);
-
-
-    dTarget_dparam.resize(nAtoms);
-
-    for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-    {
-        dTarget_dparam[atom_index].adp_derivatives.assign(atomic_displacement_parameters[atom_index].size(), 0.0);
-        dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
-        dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
-    }
-
-    //
-    bool hkl000;
-
-    //
-
-    for (int lineIdx = 0; lineIdx < nLines; lineIdx++)
+    void HansenCoppens_SF_Engine4::calculateSphericalTermsInFormFactors(
+        const std::vector<sf_engine_data_types::HC_WfnParam>& wfn_parameters,
+        const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
+        const std::vector <double> h,
+        std::vector< std::vector<REAL> >& f_core,
+        std::vector< std::vector<REAL> >& f_sph_valence,
+        const std::vector<int>& type_2_wfn_type,
+        const std::vector<std::vector<REAL> >& def_val_slater_normalization,
+        const std::vector<int>& typeMaxL)
     {
 
-        auto& hklLine = hVector_lines[lineIdx];
-        //auto& mapToOriginalSet = mapToOriginalSetIndices[lineIdx];
-        int nHklLine = hklLine.size();
+        //--
+        int nTypes, nWfnTypes;
+        nTypes = type_parameters.size();
+        nWfnTypes = wfn_parameters.size();
+        vector<REAL> wfn_spherical_core_sf(nWfnTypes);
+        vector<REAL> wfn_spherical_valence_sf(nTypes);
+        vector<vector<REAL> > g_functions_and_slater_norm(nTypes, vector<REAL>(5));
 
-        for (int hklIndex = 0; hklIndex < nHklLine; hklIndex++)
+        int nH = h.size();
+
+
+        f_core.resize(nWfnTypes,vector<double>(nH));
+        f_sph_valence.resize(nTypes,vector<double>(nH));
+
+        for (int hIndex = 0; hIndex < nH; hIndex++)
         {
-            double hVectorLength2 = hklLine[hklIndex] * hklLine[hklIndex];
-            double hVectorLength = sqrt(hVectorLength2);
-            auto dTargetDf = dTarget_df_lines[lineIdx][hklIndex];
 
-            hkl000 = (hVectorLength < 1e-10);
+            for (int wfnTypeIdx = 0; wfnTypeIdx < nWfnTypes; wfnTypeIdx++)
+                //wfn_spherical_core_sf[wfnTypeIdx] =
+                f_core[wfnTypeIdx][hIndex]=
+                sto_scattering::scatteringSphericalDensity(wfn_parameters[wfnTypeIdx].core_coeff,
+                                                           wfn_parameters[wfnTypeIdx].core_exp,
+                                                           wfn_parameters[wfnTypeIdx].core_pow,
+                                                           h[hIndex]);
 
-            //dTargetDf = _dTarget_df_lines[lineIdx][hklIndex];
-
-            pre_atom_loop_sf_calc(
-                //in:
-                wfnParams, typeParams, symOps, type_2_wfn_type, def_val_slater_normalization, hklLine[hklIndex], hVectorLength,
-                //out:
-                wfn_spherical_core_sf, wfn_spherical_valence_sf, g_functions_and_slater_norm,
-                rotated_h, rotated_normalized_h, translation_factor, adpMultipliers);
-
-
-            //
-
-
-            for (int symmOpIdx = 0; symmOpIdx < nSymmOps; symmOpIdx++)
-                real_spherical_harmonics::getDensityNormalized<4>(rotated_normalized_h[symmOpIdx], spherical_harmonics[symmOpIdx]);
-            scattering_utilities::calculate_line_temperature_factors(
-                //in:
-                atomic_positions, atomic_displacement_parameters, hklLine, hklIndex, h_vector_lines_int[lineIdx],
-                hklIndex, line_direction, rotated_h, temp_factor_multiplier_iter, temp_factor_multiplier_multiplier, adpMultipliers,
-                //out:
-                temp_factor);
-
-            scattering_utilities::calculate_line_phase_factors(
-                //in:
-                r_atom_symm, hklLine, hklIndex, h_vector_lines_int[lineIdx], hklIndex, line_direction,
-                rotated_h, phase_factor_multiplier,
-                //out:
-                line_phase_factor);
-
-
-
-            REAL realFContrib = 0;
-            REAL imagFContrib = 0;
-
-
-
-            for (int atomIdx = 0; atomIdx < atomic_positions.size(); atomIdx++)
-            {
-                complex<REAL> adp_derivatives[6];
-                complex<REAL> xyz_derivatives[3];
-                REAL atomic_phase_factor_real, atomic_phase_factor_im;// , atomic_phase_factor_phase;
-
-                if (!include_atom_contribution[atomIdx])
-                    continue;
-                complex<REAL> atomicFContribWithoutWeight = 0;
-
-                int atomWfnIdx = atom_to_wfn_map[atomIdx];
-                int atomTypeIdx = atom_to_type_map[atomIdx];
-
-
-
-
-                REAL atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-
-
-                REAL atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
-                REAL atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
-                atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-
-                complex<REAL> anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-                fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
-
-                // end of h direction independent part of atomic scattering factor calculation
-
-                // prepare derivatives data
-
-                int n_adp_components = atomic_displacement_parameters[atomIdx].size();
-                for (int i = 0; i < n_adp_components; i++)
-                    adp_derivatives[i] = 0.0;
-                xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
-
-                // loop over symetry operations
-
-                sumTeperatureRealPartPhase = 0;
-                bool use_new_imp = true;
-                for (int symOpIdx = 0; symOpIdx < symOps.size(); symOpIdx++)
+                for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
                 {
+                    int wfnTypeIdx = type_2_wfn_type[typeIdx];
 
-                    const Vector3<REAL>& rotated_h_ref = rotated_h[symOpIdx];
+                    //wfn_spherical_valence_sf[typeIdx] =
+                    f_sph_valence[typeIdx][hIndex] =
+                    sto_scattering::scatteringSphericalDensity(wfn_parameters[wfnTypeIdx].valence_coeff,
+                                                               wfn_parameters[wfnTypeIdx].valence_exp,
+                                                               wfn_parameters[wfnTypeIdx].valence_pow,
+                                                               h[hIndex] / type_parameters[typeIdx].kappa_spherical);
 
-                    //double atomic_phase_factor_phase = two_pi * (rotated_h_ref * atomic_positions[atomIdx] +
-                    //    translation_factor[symOpIdx]);
-
-                    //atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                    //atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-
-                    //complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
-                    complex<REAL> atomic_position_phase_factor = line_phase_factor[atomIdx][symOpIdx];
-                    atomic_phase_factor_real = line_phase_factor[atomIdx][symOpIdx].real();
-                    atomic_phase_factor_im = line_phase_factor[atomIdx][symOpIdx].imag();
-                    complex<REAL> atom_f_def_val;
-
-
-
-                    if (hkl000)
-                        atom_f_def_val = 0;
-                    else
-                    {
-                        //atom_f_def_val = calculateDeformationValence(typeParams[atomTypeIdx].p_lm,
-                        //    g_functions_and_slater_norm[atomTypeIdx],
-                        //    local_coordinate_systems[atomIdx],
-                        //    rotated_normalized_h[symOpIdx],
-                        //    typeMaxL[atomTypeIdx], sphericalHarmonicsData);
-
-                        atom_f_def_val = 0.0;
-                        if (atom_pz_dz[atomIdx])
-                        {
-                            double z = atom_z[atomIdx] * rotated_normalized_h[symOpIdx];
-                            atom_f_def_val.real(-4 * M_PI * typeParams[atomTypeIdx].p_lm[2][2] * g_functions_and_slater_norm[atomTypeIdx][2] * 0.2067483357831728 * (3.0 * z * z - 1.0));
-                            atom_f_def_val.imag(4 * M_PI * typeParams[atomTypeIdx].p_lm[1][1] * g_functions_and_slater_norm[atomTypeIdx][1] * 0.3183098861837907 * z);
-                        }
-                        else
-                            atom_f_def_val =
-                            calculateDeformationValence(
-                                atomPlms[atomIdx],
-                                g_functions_and_slater_norm[atomTypeIdx],
-                        
-                                typeMaxL[atomTypeIdx], spherical_harmonics[symOpIdx]);
-                    }
-                    
-                    
-
-                    //------- new
-                    //use_new_imp = true;
-                    if (use_new_imp)
-                    {
-                        REAL temperature_factor;
-                        complex<REAL> transformedAtomF;
-                        auto const& adps = atomic_displacement_parameters[atomIdx];
-                        if (n_adp_components == 6)
-                        {
-                            double* multipliers = &adpMultipliers[symOpIdx][0];
-                            //if (useLineAlgorithm)
-                            //    temperature_factor = temp_factor[atomIdx][symOpIdx];
-                            //else
-                            temperature_factor =
-                                exp(-multipliers[0] * adps[0] - multipliers[1] * adps[1]
-                                    - multipliers[2] * adps[2] - multipliers[3] * adps[3]
-                                    - multipliers[4] * adps[4] - multipliers[5] * adps[5]);
-
-                            //unweightedTransformedAtomFF = (fAtomSphericalAndAnomalous + atom_f_def_val)
-                            //    * atomic_position_phase_factor * temperature_factor;
-                            transformedAtomF = 2 * temperature_factor * (fAtomSphericalAndAnomalous * atomic_phase_factor_real +
-                                atom_f_def_val.real() * atomic_phase_factor_real -
-                                atom_f_def_val.imag() * atomic_phase_factor_im);
-
-                            if (derivativesSwitch.d_adp)
-                            {
-                                adp_derivatives[0] -= multipliers[0] * transformedAtomF;
-                                adp_derivatives[1] -= multipliers[1] * transformedAtomF;
-                                adp_derivatives[2] -= multipliers[2] * transformedAtomF;
-                                adp_derivatives[3] -= multipliers[3] * transformedAtomF;
-                                adp_derivatives[4] -= multipliers[4] * transformedAtomF;
-                                adp_derivatives[5] -= multipliers[5] * transformedAtomF;
-                            }
-
-                        }
-                        else
-                            transformedAtomF = 2.0 * (fAtomSphericalAndAnomalous * atomic_phase_factor_real +
-                                atom_f_def_val.real() * atomic_phase_factor_real -
-                                atom_f_def_val.imag() * atomic_phase_factor_im);
-
-                        atomicFContribWithoutWeight += transformedAtomF;
-
-                        // add contribution of dF[h]/dAtomicParameter to dTargetFunction/dParameter
-
-                        if (n_adp_components == 6)
-                            xyzDerivativesMultiplier = ((fAtomSphericalAndAnomalous + atom_f_def_val) * temperature_factor * atomic_position_phase_factor -
-                                 (fAtomSphericalAndAnomalous + conj(atom_f_def_val)) * temperature_factor * conj(atomic_position_phase_factor)) *
-                                 two_pi_i;
-                        else
-                            xyzDerivativesMultiplier = ((fAtomSphericalAndAnomalous + atom_f_def_val) * atomic_position_phase_factor -
-                                (fAtomSphericalAndAnomalous + conj(atom_f_def_val)) * conj(atomic_position_phase_factor)) *
-                                two_pi_i;
-
-                        xyz_derivatives[0] += rotated_h_ref[0] * xyzDerivativesMultiplier;
-                        xyz_derivatives[1] += rotated_h_ref[1] * xyzDerivativesMultiplier;
-                        xyz_derivatives[2] += rotated_h_ref[2] * xyzDerivativesMultiplier;
-
-
-                        //------- eof new
-                    }
-                    else
-                    {
-
-                        // temperature factor
-                        REAL temperature_factor;
-                        atomic_displacement_parameters[atomIdx].empty() ?
-                            temperature_factor = 1.0 :
-                            //temperature_factor = temp_factor[atomIdx][symOpIdx];
-                            temperature_factor = calc_temperature_factor(rotated_h_ref, hVectorLength, atomic_displacement_parameters[atomIdx]);
-                        double tf = temp_factor[atomIdx][symOpIdx];
-                        //if (fabs(tf - temperature_factor) / temperature_factor > 0.01)
-                          //  cout << "diff\n";
-                        complex<REAL> transformedAtomF = 2 * temperature_factor * (fAtomSphericalAndAnomalous * atomic_phase_factor_real +
-                            atom_f_def_val.real() * atomic_phase_factor_real -
-                            atom_f_def_val.imag() * atomic_phase_factor_im);
-
-
-                        atomicFContribWithoutWeight += transformedAtomF;
-
-                        // add contribution of dF[h]/dAtomicParameter to dTargetFunction/dParameter
-
-
-                        xyzDerivativesMultiplier = ((fAtomSphericalAndAnomalous + atom_f_def_val) * temperature_factor * atomic_position_phase_factor -
-                            (fAtomSphericalAndAnomalous + conj(atom_f_def_val)) * temperature_factor * conj(atomic_position_phase_factor)) *
-                            two_pi_i;
-
-                        xyz_derivatives[0] += rotated_h_ref[0] * xyzDerivativesMultiplier;
-                        xyz_derivatives[1] += rotated_h_ref[1] * xyzDerivativesMultiplier;
-                        xyz_derivatives[2] += rotated_h_ref[2] * xyzDerivativesMultiplier;
-
-                        //process_adp_derivatives(adp_derivatives, transformedAtomF, rotated_h_ref, hVectorLength, n_adp_components);
-
-                        if (n_adp_components == 6)
-                        {
-                            adp_derivatives[0] -= rotated_h_ref[0] * rotated_h_ref[0] * transformedAtomF;
-                            adp_derivatives[1] -= rotated_h_ref[1] * rotated_h_ref[1] * transformedAtomF;
-                            adp_derivatives[2] -= rotated_h_ref[2] * rotated_h_ref[2] * transformedAtomF;
-                            adp_derivatives[3] -= 2 * rotated_h_ref[0] * rotated_h_ref[1] * transformedAtomF;
-                            adp_derivatives[4] -= 2 * rotated_h_ref[0] * rotated_h_ref[2] * transformedAtomF;
-                            adp_derivatives[5] -= 2 * rotated_h_ref[1] * rotated_h_ref[2] * transformedAtomF;
-                        }
-
-                    }
-
-                } // symmetry operations
-                if (use_new_imp)
-                {
-                    double temperature_factor_iso;
-                    if (n_adp_components == 1)
-                    {
-                        //if (useLineAlgorithm)
-                        //    temperature_factor = temp_factor[atomIdx][0];
-                        //else
-                        //auto const &adps = atomic_displacement_parameters[atomIdx];
-                        temperature_factor_iso = exp(-hVectorLength * hVectorLength * atomic_displacement_parameters[atomIdx][0]);
-                        atomicFContribWithoutWeight *= temperature_factor_iso;
-                        if (derivativesSwitch.d_adp)
-                            dTarget_dparam[atomIdx].adp_derivatives[0] -= hVectorLength2 * (dTargetDf.real() * atomicFContribWithoutWeight.real() -
-                                dTargetDf.imag() * atomicFContribWithoutWeight.imag());
-                    }
-                    else
-                        if (n_adp_components == 6)
-                            if (derivativesSwitch.d_adp)
-                                for (int i = 0; i < 6; ++i)
-                                    dTarget_dparam[atomIdx].adp_derivatives[i] += dTargetDf.real() * adp_derivatives[i].real() -
-                                    dTargetDf.imag() * adp_derivatives[i].imag();
-
-                    if (derivativesSwitch.d_occ)
-                        dTarget_dparam[atomIdx].occupancy_derivatives +=
-                            (atomicFContribWithoutWeight * dTargetDf).real() *
-                            atomic_multiplicity_weight[atomIdx];
-
-
-                    realFContrib += atomicFContribWithoutWeight.real() * atomWeight;
-                    imagFContrib += atomicFContribWithoutWeight.imag() * atomWeight;
-                    complex<double> aux;
-                    n_adp_components == 1 ? aux = temperature_factor_iso * dTargetDf : aux = dTargetDf;
-
-                    if (derivativesSwitch.d_xyz)
-                        for (int i = 0; i < 3; ++i)
-                            dTarget_dparam[atomIdx].atomic_position_derivatives[i] += (aux * xyz_derivatives[i] * atomWeight).real();
-                            //dTarget_dparam[atomIdx].atomic_position_derivatives[i] -= aux.real() * xyz_derivatives[i].imag() +
-                            //aux.imag() * xyz_derivatives[i].real();
-                    /*
-                    complex<REAL> aux(dTargetDf * atomWeight);
-                    dTarget_dparam[atomIdx].atomic_position_derivatives[i] += (aux * xyz_derivatives[i]).real();
-                    */
-                }
-                else
-                {
-                    if (include_atom_contribution[atomIdx])
-                    {
-                        dTarget_dparam[atomIdx].occupancy_derivatives +=
-                            (atomicFContribWithoutWeight * dTargetDf).real() *
-                            atomic_multiplicity_weight[atomIdx];
-
-                        realFContrib += atomicFContribWithoutWeight.real() * atomWeight;
-                        imagFContrib += atomicFContribWithoutWeight.imag() * atomWeight;
-
-                        complex<REAL> aux(dTargetDf * atomWeight);
-                        // adp
-                        if (n_adp_components > 0)
-                        {
-                            if (n_adp_components == 1)
-                                dTarget_dparam[atomIdx].adp_derivatives[0] += -hVectorLength * hVectorLength * two_pi_sqare *
-                                (atomicFContribWithoutWeight * aux).real();
-                            else
-                                for (int i = 0; i < 6; ++i)
-                                    dTarget_dparam[atomIdx].adp_derivatives[i] += two_pi_sqare * (aux * adp_derivatives[i]).real();
-                        }
-                        // xyz
-
-                        for (int i = 0; i < 3; ++i)
-                            dTarget_dparam[atomIdx].atomic_position_derivatives[i] += (aux * xyz_derivatives[i]).real();
-                    }
+                    //wfn_spherical_valence_sf[typeIdx] *= type_parameters[typeIdx].p_val;
+                    f_sph_valence[typeIdx][hIndex] *= type_parameters[typeIdx].p_val;
                 }
 
-            } // symetrically independent atoms
-            //f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
-            f[line_to_orginal_hkl_list_idx[lineIdx][hklIndex]] = complex<REAL>(realFContrib, imagFContrib);
-
-        } // h vectors
-    }
-
-} // calculateSF_SerialCentrosymmetric_ordered_hkl
-
-
-void HansenCoppens_SF_Engine4::calculateSF_SerialCentrosymmetric(
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomic_positions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<REAL> &atomic_multiplicity_weight,
-    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
-    const std::vector<Vector3<REAL> > &hVectors,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    const std::vector<int> &type_2_wfn_type,
-    const std::vector<std::vector<REAL> > &def_val_slater_normalization,
-    std::vector<std::vector<double> > &sphericalHarmonicsData,
-    const std::vector<int> &typeMaxL)
-{
-    const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
-    complex<REAL> fAtomSphericalAndAnomalous,f0,f_dispersion;
-    const REAL two_pi = 2 * REAL(M_PI);
-    const REAL two_pi_sqare = 2 * REAL(M_PI*M_PI);
-    vector<Vector3<REAL> > rotated_h(symOps.size());
-    vector<Vector3<REAL> > rotated_normalized_h(symOps.size());
-    vector<REAL> translation_factor(symOps.size());
-
-    vector<REAL> wfn_spherical_core_sf(wfnParams.size());
-    vector<REAL> wfn_spherical_valence_sf(typeParams.size());
-    vector<vector<REAL> > g_functions_and_slater_norm(typeParams.size(), vector<REAL>(5));
-    int nSymmOps = symOps.size();
-    int nHklVectors = hVectors.size();
-    vector<vector<REAL> > adpMultipliers(nSymmOps,vector<REAL>(6));
-    REAL sumTeperatureRealPartPhase;
-    complex<REAL> transformedAtomContribWithoutWeight, xyzDerivativesMultiplier;
-    // set dTarget_dparam to zero ..
-
-    f.assign(nHklVectors, 0.0);
-
-    dTarget_dparam.resize(atomic_positions.size());
-
-    for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-    {
-        dTarget_dparam[atom_index].adp_derivatives.assign(atomic_displacement_parameters[atom_index].size(), 0.0);
-        dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
-        dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
-    }
-
-    //
-    bool hkl000;
-
-    for (int hklIndex = 0; hklIndex < nHklVectors; hklIndex++)
-    {
-        REAL hVectorLength = sqrt(hVectors[hklIndex] * hVectors[hklIndex]);
-        hkl000 = (hVectorLength < 1e-10);
-
-        pre_atom_loop_sf_calc(
-            //in:
-            wfnParams, typeParams, symOps, type_2_wfn_type, def_val_slater_normalization, hVectors[hklIndex], hVectorLength,
-            //out:
-            wfn_spherical_core_sf, wfn_spherical_valence_sf, g_functions_and_slater_norm,
-            rotated_h, rotated_normalized_h, translation_factor, adpMultipliers);
-
-
-
-        REAL realFContrib = 0;
-        REAL imagFContrib = 0;
-
-        
-
-        for (int atomIdx = 0; atomIdx < atomic_positions.size(); atomIdx++)
-        {
-            complex<REAL> adp_derivatives[6];
-            complex<REAL> xyz_derivatives[3];
-            REAL atomic_phase_factor_real, atomic_phase_factor_im, atomic_phase_factor_phase;
-
-            if (!include_atom_contribution[atomIdx])
-                continue;
-            complex<REAL> atomicFContribWithoutWeight = 0;
-
-            int atomWfnIdx = atom_to_wfn_map[atomIdx];
-            int atomTypeIdx = atom_to_type_map[atomIdx];
-
-
-
-
-            REAL atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-
-
-            REAL atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
-            REAL atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
-            atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-
-            complex<REAL> anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-            fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
-
-            // end of h direction independent part of atomic scattering factor calculation
-
-            // prepare derivatives data
-
-            int n_adp_components = atomic_displacement_parameters[atomIdx].size();
-            for (int i = 0; i<n_adp_components; i++)
-                adp_derivatives[i] = 0.0;
-            xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
-
-            // loop over symetry operations
-
-            sumTeperatureRealPartPhase = 0;
-
-            for (int symOpIdx = 0; symOpIdx < symOps.size(); symOpIdx++)
-            {
-
-                const Vector3<REAL> & rotated_h_ref = rotated_h[symOpIdx];
-
-                atomic_phase_factor_phase = two_pi*(rotated_h_ref*atomic_positions[atomIdx] +
-                                                    translation_factor[symOpIdx]);
-
-                atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-
-                complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
-
-                complex<REAL> atom_f_def_val;
-
-
-
-                if (hkl000)
-                    atom_f_def_val = 0;
-                else
-                    atom_f_def_val = calculateDeformationValence(typeParams[atomTypeIdx].p_lm,
-                        g_functions_and_slater_norm[atomTypeIdx],
-                        local_coordinate_systems[atomIdx],
-                        rotated_normalized_h[symOpIdx],
-                        typeMaxL[atomTypeIdx], sphericalHarmonicsData);
-
-
-                // temperature factor
-                REAL temperature_factor;
-                atomic_displacement_parameters[atomIdx].empty() ?
-                    temperature_factor = 1.0 :
-                    temperature_factor = calc_temperature_factor(rotated_h_ref, hVectorLength, atomic_displacement_parameters[atomIdx]);
-
-
-                complex<REAL> transformedAtomF = 2 * temperature_factor * (fAtomSphericalAndAnomalous*atomic_phase_factor_real +
-                                          atom_f_def_val.real() * atomic_phase_factor_real -
-                                          atom_f_def_val.imag() * atomic_phase_factor_im);
-
-
-                atomicFContribWithoutWeight += transformedAtomF;
-
-                // add contribution of dF[h]/dAtomicParameter to dTargetFunction/dParameter
-         
-
-                xyzDerivativesMultiplier = ((fAtomSphericalAndAnomalous + atom_f_def_val)*temperature_factor*atomic_position_phase_factor - 
-                                           (fAtomSphericalAndAnomalous + conj(atom_f_def_val))*temperature_factor*conj(atomic_position_phase_factor))*
-                                           two_pi_i;
-
-                xyz_derivatives[0] += rotated_h_ref[0] * xyzDerivativesMultiplier;
-                xyz_derivatives[1] += rotated_h_ref[1] * xyzDerivativesMultiplier;
-                xyz_derivatives[2] += rotated_h_ref[2] * xyzDerivativesMultiplier;
-
-                //process_adp_derivatives(adp_derivatives, transformedAtomF, rotated_h_ref, hVectorLength, n_adp_components);
-
-                if(n_adp_components==6)
-                {
-                    adp_derivatives[0] -= rotated_h_ref[0] * rotated_h_ref[0] * transformedAtomF;
-                    adp_derivatives[1] -= rotated_h_ref[1] * rotated_h_ref[1] * transformedAtomF;
-                    adp_derivatives[2] -= rotated_h_ref[2] * rotated_h_ref[2] * transformedAtomF;
-                    adp_derivatives[3] -= 2 * rotated_h_ref[0] * rotated_h_ref[1] * transformedAtomF;
-                    adp_derivatives[4] -= 2 * rotated_h_ref[0] * rotated_h_ref[2] * transformedAtomF;
-                    adp_derivatives[5] -= 2 * rotated_h_ref[1] * rotated_h_ref[2] * transformedAtomF;
-                }
-                
-
-
-            } // symmetry operations
-
-            if (include_atom_contribution[atomIdx])
-            {
-                dTarget_dparam[ atomIdx ].occupancy_derivatives += 
-                    ( atomicFContribWithoutWeight * dTarget_df[ hklIndex ] ).real() * 
-                    atomic_multiplicity_weight[ atomIdx ];
-
-                realFContrib += atomicFContribWithoutWeight.real()*atomWeight;
-                imagFContrib += atomicFContribWithoutWeight.imag()*atomWeight;
-
-                complex<REAL> aux(dTarget_df[hklIndex] * atomWeight);
-                // adp
-                if (n_adp_components > 0)
-                {
-                    if (n_adp_components == 1)
-                        dTarget_dparam[atomIdx].adp_derivatives[0] += -hVectorLength * hVectorLength * two_pi_sqare *
-                                                                        (atomicFContribWithoutWeight * aux ).real();
-                    else
-                        for (int i = 0; i<6; ++i)
-                            dTarget_dparam[atomIdx].adp_derivatives[i] += two_pi_sqare*(aux*adp_derivatives[i]).real();
-                }
-                // xyz
-
-                for (int i = 0; i<3; ++i)
-                    dTarget_dparam[atomIdx].atomic_position_derivatives[i] += (aux*xyz_derivatives[i]).real();
-            }
-
-        } // symetrically independent atoms
-        f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
-
-    } // h vectors
-
-
-} // calculateSF_SerialCentrosymmetric
-
-
-
-
-void HansenCoppens_SF_Engine4::calculateSF_SerialSymmetryCenterNotAtOrigin(
-    const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,
-    const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams,
-    const std::vector<int> &atom_to_wfn_map,
-    const std::vector<int> &atom_to_type_map,
-    const std::vector<Vector3<REAL> > &atomic_positions,
-    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
-    const std::vector<REAL> &atomic_occupancy,
-    const std::vector<std::complex<REAL> >& anomalous_dispersion,
-    const std::vector<REAL> &atomic_multiplicity_weight,
-    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
-    const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
-    const Vector3<REAL> &inversionTranslation,
-    const std::vector<Vector3<REAL> > &hVectors,
-    std::vector<std::complex<REAL> > &f,
-    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
-    const std::vector<std::complex<REAL> > &dTarget_df,
-    const std::vector<bool> &include_atom_contribution,
-    const std::vector<int> &type_2_wfn_type,
-    const std::vector<std::vector<REAL> > &def_val_slater_normalization,
-    std::vector<std::vector<double> > &sphericalHarmonicsData,
-    const std::vector<int> &typeMaxL,
-    const DerivativesSelector& derivativesSwitch,
-    bool electron,
-    const std::vector<int>& atomic_number)
-{
-    bool anomalous_per_atom = !anomalous_dispersion.empty();
-    
-    const complex<REAL> two_pi_i(0, 2 * REAL(M_PI));
-    complex<REAL> fAtomSphericalAndAnomalous, f0, f_dispersion, term1, term2;
-    const REAL two_pi = 2 * REAL(M_PI);
-    const REAL two_pi_sqare = 2 * REAL(M_PI*M_PI);
-    vector<Vector3<REAL> > rotated_h(symOps.size());
-    vector<Vector3<REAL> > rotated_normalized_h(symOps.size());
-    vector<REAL> translation_factor(symOps.size());
-
-    vector<REAL> wfn_spherical_core_sf(wfnParams.size());
-    vector<REAL> wfn_spherical_valence_sf(typeParams.size());
-    vector<vector<REAL> > g_functions_and_slater_norm(typeParams.size(), vector<REAL>(5));
-    int nSymmOps = symOps.size();
-    vector<vector<REAL> > adpMultipliers(nSymmOps,vector<REAL>(6));
-    int nHklVectors = hVectors.size();
-    REAL sumTeperatureRealPartPhase;
-    complex<REAL> transformedAtomContribWithoutWeight, xyzDerivativesMultiplier, inversionTranslationPhaseFactor;
-    // set dTarget_dparam to zero ..
-
-    //_DEBUG
-
-    //vector<vector<complex<double> > > sf(atomic_positions.size(),vector<complex<double> >(nSymmOps));
-
-    //END DEBUG
-
-    f.assign(nHklVectors, 0.0);
-
-    dTarget_dparam.resize(atomic_positions.size());
-
-    for (int atom_index = 0; atom_index < atomic_positions.size(); atom_index++)
-    {
-        dTarget_dparam[atom_index].adp_derivatives.assign(atomic_displacement_parameters[atom_index].size(), 0.0);
-        dTarget_dparam[atom_index].atomic_position_derivatives = Vector3d(0, 0, 0);
-        dTarget_dparam[atom_index].occupancy_derivatives = 0.0;
-    }
-
-    //
-
-    bool hkl000;
-    for (int hklIndex = 0; hklIndex < nHklVectors; hklIndex++)
-    {
-        REAL hVectorLength = sqrt(hVectors[hklIndex] * hVectors[hklIndex]);
-        hkl000 = (hVectorLength < 1e-10);
-
-        vector<double> f000_electron;
-
-        if (hkl000)
-        {
-            if (electron)
-                electronScatteringAt000(atomic_number, f000_electron);
         }
 
 
-        pre_atom_loop_sf_calc(
-            //in:
-            wfnParams, typeParams, symOps, type_2_wfn_type, def_val_slater_normalization, hVectors[hklIndex], hVectorLength,
-            //out:
-            wfn_spherical_core_sf, wfn_spherical_valence_sf, g_functions_and_slater_norm,
-            rotated_h, rotated_normalized_h, translation_factor, adpMultipliers);
-
-        inversionTranslationPhaseFactor = exp(two_pi_i*(hVectors[hklIndex]*inversionTranslation));
-
-        REAL realFContrib = 0;
-        REAL imagFContrib = 0;
+    }
 
 
-        for (int atomIdx = 0; atomIdx < atomic_positions.size(); atomIdx++)
+
+    void HansenCoppens_SF_Engine4::calculateGlobalCoordinatesPlm(
+        const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
+        const std::vector<int>& atom_to_type_map,
+        const std::vector<Matrix3<REAL> >& local_coordinate_systems,// rows are vectors
+        std::vector< std::vector<std::vector<double> > > & atomPlms)
+    {
+        int maxL = 4;
+        vector<vector<double> > den2wfn;
+        real_spherical_harmonics::getDensityToWfnMultipliers(maxL, den2wfn);
+
+        int nTypes = type_parameters.size();
+        vector<vector<vector<double> > > typePlmWfn(nTypes);
+        for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
         {
-            complex<REAL> adp_derivatives[6];
-            complex<REAL> xyz_derivatives[3];
-            REAL atomic_phase_factor_real, atomic_phase_factor_im, atomic_phase_factor_phase;
-
-            if (!include_atom_contribution[atomIdx])
-                continue;
-            complex<REAL> atomicFContribWithoutWeight = 0;
-
-            int atomWfnIdx = atom_to_wfn_map[atomIdx];
-            int atomTypeIdx = atom_to_type_map[atomIdx];
-
-
-
-
-            REAL atomWeight = atomic_occupancy[atomIdx] * atomic_multiplicity_weight[atomIdx];
-
-
-            REAL atom_f_core = wfn_spherical_core_sf[atomWfnIdx];
-            REAL atom_f_sph_val = wfn_spherical_valence_sf[atomTypeIdx];
-            atom_f_sph_val *= typeParams[atomTypeIdx].p_val;
-
-            complex<REAL> anomalousScattering;
-            anomalous_per_atom ? anomalousScattering = anomalous_dispersion[atomIdx]: anomalousScattering = wfnParams[atomWfnIdx].anomalous_scattering;
-            
-            fAtomSphericalAndAnomalous = atom_f_core + atom_f_sph_val + anomalousScattering;
-
-            // end of h direction independent part of atomic scattering factor calculation
-
-            // prepare derivatives data
-
-            int n_adp_components = atomic_displacement_parameters[atomIdx].size();
-            for (int i = 0; i<n_adp_components; i++)
-                adp_derivatives[i] = 0.0;
-            xyz_derivatives[0] = xyz_derivatives[1] = xyz_derivatives[2] = 0;
-
-            // loop over symmetry operations
-
-            sumTeperatureRealPartPhase = 0;
-
-            for (int symOpIdx = 0; symOpIdx < symOps.size(); symOpIdx++)
-            {
-
-                const Vector3<REAL> & rotated_h_ref = rotated_h[symOpIdx];
-
-                atomic_phase_factor_phase = two_pi*(rotated_h_ref*atomic_positions[atomIdx] +
-                                                    translation_factor[symOpIdx]);
-
-                atomic_phase_factor_real = cos(atomic_phase_factor_phase);
-                atomic_phase_factor_im = sin(atomic_phase_factor_phase);
-
-                complex<REAL> atomic_position_phase_factor(atomic_phase_factor_real, atomic_phase_factor_im);
-
-
-                complex<REAL> atom_f_def_val = 
-                    hkl000 ? 0.0 : 
-                             calculateDeformationValence(typeParams[atomTypeIdx].p_lm,
-                                                         g_functions_and_slater_norm[atomTypeIdx],
-                                                         local_coordinate_systems[atomIdx],
-                                                         rotated_normalized_h[symOpIdx],
-                                                         typeMaxL[atomTypeIdx], sphericalHarmonicsData);
-
-                // temperature factor
-                REAL temperature_factor;
-                atomic_displacement_parameters[atomIdx].empty() ?
-                    temperature_factor = 1.0 :
-                    temperature_factor = calc_temperature_factor(rotated_h_ref, hVectorLength, atomic_displacement_parameters[atomIdx]);
-
-                complex<double> atomic_ff = fAtomSphericalAndAnomalous + atom_f_def_val;
-                if (electron)
+            int typeMaxL = type_parameters[typeIdx].p_lm.size() - 1;
+            typePlmWfn[typeIdx] = type_parameters[typeIdx].p_lm;
+            for (int l = 0; l <= typeMaxL; l++)
+                for (int i = 0; i < 2 * l + 1; i++)
                 {
-                    if (hkl000)
-                        atomic_ff = f000_electron[atomIdx] + anomalousScattering;
-                    else
-                    {
-                        complex<double> nuclear = 0.023934 * atomic_number[atomIdx] / (0.25 * hVectorLength* hVectorLength);
-                        complex<double> electron = -0.023934 * (atomic_ff - anomalousScattering) / (0.25 * hVectorLength* hVectorLength);
-                        atomic_ff = nuclear + electron + anomalousScattering;
+                    int abs_m = abs(l - i);
+                    typePlmWfn[typeIdx][l][i] *= den2wfn[l][abs_m];
+                }
+
+        }
+
+        SphConverter sphConverter;
+        vector<vector<vector<double> > > conversionMatrices;
+        sphConverter.setMaxL(maxL);
+
+        vector<vector<double> > localCoordinates(3, vector<double>(3));
+        vector<vector<double> > cartesianCoordinates{ {1.0,0.0,0.0}, {0.0,1.0,0.0},{0.0,0.0,1.0} };
+
+
+        int nAtoms = atom_to_type_map.size();
+        atomPlms.resize(nAtoms);
+
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                    localCoordinates[i][j] = local_coordinate_systems[atomIdx](i, j);
+
+            sphConverter.convert(localCoordinates, cartesianCoordinates, conversionMatrices);
+            int atomType = atom_to_type_map[atomIdx];
+            int typeMaxL = type_parameters[atomType].p_lm.size() - 1;
+            atomPlms[atomIdx].resize(typeMaxL + 1);
+            for (int l = 0; l <= typeMaxL; l++)
+            {
+                atomPlms[atomIdx][l].resize(2 * l + 1);
+                for (int i = 0; i < 2 * l + 1; i++)
+                {
+                    atomPlms[atomIdx][l][i] = 0.0;
+                    for (int j = 0; j < 2 * l + 1; j++)
+                        atomPlms[atomIdx][l][i] += conversionMatrices[l][i][j] * typePlmWfn[atomType][l][j];
+
+                    int abs_m = abs(l - i);
+                    atomPlms[atomIdx][l][i] /= den2wfn[l][abs_m];
+                }
+            }
+        }
+    }
+    /*
+     * void calculateSF(
+     *    const UnitCell &unitCell,
+     *    const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
+     *    const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
+     *    const std::vector<int> &atom_to_wfn_map,
+     *    const std::vector<int> &atom_to_type_map,
+     *    const std::vector<Vector3<REAL> > &atomicPositions,
+     *    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
+     *    const std::vector<REAL> &atomic_occupancy,
+     *    const std::vector<REAL> &atomic_multiplicity_factor,
+     *    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
+     *    const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
+     *    bool centrosymmetric,
+     *    const Vector3<REAL> &inversionTranslation,
+     *    const std::vector<Vector3<REAL> > &h_vectors,
+     *    const std::vector<Vector3i >& hkl_indices,
+     *    std::vector<std::complex<REAL> > &f,
+     *    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
+     *    const std::vector<std::complex<REAL> > &dTarget_df,
+     *    const std::vector<bool> &include_atom_contribution,
+     *    int nThreads);
+     */
+
+    inline void printStep(std::string name){
+        std::cout << "calculateSF: after - " << name << " - time = " << std::clock() << std::endl;
+    }
+
+    inline void printInLoop(std::string name){
+        //std::cout << "calculateSF-main: after - " << name << " - time = " << std::clock() << std::endl;
+    }
+
+    template<typename T>
+    inline void infrequentValueLog(std::string name, T value){
+        //std::cout << name << " = " << value << std::endl;
+    }
+
+    template<typename T>
+    inline void valueLog(std::string name, T value){
+        //std::cout << name << " = " << value << std::endl;
+    }
+
+    constexpr std::array<int, 3> binSize = {8, 8, 8};
+    //constexpr bool virtLinePhaseFlag = true; // maybe add later (the ability to change to false)
+    //constexpr bool virtLineTemperatureFlag = true; // maybe add later (the ability to change to false)
+    constexpr bool virtHklPhaseFlag = false;
+    constexpr bool virtHklTemperatureFlag = false;
+    constexpr bool virtHklTMulFlag = true;
+    //constexpr bool symOpExtractionFlag = true; // maybe add later (the ability to change to false)
+    //constexpr bool fSymDeduplicationFlag = false; // cctbx already dedupes // maybe add later (the ability to change to true)
+    //constexpr bool versorDeduplicationFlag = true; // maybe add later (the ability to change to true) since it should only speed it up ~1.2 times
+    //constexpr bool lengthDeduplicationFlag = true; // maybe add later (the ability to change to true)
+    //constexpr bool symOpOffsetDeduplication = false; // maybe add later (the ability to change to true)
+
+    constexpr double two_pi = 2.0*M_PI;
+    constexpr double two_pi_squared = two_pi*M_PI;
+    constexpr double four_pi_squared = two_pi*two_pi;
+    constexpr double four_pi = 4.0*M_PI;
+
+    inline REAL square(REAL x){
+        return x*x;
+    }
+
+    inline bool closeToZero(REAL x){
+        return -1e-12<x and x<1e-12;
+    }
+
+    inline bool closeToZero(Vector3<REAL> vec){
+        return (
+            closeToZero(vec[0]) and
+            closeToZero(vec[1]) and
+            closeToZero(vec[2]));
+    }
+
+    inline bool closeToZero(Matrix3<REAL> mat){
+        return (
+            closeToZero({mat(0,0), mat(0,1), mat(0,2)}) and
+            closeToZero({mat(1,0), mat(1,1), mat(1,2)}) and
+            closeToZero({mat(2,0), mat(2,1), mat(2,2)}));
+    }
+
+    inline Matrix3<REAL> U(const std::vector<REAL> &adps){
+        assert(adps.size()==6);
+        return Matrix3<REAL>(
+            adps[0], adps[3], adps[4],
+            adps[3], adps[1], adps[5],
+            adps[4], adps[5], adps[2]);
+    }
+
+    inline int gcd(int a, int b){
+        while (b != 0){
+            int t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+
+    inline REAL sqrt(REAL x){
+        return std::sqrt(x); // TODO make it use a more precise approach (some new c++ versions may not have support for double here)
+    }
+
+    inline REAL pow(REAL x, int n){
+        return std::pow(x, n); // TODO make it use a more precise approach (some new c++ versions may not have support for double here)
+    }
+    /* this breaks the results by ~10^-5 (tyrosine) TODO make a more robust replacement (for now use the compiler default)
+     * REAL cos(REAL x){
+     *    return std::cosf(std::fmodf(x, two_pi));
+}
+
+REAL sin(REAL x){
+return std::sinf(std::fmodf(x, two_pi));
+}
+*/
+    void HansenCoppens_SF_Engine4::calculateSF(
+        const UnitCell &unitCell,
+        const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams, // per wfn
+        const std::vector<sf_engine_data_types::HC_TypeParam> &typeParams, // per type
+        const std::vector<int> &atom_to_wfn_map,
+        const std::vector<int> &atom_to_type_map,
+        const std::vector<Vector3<REAL> > &atomicPositions, // per atom
+        const std::vector<std::vector<REAL> > &atomic_displacement_parameters, // per atom and already premultiplied by two_pi_squared
+        const std::vector<REAL> &atomic_occupancy,
+        const std::vector<std::complex<REAL> >& anomalous_dispersion, // per atom // TODO use
+        const std::vector<REAL> &atomic_multiplicity_factor,
+        const std::vector<Matrix3<REAL> > &local_coordinate_systems, // per atom
+        const std::vector<sf_engine_data_types::SymmetryOperation> &symOps,
+        bool centrosymmetric, // TODO use
+        const Vector3<REAL> &inversionTranslation, // TODO use
+        const std::vector<Vector3<REAL> > &hVectors,
+        const std::vector<Vector3i >& hkl_indices, // unused
+        std::vector<std::complex<REAL> > &f,
+        std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam, // per atom // TODO generate
+        const std::vector<std::complex<REAL> > &dTarget_df, // per hkl // TODO use
+        const std::vector<bool> &include_atom_contribution, // per atom
+        int nThreads,
+        const DerivativesSelector& derivativesSwitch, // TODO use
+        bool electron, // TODO use
+        const std::vector<int>& atomic_numbers) // TODO use
+    {
+        printStep("calculateSF start");
+        const int trueNAtoms = atom_to_wfn_map.size();
+        std::vector<int> usedAtomIndices;
+        usedAtomIndices.clear();
+        for (int i=0; i<trueNAtoms; i++){
+            if (include_atom_contribution[i])
+                usedAtomIndices.emplace_back(i);
+        }
+        const int hklCount = hVectors.size();
+        const int nAtoms = usedAtomIndices.size();
+
+        infrequentValueLog("nAtoms", nAtoms);
+        for (int atom=0; atom<nAtoms; atom++){
+            valueLog("usedAtomIndices[atom]", usedAtomIndices[atom]);
+            for (int i=0; i<atomic_displacement_parameters[usedAtomIndices[atom]].size(); i++){
+                valueLog("atomic_displacement_parameters[usedAtomIndices[atom]]",atomic_displacement_parameters[usedAtomIndices[atom]][i]);
+            }
+        }
+
+        const int nSymOps = symOps.size();
+
+        std::vector<Matrix3<REAL>> symOpMults;
+        std::vector<int> symOpToMult;
+        symOpToMult.resize(nSymOps);
+        symOpMults.emplace_back(symOps[0].rotation);
+        valueLog("symOpIdx", 0);
+        valueLog("current(0,0)", symOps[0].rotation(0,0));
+        valueLog("current(0,1)", symOps[0].rotation(0,1));
+        valueLog("current(0,2)", symOps[0].rotation(0,2));
+        valueLog("current(1,0)", symOps[0].rotation(1,0));
+        valueLog("current(1,1)", symOps[0].rotation(1,1));
+        valueLog("current(1,2)", symOps[0].rotation(1,2));
+        valueLog("current(2,0)", symOps[0].rotation(2,0));
+        valueLog("current(2,1)", symOps[0].rotation(2,1));
+        valueLog("current(2,2)", symOps[0].rotation(2,2));
+        for (int symOpIdx = 1; symOpIdx<nSymOps; symOpIdx++){
+            auto &current = symOps[symOpIdx].rotation;
+            valueLog("symOpIdx", symOpIdx);
+            valueLog("current(0,0)", current(0,0));
+            valueLog("current(0,1)", current(0,1));
+            valueLog("current(0,2)", current(0,2));
+            valueLog("current(1,0)", current(1,0));
+            valueLog("current(1,1)", current(1,1));
+            valueLog("current(1,2)", current(1,2));
+            valueLog("current(2,0)", current(2,0));
+            valueLog("current(2,1)", current(2,1));
+            valueLog("current(2,2)", current(2,2));
+            bool isInMults = false;
+            for (int multIdx = 0; multIdx<symOpMults.size(); multIdx++){
+                if (closeToZero(current - symOpMults[multIdx])){
+                    isInMults = true;
+                    symOpToMult[symOpIdx] = multIdx;
+                    break;
+                }
+            }
+            if (not isInMults){
+                symOpToMult[symOpIdx] = symOpMults.size();
+                symOpMults.emplace_back(current);
+            }
+        }
+        const int symOpMultCount = symOpMults.size();
+        infrequentValueLog("symOpMultCount", symOpMultCount);
+
+        std::vector<Vector3<REAL>> symOpOffsets;
+        std::vector<int> symOpToOffset;
+        symOpToOffset.resize(nSymOps);
+        symOpOffsets.emplace_back(symOps[0].translation);
+        valueLog("symOpIdx", 0);
+        valueLog("current[0]", symOps[0].translation[0]);
+        valueLog("current[1]", symOps[0].translation[1]);
+        valueLog("current[2]", symOps[0].translation[2]);
+        for (int symOpIdx = 1; symOpIdx<nSymOps; symOpIdx++){
+            auto &current = symOps[symOpIdx].translation;
+            valueLog("symOpIdx", symOpIdx);
+            valueLog("current[0]", current[0]);
+            valueLog("current[1]", current[1]);
+            valueLog("current[2]", current[2]);
+            bool isInOffsets = false;
+            for (int offsetIdx = 0; offsetIdx<symOpOffsets.size(); offsetIdx++){
+                if (closeToZero(current - symOpOffsets[offsetIdx])){
+                    isInOffsets = true;
+                    symOpToOffset[symOpIdx] = offsetIdx;
+                    break;
+                }
+            }
+            if (not isInOffsets){
+                symOpToOffset[symOpIdx] = symOpOffsets.size();
+                symOpOffsets.emplace_back(current);
+            }
+        }
+        const int symOpOffsetCount = symOpOffsets.size();
+        infrequentValueLog("symOpOffsetCount", symOpOffsetCount);
+
+        printStep("symOp deduplication");
+
+        Vector3<int> minHkl = hkl_indices[0];
+        Vector3<int> maxHkl = hkl_indices[0];
+        Vector3<int> step = {0, 0, 0};
+        //Vector3<REAL> minH = hVectors[0];
+        //Vector3<REAL> maxH = hVectors[0];
+        for (int hklIdx = 1; hklIdx<hklCount; hklIdx++){
+            const Vector3<int> &currentHkl = hkl_indices[hklIdx];
+            const Vector3<REAL> &currentH = hVectors[hklIdx];
+            for (int i = 0; i<3; i++){
+                if (currentHkl[i]<minHkl[i]) {
+                    minHkl[i] = currentHkl[i];
+                    //minH[i] = currentH[i];
+                }
+                if (currentHkl[i]>maxHkl[i]) {
+                    maxHkl[i] = currentHkl[i];
+                    //maxH[i] = currentH[i];
+                }
+                const int diff = std::abs(currentHkl[i]-hkl_indices[0][i]);
+                if (step[i]==0)
+                    step[i]=diff;
+                else if ((diff % step[i]) != 0) {
+                    step[i] = gcd(diff, step[i]);
+                };
+            }
+        }
+
+        for (int i=0; i<3; i++){
+            if (step[i]==0)
+                step[i]=1;
+        }
+
+        infrequentValueLog("step[0]", step[0]);
+        infrequentValueLog("step[1]", step[1]);
+        infrequentValueLog("step[2]", step[2]);
+
+        /*
+         *    Vector3<REAL> scale;
+         *    for (int i =0; i<3; i++){
+         *        if (((maxHkl[i] - minHkl[i]) == 0) or closeToZero(maxH[i] - minH[i])){
+         *          if ((maxHkl[i] == 0) or closeToZero(maxH[i])){
+         *            scale[i]=1.0;
+    } else {
+        scale[i]=maxH[i]/maxHkl[i];
+    }
+    }
+    else{
+        scale[i]=(maxH[i] - minH[i]) / (maxHkl[i] - minHkl[i]);
+    }
+    }
+
+    infrequentValueLog("scale[0]", scale[0]);
+    infrequentValueLog("scale[1]", scale[1]);
+    infrequentValueLog("scale[2]", scale[2]);
+    */
+
+        Vector3<int> nHkls;
+        for (int i = 0; i<3; i++){
+            const int diff = maxHkl[i]-minHkl[i];
+            assert(diff % step[i] == 0);
+            nHkls[i]=diff/step[i] + 1;
+        }
+
+        Vector3<int> nBins;
+        for (int i = 0; i<3; i++){
+            if ((nHkls[i]%binSize[i]) == 0)
+                nBins[i] = nHkls[i] / binSize[i];
+            else
+                nBins[i] = (nHkls[i] / binSize[i]) + 1;
+        }
+
+        const int totalNBins = nBins[0]*nBins[1]*nBins[2];
+
+
+        printStep("hkl binning");
+
+        // [h*nk*nl + k*nl + l]
+        std::vector<bool> isBinUsed;
+        isBinUsed.resize(totalNBins, false);
+        for (int hklIdx = 0; hklIdx<hklCount; hklIdx++){
+            const Vector3<int> &currentHkl = hkl_indices[hklIdx];
+            Vector3<int> binIdx;
+            for (int i=0; i<3; i++){
+                //assert((currentHkl[i] % step[i]) == 0)
+                binIdx[i] = (currentHkl[i] - minHkl[i]) / (step[i] * binSize[i]);
+            }
+            isBinUsed[(binIdx[0]*nBins[1] + binIdx[1])*nBins[2] + binIdx[2]] = true;
+        }
+        std::vector<int> allBinsMap;
+        allBinsMap.resize(nBins[0]*nBins[1]*nBins[2]);
+        std::vector<Vector3<int>> usedBins;
+        usedBins.clear();
+        for (int h = 0; h<nBins[0]; h++){
+            for (int k = 0; k<nBins[1]; k++){
+                for (int l = 0; l<nBins[2]; l++){
+                    if (isBinUsed[(h*nBins[1] + k)*nBins[2] + l]){
+                        allBinsMap[(h*nBins[1] + k)*nBins[2] + l] = usedBins.size();
+                        usedBins.emplace_back(h, k, l);
                     }
-
                 }
+            }
+        }
 
-                //term1 = (fAtomSphericalAndAnomalous + atom_f_def_val) * atomic_position_phase_factor;
-                //term2 = (fAtomSphericalAndAnomalous + conj(atom_f_def_val)) * conj(atomic_position_phase_factor) *
-                //        inversionTranslationPhaseFactor;
-                term1 = atomic_ff * atomic_position_phase_factor;
-                term2 = conj(atomic_ff) * conj(atomic_position_phase_factor) *
-                        inversionTranslationPhaseFactor;
+        const int binCount = usedBins.size();
 
-                complex<REAL> transformedAtomF = temperature_factor * ( term1 + term2 );
+        infrequentValueLog("binCount", binCount);
 
-                atomicFContribWithoutWeight += transformedAtomF;
+        printStep("bin deduplication");
 
-                //if(hklIndex==5)
-                  //  sf[atomIdx][symOpIdx] = transformedAtomF;
+        vector<vector<Vector3d> > r_atom_rot(nAtoms,vector<Vector3<REAL>>(symOpMultCount));
+        #pragma omp parallel for num_threads(nThreads) collapse(2)
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++){
+            for (int symOpMultIdx = 0; symOpMultIdx < symOpMultCount; symOpMultIdx++){
+                r_atom_rot[atomIdx][symOpMultIdx] = symOpMults[symOpMultIdx]*atomicPositions[usedAtomIndices[atomIdx]];
+            }
+        }
 
-                xyzDerivativesMultiplier = temperature_factor*(term1 - term2)*two_pi_i;
+        ReciprocalLatticeUnitCell recUnitCell(unitCell);
+        std::array<Vector3<REAL>, 3> stepCartesian;
+        recUnitCell.fractionalToCartesian({step[0], 0.0, 0.0}, stepCartesian[0]);
+        recUnitCell.fractionalToCartesian({0.0, step[1], 0.0}, stepCartesian[1]);
+        recUnitCell.fractionalToCartesian({0.0, 0.0, step[2]}, stepCartesian[2]);
 
-                xyz_derivatives[0] += rotated_h_ref[0] * xyzDerivativesMultiplier;
-                xyz_derivatives[1] += rotated_h_ref[1] * xyzDerivativesMultiplier;
-                xyz_derivatives[2] += rotated_h_ref[2] * xyzDerivativesMultiplier;
+        std::vector<Vector3<REAL>> bin000Cartesian;
+        bin000Cartesian.resize(binCount);
+        #pragma omp parallel for num_threads(nThreads)
+        for (int binIdx = 0; binIdx<binCount; binIdx++){
+            Vector3<int> bin000;
+            for (int i=0; i<3; i++){
+                bin000[i] = usedBins[binIdx][i] * step[i] * binSize[i] + minHkl[i];
+                infrequentValueLog("bin000[i]", bin000[i]);
+            }
+            recUnitCell.fractionalToCartesian(bin000, bin000Cartesian[binIdx]);
+            infrequentValueLog("bin000Cartesian[binIdx][0]", bin000Cartesian[binIdx][0]);
+            infrequentValueLog("bin000Cartesian[binIdx][1]", bin000Cartesian[binIdx][1]);
+            infrequentValueLog("bin000Cartesian[binIdx][2]", bin000Cartesian[binIdx][2]);
+        }
 
-                if (n_adp_components == 6)
-                {
-                    adp_derivatives[0] -= rotated_h_ref[0] * rotated_h_ref[0] * transformedAtomF;
-                    adp_derivatives[1] -= rotated_h_ref[1] * rotated_h_ref[1] * transformedAtomF;
-                    adp_derivatives[2] -= rotated_h_ref[2] * rotated_h_ref[2] * transformedAtomF;
-                    adp_derivatives[3] -= 2 * rotated_h_ref[0] * rotated_h_ref[1] * transformedAtomF;
-                    adp_derivatives[4] -= 2 * rotated_h_ref[0] * rotated_h_ref[2] * transformedAtomF;
-                    adp_derivatives[5] -= 2 * rotated_h_ref[1] * rotated_h_ref[2] * transformedAtomF;
+        printStep("fractional to cartesian conversion");
+
+        // [atom][symOpMult | 0]
+        std::vector<std::vector<Matrix3<REAL>>> rotatedUs;
+        rotatedUs.resize(nAtoms);
+        for (int atom=0; atom<nAtoms; atom++){
+            rotatedUs[atom].resize((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 6) ? symOpMultCount : 0);
+        }
+        #pragma omp parallel for num_threads(nThreads)
+        for (int atom=0; atom<nAtoms; atom++){
+            if (atomic_displacement_parameters[usedAtomIndices[atom]].size() == 6) {
+                /*auto ftcMatrixT = recUnitCell.getFractionalToCartesianMatrix();
+                 *            ftcMatrixT.transpose();
+                 *            const auto orig = recUnitCell.getFractionalToCartesianMatrix() * U(atomic_displacement_parameters[usedAtomIndices[atom]]) * ftcMatrixT;
+                 */
+                valueLog("atom", atom);
+                for (int i=0; i<6; i++){
+                    valueLog("atomic_displacement_parameters[usedAtomIndices[atom]][i]", atomic_displacement_parameters[usedAtomIndices[atom]][i]);
                 }
-
-            } // symmetry operations
-
-            if (include_atom_contribution[atomIdx])
-            {
-                dTarget_dparam[atomIdx].occupancy_derivatives +=
-                    (atomicFContribWithoutWeight * dTarget_df[hklIndex]).real() *
-                    atomic_multiplicity_weight[atomIdx];
-
-                realFContrib += atomicFContribWithoutWeight.real()*atomWeight;
-                imagFContrib += atomicFContribWithoutWeight.imag()*atomWeight;
-
-                complex<REAL> aux(dTarget_df[hklIndex] * atomWeight);
-                // adp
-                if (n_adp_components > 0)
-                {
-                    if (n_adp_components == 1)
-                        //                        df_dparam = -hVectorLength * hVectorLength * atomic_f;
-                        //                  adp_derivatives[0] += dTarget_dF * df_dparam;
-                        //dTarget_dparam[atomIdx].adp_derivatives[0] += -hVectorLength * hVectorLength * two_pi_sqare *
-                        //                                             (atomicFContribWithoutWeight * aux * dTarget_df[hklIndex]).real();
-                        dTarget_dparam[atomIdx].adp_derivatives[0] += -hVectorLength * hVectorLength * two_pi_sqare *
-                                                                     (atomicFContribWithoutWeight * aux ).real();
-                    else
-                        for (int i = 0; i<6; ++i)
-                            dTarget_dparam[atomIdx].adp_derivatives[i] += two_pi_sqare*(aux*adp_derivatives[i]).real();
+                const auto orig = U(atomic_displacement_parameters[usedAtomIndices[atom]]);
+                for (int symOpIdx = 0; symOpIdx<symOpMultCount; symOpIdx++){
+                    Matrix3<REAL> symOpT;
+                    for (int i=0; i<3; i++){
+                        for(int j=0; j<3; j++){
+                            symOpT(i, j) = symOpMults[symOpIdx](j, i);
+                        }
+                    }
+                    rotatedUs[atom][symOpIdx] = symOpT * orig * symOpMults[symOpIdx];
+                    /*
+                     *                // trying to do M = symOp * orig * symOp^T
+                     *                // because orig^T = orig and M^T = M
+                     *                // it is enough to compute only 6/9 of acc and 6/9 of M = P * symOp^T
+                     *                  std::array<Matrix3<REAL>, 3> acc;
+                     *                  for (int x=0; x<3; x++){
+                     *                      for (int y=0; y<3; y++){
+                     *                          for (int i=y; i<3; i++){
+                     *                              acc[i](x, y) = symOp(i, y) * orig(x, i);
                 }
-                // xyz
-                //aux *= 2.0 * two_pi_i;
-                for (int i = 0; i<3; ++i)
-                    dTarget_dparam[atomIdx].atomic_position_derivatives[i] += (aux*xyz_derivatives[i]).real();
+                }
+                }
+                Matrix3<REAL> P;
+                for (int x=0; x<3; x++){
+                    for (int y=0; y<3; y++){
+                        for (int i=0; i<y; i++){
+                            P(x, y) += acc[y](x, i);
+                }
+                for (int i=y; i<3; i++){
+                    P(x, y) += acc[i](x, y);
+                }
+                }
+                }
+                Matrix3<REAL> M;
+                for (int x=0; x<3; x++){
+                    for (int y=0; y<=x; y++){
+                        for (int i=0; i<3; i++){
+                            M(x, y) += P(i, y) * symOp(i, x);
+                }
+                }
+                }
+                rotatedUs[atom][symOpIdx] = Matrix3<REAL>(
+                    M(0, 0), M(1, 0), M(2, 0),
+                    M(1, 0), M(1, 1), M(2, 1),
+                    M(2, 0), M(2, 1), M(2, 2));
+                    */
+                }
+            }
+        }
+        printStep("rotating Us");
+
+
+        // [bin][atom][symOpMult | 1]
+        std::vector<std::vector<std::vector<REAL>>> temperatureFactorRoots;
+        temperatureFactorRoots.resize(binCount);
+        for (int binIdx = 0; binIdx<binCount; binIdx++){
+            temperatureFactorRoots[binIdx].resize(nAtoms);
+            for (int atom = 0; atom<nAtoms; atom++){
+                temperatureFactorRoots[binIdx][atom].resize((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount);
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(2)
+        for (int binIdx = 0; binIdx<binCount; binIdx++){
+            for (int atom = 0; atom<nAtoms; atom++){
+                bool iso = (atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1);
+                if (iso) {
+                    REAL T1iso = std::exp(-atomic_displacement_parameters[usedAtomIndices[atom]][0] * (
+                        square(bin000Cartesian[binIdx][0]) +
+                        square(bin000Cartesian[binIdx][1]) +
+                        square(bin000Cartesian[binIdx][2])) );
+                    temperatureFactorRoots[binIdx][atom][0] = T1iso;
+                } else {
+                    for (int symOpIdx = 0; symOpIdx<symOpMultCount; symOpIdx++){
+                        Matrix3<REAL> currentU = rotatedUs[atom][symOpIdx];
+                        REAL T1 = std::exp(-(
+                            square(bin000Cartesian[binIdx][0])*currentU(0,0) +
+                            square(bin000Cartesian[binIdx][1])*currentU(1,1) +
+                            square(bin000Cartesian[binIdx][2])*currentU(2,2) + 2.0*(
+                                bin000Cartesian[binIdx][0]*bin000Cartesian[binIdx][1]*currentU(0,1) +
+                                bin000Cartesian[binIdx][0]*bin000Cartesian[binIdx][2]*currentU(0,2) +
+                                bin000Cartesian[binIdx][1]*bin000Cartesian[binIdx][2]*currentU(1,2))));
+                        temperatureFactorRoots[binIdx][atom][symOpIdx] = T1;
+                    }
+                }
+            }
+        }
+
+        printStep("temperature factor roots");
+
+        // [bin][atom][symOp]
+        std::vector<std::vector<std::vector<std::complex<REAL>>>> phaseFactorRoots;
+        phaseFactorRoots.resize(binCount);
+        for (int binIdx = 0; binIdx<binCount; binIdx++){
+            phaseFactorRoots[binIdx].resize(nAtoms);
+            for (int atom = 0; atom<nAtoms; atom++){
+                phaseFactorRoots[binIdx][atom].resize(nSymOps);
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(3)
+        for (int binIdx = 0; binIdx<binCount; binIdx++){
+            for (int atom = 0; atom<nAtoms; atom++){
+                for (int symOpIdx = 0; symOpIdx<nSymOps; symOpIdx++){
+                    const REAL phase_angle_root = two_pi * (r_atom_rot[atom][symOpToMult[symOpIdx]] + symOpOffsets[symOpToOffset[symOpIdx]]) * bin000Cartesian[binIdx];
+                    const std::complex<REAL> result = { cos(phase_angle_root), sin(phase_angle_root) };
+                    phaseFactorRoots[binIdx][atom][symOpIdx] = result;
+                }
+            }
+        }
+
+        printStep("phase factor roots");
+
+        // [dir][atom][symOp][n]
+        std::array<std::vector<std::vector<std::vector<std::complex<REAL>>>>, 3> phaseFactorMults;
+        for (int i = 0; i<3; i++){
+            phaseFactorMults[i].resize(nAtoms);
+            for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                phaseFactorMults[i][atomIdx].resize(nSymOps);
+                for (int symOpIdx = 0; symOpIdx<nSymOps; symOpIdx++){
+                    phaseFactorMults[i][atomIdx][symOpIdx].resize(binSize[i]);
+                }
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(3)
+        for (int i = 0; i < 3; i++){
+            for (int atom = 0; atom<nAtoms; atom++){
+                for (int symOpIdx = 0; symOpIdx<nSymOps; symOpIdx++){
+                    const REAL phase_angle_mult = two_pi * (r_atom_rot[atom][symOpToMult[symOpIdx]] + symOpOffsets[symOpToOffset[symOpIdx]]) * stepCartesian[i];
+                    const std::complex<REAL> single = { cos(phase_angle_mult), sin(phase_angle_mult) };
+                    std::complex<REAL> acc = 1.0;
+                    for (int j = 0; j<binSize[i]; j++){
+                        phaseFactorMults[i][atom][symOpIdx][j] = acc;
+                        acc*=single;
+                    }
+                }
+            }
+        }
+
+        printStep("phase factor multipliers");
+
+        // [h*nk*nl + k*nl + l][atom][symOp]
+        std::vector<std::vector<std::vector<std::complex<REAL>>>> virtHklPhase;
+        if constexpr (virtHklPhaseFlag) {
+            virtHklPhase.resize(binSize[0]*binSize[1]*binSize[2]);
+            for (int hklIdx = 0; hklIdx<(binSize[0]*binSize[1]*binSize[2]); hklIdx++){
+                virtHklPhase[hklIdx].resize(nAtoms);
+                for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                    virtHklPhase[hklIdx][atomIdx].resize(nSymOps);
+                }
+            }
+            #pragma omp parallel for num_threads(nThreads) collapse(4)
+            for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                for (int h = 0; h<binSize[0]; h++){
+                    for (int k = 0; k<binSize[1]; k++){
+                        for (int l = 0; l<binSize[2]; l++){
+                            for (int symOpIdx = 0; symOpIdx<nSymOps; symOpIdx++){
+                                virtHklPhase[(h*binSize[1] + k)*binSize[2] + l][atomIdx][symOpIdx] =
+                                phaseFactorMults[0][atomIdx][symOpIdx][h] *
+                                phaseFactorMults[1][atomIdx][symOpIdx][k] *
+                                phaseFactorMults[2][atomIdx][symOpIdx][l];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("virtual hkl phase factors");
+
+        // [dir][atom][symOpMult | 1][n]
+        std::array<std::vector<std::vector<std::vector<REAL>>>, 3> temperatureFactorMults;
+        for (int i=0; i<3; i++){
+            temperatureFactorMults[i].resize(nAtoms);
+            for (int atom=0; atom<nAtoms; atom++){
+                temperatureFactorMults[i][atom].resize((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount);
+                for (int symOp=0; symOp<((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount); symOp++){
+                    temperatureFactorMults[i][atom][symOp].resize(binSize[i]);
+                }
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(2)
+        for (int i=0; i<3; i++){
+            for (int atom=0; atom<nAtoms; atom++){
+                bool iso = (atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1);
+                if (iso) {
+                    REAL c = std::exp(
+                        -atomic_displacement_parameters[usedAtomIndices[atom]][0] * (
+                            square(stepCartesian[i][0]) +
+                            square(stepCartesian[i][1]) +
+                            square(stepCartesian[i][2])));
+                    REAL mult = 1.0;
+                    REAL acc = c;
+                    REAL c_pow = square(c);
+                    temperatureFactorMults[i][atom][0][0] = 1.0;
+                    for (int j=1; j<binSize[i]; j++){
+                        //mult*=pow(c, j*2 - 1);
+                        mult*=acc;
+                        temperatureFactorMults[i][atom][0][j] = mult;
+                        acc*=c_pow;
+                    }
+                } else {
+                    for (int symOp=0; symOp<symOpMultCount; symOp++){
+                        Matrix3<REAL> currentU = rotatedUs[atom][symOp];
+                        REAL c = std::exp(-(
+                            square(stepCartesian[i][0])*currentU(0, 0) +
+                            square(stepCartesian[i][1])*currentU(1, 1) +
+                            square(stepCartesian[i][2])*currentU(2, 2) + 2.0*(
+                                stepCartesian[i][0]*stepCartesian[i][1]*currentU(0, 1) +
+                                stepCartesian[i][0]*stepCartesian[i][2]*currentU(0, 2) +
+                                stepCartesian[i][1]*stepCartesian[i][2]*currentU(1, 2))));
+                        REAL mult = 1.0;
+                        REAL acc = c;
+                        REAL c_pow = square(c);
+                        temperatureFactorMults[i][atom][symOp][0] = 1.0;
+                        for (int j=1; j<binSize[i]; j++){
+                            //mult*=pow(c, j*2 - 1);
+                            mult*=acc;
+                            temperatureFactorMults[i][atom][symOp][j] = mult;
+                            acc*=c_pow;
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("temperature factor multipliers");
+
+        // [dir][atom][symOpMult | 1][n][m]
+        std::array<std::vector<std::vector<std::vector<std::vector<REAL>>>>, 3> temperatureFactorMultsSquare;
+        for (int i=0; i<3; i++){
+            temperatureFactorMultsSquare[i].resize(nAtoms);
+            for (int atom=0; atom<nAtoms; atom++){
+                temperatureFactorMultsSquare[i][atom].resize((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount);
+                for (int symOp=0; symOp<((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount); symOp++){
+                    temperatureFactorMultsSquare[i][atom][symOp].resize(binSize[(i+1)%3]);
+                    for (int n=0; n<binSize[(i+1)%3];n++){
+                        temperatureFactorMultsSquare[i][atom][symOp][n].resize(binSize[(i+2)%3]);
+                    }
+                }
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(2)
+        for (int i=0; i<3; i++){
+            for (int atom=0; atom<nAtoms; atom++){
+                bool iso = (atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1);
+                int ns = (i+1)%3;
+                int ms = (i+2)%3;
+                if (iso) {
+                    REAL c = std::exp(
+                        -2.0*atomic_displacement_parameters[usedAtomIndices[atom]][0] * (
+                            stepCartesian[ns][0]*stepCartesian[ms][0] +
+                            stepCartesian[ns][1]*stepCartesian[ms][1] +
+                            stepCartesian[ns][2]*stepCartesian[ms][2]));
+                    REAL mult = 1.0;
+                    for (int n=0; n<binSize[ns]; n++){
+                        REAL acc = 1.0;
+                        for (int m=0; m<binSize[ms]; m++){
+                            temperatureFactorMultsSquare[i][atom][0][n][m]=acc;
+                            acc *= mult;
+                        }
+                        mult *= c;
+                    }
+                } else {
+                    for (int symOp=0; symOp<symOpMultCount; symOp++){
+                        Matrix3<REAL> currentU = rotatedUs[atom][symOp];
+                        REAL c = std::exp(-2.0*(
+                            stepCartesian[ns][0]*stepCartesian[ms][0]*currentU(0,0) +
+                            stepCartesian[ns][1]*stepCartesian[ms][1]*currentU(1,1) +
+                            stepCartesian[ns][2]*stepCartesian[ms][2]*currentU(2,2) +
+                            (stepCartesian[ns][0]*stepCartesian[ms][1] + stepCartesian[ns][1]*stepCartesian[ms][0])*currentU(0,1) +
+                            (stepCartesian[ns][0]*stepCartesian[ms][2] + stepCartesian[ns][2]*stepCartesian[ms][0])*currentU(0,2) +
+                            (stepCartesian[ns][1]*stepCartesian[ms][2] + stepCartesian[ns][2]*stepCartesian[ms][1])*currentU(1,2)));
+                        REAL mult = 1.0;
+                        for (int n=0; n<binSize[ns]; n++){
+                            REAL acc = 1.0;
+                            for (int m=0; m<binSize[ms]; m++){
+                                temperatureFactorMultsSquare[i][atom][symOp][n][m]=acc;
+                                acc *= mult;
+                            }
+                            mult *= c;
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("temperature factor square multipliers");
+
+        // [h*nk*nl + k*nl + l][atom][symOpMult | 1]
+        std::vector<std::vector<std::vector<REAL>>> virtHklTemperature;
+        if constexpr (virtHklTemperatureFlag) {
+            virtHklTemperature.resize(binSize[0]*binSize[1]*binSize[2]);
+            for (int hklIdx = 0; hklIdx<(binSize[0]*binSize[1]*binSize[2]); hklIdx++){
+                virtHklTemperature[hklIdx].resize(nAtoms);
+                for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                    virtHklTemperature[hklIdx][atomIdx].resize((atomic_displacement_parameters[usedAtomIndices[atomIdx]].size() == 1) ? 1 : symOpMultCount);
+                }
+            }
+            #pragma omp parallel for num_threads(nThreads) collapse(4)
+            for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                for (int h = 0; h<binSize[0]; h++){
+                    for (int k = 0; k<binSize[1]; k++){
+                        for (int l = 0; l<binSize[2]; l++){
+                            for (int symOp = 0; symOp<((atomic_displacement_parameters[usedAtomIndices[atomIdx]].size() == 1) ? 1 : symOpMultCount); symOp++){
+                                virtHklTemperature[(h*binSize[1] + k)*binSize[2] + l][atomIdx][symOp] =
+                                temperatureFactorMults[0][atomIdx][symOp][h] *
+                                temperatureFactorMults[1][atomIdx][symOp][k] *
+                                temperatureFactorMults[2][atomIdx][symOp][l] *
+                                temperatureFactorMultsSquare[0][atomIdx][symOp][k][l] *
+                                temperatureFactorMultsSquare[1][atomIdx][symOp][l][h] *
+                                temperatureFactorMultsSquare[2][atomIdx][symOp][h][k];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("virtual hkl temperature factors");
+
+        // [bin][atom][symOpMult | 1]
+        std::vector<std::vector<std::vector<Vector3<REAL>>>> perBinTemperatureFactorMult;
+        perBinTemperatureFactorMult.resize(binCount);
+        for (int binIdx=0; binIdx<binCount; binIdx++){
+            perBinTemperatureFactorMult[binIdx].resize(nAtoms);
+            for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                perBinTemperatureFactorMult[binIdx][atomIdx].resize((atomic_displacement_parameters[usedAtomIndices[atomIdx]].size() == 1)?1:symOpMultCount);
+            }
+        }
+        #pragma omp parallel for num_threads(nThreads) collapse(3)
+        for (int binIdx=0; binIdx<binCount; binIdx++){
+            for (int atom=0; atom<nAtoms; atom++){
+                for (int i=0; i<3; i++){
+                    if (atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1){
+                        perBinTemperatureFactorMult[binIdx][atom][0][i] = std::exp(
+                            -2.0 * atomic_displacement_parameters[usedAtomIndices[atom]][0] *
+                            (bin000Cartesian[binIdx] * stepCartesian[i]));
+                    } else {
+                        for (int symOp = 0; symOp<symOpMultCount; symOp++){
+                            Matrix3<REAL> currentU = rotatedUs[atom][symOp];
+                            perBinTemperatureFactorMult[binIdx][atom][symOp][i] = std::exp(-2.0 * (
+                                bin000Cartesian[binIdx][0] * stepCartesian[i][0] * currentU(0, 0) +
+                                bin000Cartesian[binIdx][1] * stepCartesian[i][1] * currentU(1, 1) +
+                                bin000Cartesian[binIdx][2] * stepCartesian[i][2] * currentU(2, 2) +
+                                (bin000Cartesian[binIdx][0] * stepCartesian[i][1] + bin000Cartesian[binIdx][1] * stepCartesian[i][0]) * currentU(0, 1) +
+                                (bin000Cartesian[binIdx][0] * stepCartesian[i][2] + bin000Cartesian[binIdx][2] * stepCartesian[i][0]) * currentU(0, 2) +
+                                (bin000Cartesian[binIdx][1] * stepCartesian[i][2] + bin000Cartesian[binIdx][2] * stepCartesian[i][1]) * currentU(1, 2)));
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("per bin temperature factor multipliers");
+
+        // [bin][dir][n][atom][symOpMult | 1]
+        std::vector<std::array<std::vector<std::vector<std::vector<REAL>>>, 3>> virtHklTMul;
+        if constexpr (virtHklTMulFlag) {
+            virtHklTMul.resize(binCount);
+            for (int binIdx=0; binIdx<binCount; binIdx++){
+                for (int i=0; i<3; i++){
+                    virtHklTMul[binIdx][i].resize(binSize[i]);
+                    for (int n=0; n<binSize[i];n++){
+                        virtHklTMul[binIdx][i][n].resize(nAtoms);
+                        for (int atom=0; atom<nAtoms; atom++){
+                            virtHklTMul[binIdx][i][n][atom].resize((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount);
+                        }
+                    }
+                }
+            }
+            #pragma omp parallel for num_threads(nThreads) collapse(3)
+            for (int binIdx=0; binIdx<binCount; binIdx++){
+                for (int i=0; i<3; i++){
+                    for (int atom=0; atom<nAtoms; atom++){
+                        for (int symOp = 0; symOp<((atomic_displacement_parameters[usedAtomIndices[atom]].size() == 1) ? 1 : symOpMultCount); symOp++){
+                            REAL mult = 1.0;
+                            for (int n=0; n<binSize[i]; n++){
+                                virtHklTMul[binIdx][i][n][atom][symOp] = mult;
+                                mult *= perBinTemperatureFactorMult[binIdx][atom][symOp][i];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        printStep("virtual hkl temperature multipliers");
+
+        std::vector<int> usedWfns;
+        usedWfns.clear();
+        std::vector<int> usedTypes;
+        usedTypes.clear();
+        std::vector<std::array<int, 2>> usedWfnTypeCombo;
+        usedWfnTypeCombo.clear();
+        std::vector<int> atomToUsedWfnTypeCombo;
+        atomToUsedWfnTypeCombo.resize(nAtoms);
+        for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+            const int trueAtomIdx = usedAtomIndices[atomIdx];
+            const int wfnIdx = atom_to_wfn_map[trueAtomIdx];
+            const int typeIdx = atom_to_type_map[trueAtomIdx];
+
+            int currentUsedWfnIdx = -1;
+            for (int usedWfnIdx = 0; usedWfnIdx<usedWfns.size(); usedWfnIdx++){
+                if (usedWfns[usedWfnIdx] == wfnIdx){
+                    currentUsedWfnIdx = usedWfnIdx;
+                    break;
+                }
+            }
+            if (currentUsedWfnIdx<0){
+                currentUsedWfnIdx = usedWfns.size();
+                usedWfns.emplace_back(wfnIdx);
             }
 
-        } // symetrically independent atoms
-          //exit(0);
-        f[hklIndex] = complex<REAL>(realFContrib, imagFContrib);
+            int currentUsedTypeIdx = -1;
+            for (int usedTypeIdx = 0; usedTypeIdx<usedTypes.size(); usedTypeIdx++){
+                if (usedTypes[usedTypeIdx] == typeIdx){
+                    currentUsedTypeIdx = usedTypeIdx;
+                    break;
+                }
+            }
+            if (currentUsedTypeIdx<0){
+                currentUsedTypeIdx = usedTypes.size();
+                usedTypes.emplace_back(typeIdx);
+            }
 
-    } // h vectors
+            int currentUsedComboIdx = -1;
+            for (int usedComboIdx = 0; usedComboIdx<usedWfnTypeCombo.size(); usedComboIdx++){
+                if ((usedWfnTypeCombo[usedComboIdx][0] == currentUsedWfnIdx) and (usedWfnTypeCombo[usedComboIdx][1] == currentUsedTypeIdx)){
+                    currentUsedComboIdx = usedComboIdx;
+                    break;
+                }
+            }
+            if (currentUsedComboIdx<0){
+                currentUsedComboIdx = usedWfnTypeCombo.size();
+                std::array<int, 2> pair;
+                pair[0] = currentUsedWfnIdx;
+                pair[1] = currentUsedTypeIdx;
+                usedWfnTypeCombo.emplace_back(pair);
+            }
+
+            atomToUsedWfnTypeCombo[atomIdx] = currentUsedComboIdx;
+        }
+
+        const int wfnCount = usedWfns.size();
+        const int typeCount = usedTypes.size();
+        const int comboCount = usedWfnTypeCombo.size();
+
+        printStep("wfn and type deduplication");
+
+        // [wfn][l]
+        std::vector<std::vector<std::complex<REAL>>> N;
+        N.resize(wfnParams.size());
+        for (int wfnIdx=0; wfnIdx<wfnCount; wfnIdx++){
+            N[usedWfns[wfnIdx]].resize(wfnParams[usedWfns[wfnIdx]].def_valence_pow.size());
+        }
+        #pragma omp parallel for num_threads(nThreads)
+        for (int wfnIdx=0; wfnIdx<wfnCount; wfnIdx++){
+            const auto &wfn = wfnParams[usedWfns[wfnIdx]];
+            const int nl = wfn.def_valence_pow.size();
+            for (int l=0; l<nl; l++){
+                std::complex<REAL> perL;
+                const int rest = l%4;
+                if (rest==0){
+                    perL = {four_pi, 0.0};
+                } else if (rest==1){
+                    perL = {0.0, four_pi};
+                } else if (rest==2){
+                    perL = {-four_pi, 0.0};
+                } else {
+                    perL = {0.0, -four_pi};
+                }
+                N[usedWfns[wfnIdx]][l] = perL *
+                sto_atomic_wfn::stoDensityNormalizationFactor(
+                    wfn.def_valence_pow[l],
+                    wfn.def_valence_exp);
+            }
+        }
+
+        printStep("density normalization factor");
+
+        f.resize(hklCount);
+        #pragma omp parallel for num_threads(nThreads) schedule(guided)
+        for (int hklIdx = 0; hklIdx<hklCount; hklIdx++){
+            printInLoop("begin");
+            valueLog("hklIdx", hklIdx);
+            valueLog("hkl_indices[hklIdx][0]", hkl_indices[hklIdx][0]);
+            valueLog("hkl_indices[hklIdx][1]", hkl_indices[hklIdx][1]);
+            valueLog("hkl_indices[hklIdx][2]", hkl_indices[hklIdx][2]);
+            Vector3<int> origBin;
+            for (int i=0; i<3; i++){
+                origBin[i] = (hkl_indices[hklIdx][i] - minHkl[i]) / (step[i] * binSize[i]);
+            }
+            int binIdx = allBinsMap[(origBin[0]*nBins[1] + origBin[1])*nBins[2] + origBin[2]];
+
+            printInLoop("bin index");
+            valueLog("binIdx", binIdx);
+
+            std::complex<REAL> f_acc = 0.0;
+
+            Vector3<int> offset;
+            for (int i=0; i<3; i++){
+                offset[i] = ((hkl_indices[hklIdx][i] - minHkl[i]) / step[i]) - (usedBins[binIdx][i] * binSize[i]);
+                valueLog("offset[i]", offset[i]);
+            }
+
+            printInLoop("offset");
+
+            Vector3<REAL> cartesianH;
+            recUnitCell.fractionalToCartesian({
+                hkl_indices[hklIdx][0],
+                hkl_indices[hklIdx][1],
+                hkl_indices[hklIdx][2]}, cartesianH);
+
+            valueLog("cartesianH[0]", cartesianH[0]);
+            valueLog("cartesianH[1]", cartesianH[1]);
+            valueLog("cartesianH[2]", cartesianH[2]);
+
+            printInLoop("fractional to cartesian conversion");
+
+            REAL hLength = 0.0;
+            for (int i=0; i<3; i++){
+                hLength += square(cartesianH[i]);
+            }
+            hLength = sqrt(hLength);
+
+            printInLoop("length of h");
+
+            std::vector<REAL> f_core;
+            f_core.resize(wfnCount);
+            #pragma omp simd
+            for (int wfnIdx=0; wfnIdx<wfnCount; wfnIdx++){
+                const auto &wfn = wfnParams[usedWfns[wfnIdx]];
+                const int kMax = wfn.core_coeff.size();
+                for (int k=0; k<kMax; k++)
+                    f_core[wfnIdx] += wfn.core_coeff[k] * sto_scattering::gFunction(0, wfn.core_pow[k] +2, hLength, wfn.core_exp[k]); // TODO find out why pow+2 in all gFunction pow
+                    f_core[wfnIdx] *= four_pi;
+            }
+
+            printInLoop("core factor");
+
+            std::vector<REAL> val;
+            val.resize(comboCount);
+            #pragma omp simd
+            for (int comboIdx=0; comboIdx<comboCount; comboIdx++){
+                const auto &combo = usedWfnTypeCombo[comboIdx];
+                const auto &wfn = wfnParams[usedWfns[combo[0]]];
+                const auto &type = typeParams[usedTypes[combo[1]]];
+                const int kMax = wfn.valence_coeff.size();
+                const auto h = hLength/type.kappa_spherical;
+                for (int k=0; k<kMax; k++)
+                    val[comboIdx] += wfn.valence_coeff[k] * sto_scattering::gFunction(0, wfn.valence_pow[k] +2, h, wfn.valence_exp[k]);
+                val[comboIdx] *= type.p_val * four_pi;
+            }
+
+            printInLoop("valence component");
+
+            Vector3<REAL> hVersor;
+            for (int i=0; i<3; i++){
+                hVersor[i] = closeToZero(hLength) ? 0.0 : cartesianH[i]/hLength;
+            }
+
+            printInLoop("h versor");
+
+            std::vector<std::vector<std::complex<REAL>>> virtHklPhaseCurrent;
+            if constexpr (virtHklPhaseFlag)
+                virtHklPhaseCurrent = virtHklPhase[(offset[0]*binSize[1] + offset[1])*binSize[2] + offset[2]];
+
+            printInLoop("virtual hkl phase factors retreival");
+
+            std::vector<std::vector<REAL>> virtHklTemperatureCurrent;
+            if constexpr (virtHklTemperatureFlag)
+                virtHklTemperatureCurrent = virtHklTemperature[(offset[0]*binSize[1] + offset[1])*binSize[2] + offset[2]];
+
+            printInLoop("virtual hkl temperature factors retreival");
+
+            std::array<std::vector<std::vector<REAL>>, 3> virtHklTMulCurrent;
+            if constexpr (virtHklTMulFlag){
+                for (int i=0; i<3; i++)
+                    virtHklTMulCurrent[i] = virtHklTMul[binIdx][i][offset[i]];
+            }
+
+            printInLoop("virtual hkl temperature multipliers retreival");
+
+            #pragma omp simd
+            for (int atomIdx = 0; atomIdx<nAtoms; atomIdx++){
+                std::complex<REAL> perAtomF = 0.0;
+                std::vector<std::complex<REAL>> symOpFMult;
+                symOpFMult.resize(symOpMultCount);
+                for (int symOpIdx = 0; symOpIdx<nSymOps; symOpIdx++){
+                    std::complex<REAL> localF = phaseFactorRoots[binIdx][atomIdx][symOpIdx];
+                    valueLog("0 - localF", localF);
+                    if constexpr (virtHklPhaseFlag){
+                        localF *= virtHklPhaseCurrent[atomIdx][symOpIdx];
+                    } else {
+                        localF *=
+                        phaseFactorMults[0][atomIdx][symOpIdx][offset[0]] *
+                        phaseFactorMults[1][atomIdx][symOpIdx][offset[1]] *
+                        phaseFactorMults[2][atomIdx][symOpIdx][offset[2]];
+                    }
+                    valueLog("1 - localF", localF);
+                    symOpFMult[symOpToMult[symOpIdx]] += localF;
+                }
+
+                //const auto hVersorLocal = local_coordinate_systems[usedAtomIndices[atomIdx]] * hVersor;
+
+                for (int symOpIdx=0; symOpIdx<symOpMultCount; symOpIdx++){
+
+                    bool iso = atomic_displacement_parameters[usedAtomIndices[atomIdx]].size() == 1;
+
+                    REAL localF = temperatureFactorRoots[binIdx][atomIdx][iso?0:symOpIdx];
+                    valueLog("2 - localF", localF);
+                    if constexpr (virtHklTemperatureFlag) {
+                        localF *= virtHklTemperatureCurrent[atomIdx][iso?0:symOpIdx];
+                    } else {
+                        localF *=
+                        temperatureFactorMults[0][atomIdx][iso?0:symOpIdx][offset[0]] *
+                        temperatureFactorMults[1][atomIdx][iso?0:symOpIdx][offset[1]] *
+                        temperatureFactorMults[2][atomIdx][iso?0:symOpIdx][offset[2]] *
+                        temperatureFactorMultsSquare[0][atomIdx][iso?0:symOpIdx][offset[1]][offset[2]] *
+                        temperatureFactorMultsSquare[1][atomIdx][iso?0:symOpIdx][offset[2]][offset[0]] *
+                        temperatureFactorMultsSquare[2][atomIdx][iso?0:symOpIdx][offset[0]][offset[1]];
+                    }
+                    valueLog("3 - localF", localF);
+
+                    for (int i=0; i<3; i++){
+                        if constexpr (virtHklTMulFlag)
+                            localF *= virtHklTMulCurrent[i][atomIdx][iso?0:symOpIdx];
+                        else
+                            localF *= pow(perBinTemperatureFactorMult[binIdx][atomIdx][iso?0:symOpIdx][i], offset[i]);
+                    }
+
+                    valueLog("4 - localF", localF);
+
+                    const int wfnIdx = atom_to_wfn_map[usedAtomIndices[atomIdx]];
+                    const auto &wfn = wfnParams[wfnIdx];
+                    const auto &type = typeParams[atom_to_type_map[usedAtomIndices[atomIdx]]];
+
+                    const auto h = (hVersor * symOpMults[symOpIdx]) * local_coordinate_systems[usedAtomIndices[atomIdx]];
+                    valueLog("(square(h[0]) + square(h[1]) + square(h[2]))", (square(h[0]) + square(h[1]) + square(h[2])));
+
+                    const int nl = std::min(wfn.def_valence_pow.size(), type.p_lm.size());
+                    std::complex<REAL> dval;
+                    for (int l=0; l<nl; l++){
+                        // may be ordered differently than in publication because the publication doesn't seem to have a consistent ordering of arguments passed to g
+                        const REAL multPerL = sto_scattering::gFunction(l, wfn.def_valence_pow[l] +2, hLength / type.kappa_def_valence, wfn.def_valence_exp);
+
+                        REAL sumPerM = 0.0;
+                        for (int m=-l; m<=l; m++){
+                            sumPerM += type.p_lm[l][m+l] * real_spherical_harmonics::densityNormalized(h, l, m);
+                        }
+                        dval += N[wfnIdx][l] * (multPerL * sumPerM);
+                    }
+
+                    valueLog("symOpFMult[symOpIdx]", symOpFMult[symOpIdx]);
+                    valueLog("dval", dval);
+                    valueLog("f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo[atomIdx]][0]]", f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo[atomIdx]][0]]);
+                    valueLog("val[atomToUsedWfnTypeCombo[atomIdx]]", val[atomToUsedWfnTypeCombo[atomIdx]]);
+
+                    perAtomF += symOpFMult[symOpIdx] * localF * (dval + 1.0 * f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo[atomIdx]][0]] + val[atomToUsedWfnTypeCombo[atomIdx]]);
+                }
+                f_acc += perAtomF * atomic_occupancy[usedAtomIndices[atomIdx]] * atomic_multiplicity_factor[usedAtomIndices[atomIdx]];
+            }
+            printInLoop("atom loop");
+            f[hklIdx] = f_acc;
+            printInLoop("returning results");
+        }
+
+        printStep("main loop");
+
+        // TODO add centrosymmetry support
+        // TODO derivatives
+        // TODO find out how to implement implement wfn.anomalous_scattering, electron
+        /*
+         *    bool mUseIAM;
+         *    std::vector<std::string> mIamAtomType;
+         *    std::vector<int> mAtomToIamTypeMap;
+         *    std::vector<NGaussianFormFactor> mIamFormFactors;
+         */ // TODO use this
+    } //calculateSF_parallel_2
+
+    void HansenCoppens_SF_Engine4::electronScatteringAt000(
+        const std::vector<int>& atomic_numbers,
+        std::vector<double>& f)
+    {
+        map<int, int> z_2_ff_idx;
+        set<int> unique_z(atomic_numbers.begin(), atomic_numbers.end());
+        vector<int> unique_z_vec(unique_z.begin(), unique_z.end());
+        for (int i = 0; i < unique_z_vec.size(); i++)
+            z_2_ff_idx[unique_z_vec[i]] = i;
+
+        vector<double> ff_type;
+        for (int i = 0; i < unique_z_vec.size(); i++)
+            ff_type.push_back(n_gaussian_form_factors_table::getFormFactor(periodic_table::symbol(unique_z_vec[i]), "electron-IT").calculate_h(0.0));
+
+        int atomIdx, nAtoms = atomic_numbers.size();
+        f.resize(nAtoms);
+        for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            f[atomIdx] = ff_type[z_2_ff_idx[atomic_numbers[atomIdx]]];
+    }
 
 
-} // calculateSF_SerialSymmetryCenterNotAtOrigin
+
+
+    //---------------
+    /*
+     * void calculateSF(
+     *    const UnitCell &unitCell,
+     *    const std::vector<sf_engine_data_types::HC_WfnParam> &wfn_parameters,
+     *    const std::vector<sf_engine_data_types::HC_TypeParam> &type_parameters,
+     *    const std::vector<int> &atom_to_wfn_map,
+     *    const std::vector<int> &atom_to_type_map,
+     *    const std::vector<Vector3<REAL> > &atomicPositions,
+     *    const std::vector<std::vector<REAL> > &atomic_displacement_parameters,
+     *    const std::vector<REAL> &atomic_occupancy,
+     *    const std::vector<REAL> &atomic_multiplicity_factor,
+     *    const std::vector<Matrix3<REAL> > &local_coordinate_systems,
+     *    const std::vector<sf_engine_data_types::SymmetryOperation> &symmetry_operations,
+     *    bool centrosymmetric,
+     *    const Vector3<REAL> &inversionTranslation,
+     *    const std::vector<Vector3<REAL> > &h_vectors,
+     *    const std::vector<Vector3i >& hkl_indices,
+     *    std::vector<std::complex<REAL> > &f,
+     *    std::vector<TargetFunctionAtomicParamDerivatives> &dTarget_dparam,
+     *    const std::vector<std::complex<REAL> > &dTarget_df,
+     *    const std::vector<bool> &include_atom_contribution,
+     *    int nThreads);
+     *
+     */
+
+    void HansenCoppens_SF_Engine4::select_P10P20_atoms(
+        const std::vector<sf_engine_data_types::HC_TypeParam>& type_parameters,
+        const std::vector<int>& atom_to_type_map,
+        std::vector<bool>& atom_selection)
+    {
+        int nTypes = type_parameters.size();
+        int nAtoms = atom_to_type_map.size();
+        vector<bool> pz_dz_type(nTypes, false);
+        for (int typeIdx = 0; typeIdx < nTypes; typeIdx++)
+        {
+            auto const& plms = type_parameters[typeIdx].p_lm;
+            if (plms.size() == 3)
+                if (plms[0][0] == 0.0)
+                {
+                    pz_dz_type[typeIdx] = true;
+                    for (int l = 1; l <= 2; l++)
+                        for (int i = 0; i < 2 * l + 1; i++)
+                            if (plms[l][i] != 0.0)
+                                if (l != i)
+                                    pz_dz_type[typeIdx] = false;
+                }
+        }
+        atom_selection.resize(nAtoms);
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+            atom_selection[atomIdx] = pz_dz_type[atom_to_type_map[atomIdx]];
+
+    }
 
 } // namespace discamb
