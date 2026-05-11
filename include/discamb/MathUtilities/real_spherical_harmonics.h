@@ -69,6 +69,12 @@ namespace real_spherical_harmonics
 
     \f$\bar{4}m2 - m_2 \bar y \f$.
 
+    mm2-z  - C2 axis parallel to z
+    mm2-y  - C2 axis parallel to y
+    mm2-x  - C2 axis parallel to x
+    m-z    - mirror plane perpendicular to z
+    m-y    - mirror plane perpendicular to y
+    m-x    - mirror plane perpendicular to x
        
     */
     bool symmetryInvariant(const std::string &pointGroupLabel, std::vector<std::pair<int, int> > &plms);
