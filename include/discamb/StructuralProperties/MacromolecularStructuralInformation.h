@@ -13,7 +13,8 @@ namespace discamb{
         /* like in pdb e.g. HB3, CA, OG1 */
         std::vector<std::string> atomNames; 
         void set(const nlohmann::json &data);
-        void toOrderedSubcrystalAtoms(std::vector<std::vector<std::pair<std::string, double> > >& orderedSubcrystalAtoms) const;
+        //void toOrderedSubcrystalAtoms(std::vector<std::vector<std::pair<std::string, double> > >& orderedSubcrystalAtoms) const;
+
     };
 }
 

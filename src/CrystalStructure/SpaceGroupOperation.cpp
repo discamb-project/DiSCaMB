@@ -481,6 +481,14 @@ const
     translation = mTranslation;
 }
 
+bool operator==(
+    const SpaceGroupOperation& op1, 
+    const SpaceGroupOperation& op2)
+{
+    if(op1.mRotation == op2.mRotation && op1.mTranslation == op2.mTranslation)
+        return true;
+    return false;
+}
 
 SpaceGroupOperation operator*(
 const SpaceGroupOperation &op1,

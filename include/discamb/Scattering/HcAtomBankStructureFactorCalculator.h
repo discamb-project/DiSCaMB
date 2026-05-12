@@ -37,6 +37,8 @@ namespace discamb {
     public:
         /**
         if assignemntInfoFile is empty the assignment info is not printed
+        if structureWithDescriptors is not empty, the atom types are assigned based 
+        on the descriptors and not on the atomic numbers and positions
         */
         HcAtomBankStructureFactorCalculator(
             const Crystal &crystal,

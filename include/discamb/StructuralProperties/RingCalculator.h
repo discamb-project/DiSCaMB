@@ -40,7 +40,14 @@ namespace discamb {
             int maxRingSize, std::vector<std::vector<int> >& rings,
             std::vector<double>& ringPlanarityEsd,
             const std::vector<int>& atomicNumbers);// = std::vector<int>(),
-            //const std::map<std::pair<int, int>, double >& maxInteratomicDistance);// = std::map<std::pair<int, int>, double >());
+
+        void calculateRings(
+            const std::vector<std::vector<int> >& connectivityMatrix,
+            const std::vector<bool>& atomPlanarity,
+            int maxRingSize, std::vector<std::vector<int> >& rings);
+
+        
+        //const std::map<std::pair<int, int>, double >& maxInteratomicDistance);// = std::map<std::pair<int, int>, double >());
         /*
         finds planar rings in the structure defined by connectivityMatrix and positions
         if maxInteratomicDistance and atomicNumbers are given then it also checks that all interatomic distances in the ring are below the given threshold for atoms with given atomic numbers

@@ -547,7 +547,138 @@ namespace disordered_structure_fragments{
         const MacromolecularStructuralInformation& macromolInfo,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts)
     {
+        Crystal crystal = _crystal;
+        int nAtoms = crystal.atoms.size();
+        if (macromolInfo.altlocs.size() != nAtoms ||
+            macromolInfo.residueSequenceNumbers.size() != nAtoms ||
+            macromolInfo.residueNames.size() != nAtoms ||
+            macromolInfo.atomNames.size() != nAtoms)
+        {
+            string message = "inconsistent macromolecular structural information provided";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+        map<string, int> new_label2idx;
+        for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
+        {
+            string new_label =
+                to_string(macromolInfo.residueSequenceNumbers[atomIdx]) +
+                "_" + macromolInfo.residueNames[atomIdx] +
+                "_" + macromolInfo.atomNames[atomIdx];
 
+            if (macromolInfo.altlocs[atomIdx] != ' ')
+                new_label += string(".") + macromolInfo.altlocs[atomIdx];
+
+            crystal.atoms[atomIdx].label = new_label;
+            new_label2idx[new_label] = atomIdx;
+        }
+
+        vector< vector<pair<string, double> > > ordered_parts_new_labels;
+        split_with_labels(crystal, ordered_parts_new_labels, macromolInfo.connectivity);
+        ordered_parts = ordered_parts_new_labels;
+        int nOrderedParts = ordered_parts.size();
+        
+        for (int i = 0; i < nOrderedParts; i++)
+            for (auto& atom : ordered_parts[i])
+                atom.first = _crystal.atoms[new_label2idx[atom.first]].label;
+
+    }
+
+    void describe_with_macromol_info(
+        const Crystal& crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        const std::vector< std::vector<int> >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors,
+        int descriptorRange)
+    {
+        structureDescriptors.clear();
+
+        if(macromolInfo.connectivity.empty())
+        {
+            string message = "connectivity information is required for structure description";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+        if(macromolInfo.connectivity.size() != crystal.atoms.size())
+        {
+            string message = "connectivity information size does not match number of atoms in the crystal";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+        int nAtomsCrystal = crystal.atoms.size();
+        int nParts = ordered_parts.size();
+        structureDescriptors.resize(nParts);
+        map<string, int> label2idx;
+        for(int atomIdx=0; atomIdx<nAtomsCrystal; atomIdx++)
+            label2idx[crystal.atoms[atomIdx].label] = atomIdx;
+
+        vector<bool> atomInPart; (nAtomsCrystal, false);
+        for(int partIdx = 0; partIdx < nParts; partIdx++)
+        {
+            atomInPart.assign(nAtomsCrystal, false);
+            int nAtomsPart = ordered_parts[partIdx].size();
+            vector<vector<pair<int, string> > > asymmetricUnitConnectivity;
+            vector<bool> planarity(nAtomsPart, false);
+
+            map<string, int> partLabel2idx;
+            for (int i = 0; i < nAtomsPart; i++)
+                partLabel2idx[crystal.atoms[ordered_parts[partIdx][i]].label] = i;
+            
+            for (int i = 0; i < nAtomsPart; i++)
+                atomInPart[ordered_parts[partIdx][i]] = true;
+
+            for(int atomIdx = 0; atomIdx < nAtomsCrystal; atomIdx++)
+                if(atomInPart[atomIdx])
+                {
+                    int atomIdxInPart = partLabel2idx[crystal.atoms[atomIdx].label];
+                    vector<pair<int, string> > neighbours_part_numeration, neighbours_crystal_numeration;
+                    
+                    for (auto& neighbour: macromolInfo.connectivity[atomIdx])
+                        if (atomInPart[neighbour.first])
+                        {
+                            int idxInPart = partLabel2idx[crystal.atoms[neighbour.first].label];
+                            neighbours_part_numeration.push_back({ idxInPart, neighbour.second });
+                            neighbours_crystal_numeration.push_back(neighbour);
+                        }
+                    asymmetricUnitConnectivity.push_back(neighbours_part_numeration);
+
+                    // planarity
+                    if (!macromolInfo.planes.empty())
+                    {
+                        int nNeighbours = neighbours_crystal_numeration.size();
+                        bool planar = false;
+                        if (nNeighbours > 2)
+                        {
+                            planar = true;
+                            for (int neighbourIdx = 0; neighbourIdx < nNeighbours; neighbourIdx++)
+                            {
+                                const auto it = find(macromolInfo.planes[atomIdx].begin(), macromolInfo.planes[atomIdx].end(), neighbours_crystal_numeration[neighbourIdx]);
+                                if(it == macromolInfo.planes[atomIdx].end())
+                                    planar = false;
+                            }
+                        }
+                        planarity[atomIdxInPart] = planar;
+
+                    }
+                    else // planarity descriptor calculation is not implemented for structures without planarity information provided
+                        on_error::not_implemented( __FILE__, __LINE__);
+
+
+                }
+            vector< pair<int, string> > asuWithNeighbours;
+            structural_properties::assymetricUnitWithNeighbours(
+                crystal, asymmetricUnitConnectivity, asuWithNeighbours,
+                descriptorRange);
+            
+            //structureDescriptors[partIdx].
+        }
+    }
+
+
+    void split_and_describe_with_macromol_info(
+        const Crystal& _crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors)
+    {
+        structureDescriptors.clear();
         Crystal crystal = _crystal;
         int nAtoms = crystal.atoms.size();
         if(macromolInfo.altlocs.size() != nAtoms ||
@@ -576,10 +707,24 @@ namespace disordered_structure_fragments{
         vector< vector<pair<string, double> > > ordered_parts_new_labels;
         split_with_labels(crystal, ordered_parts_new_labels, macromolInfo.connectivity);
         ordered_parts = ordered_parts_new_labels;
-        for(auto &ordered_part: ordered_parts)
-            for(auto &atom: ordered_part)
+        int nOrderedParts = ordered_parts.size();
+        structureDescriptors.resize(nOrderedParts);
+        for(int i=0;i<nOrderedParts;i++)
+//        for (auto& ordered_part : ordered_parts)
+        {
+            for (auto& atom : ordered_parts[i])
                 atom.first = _crystal.atoms[new_label2idx[atom.first]].label;
+        
+            // descriptors for the part
+            // extract connectivity
+            vector<vector<pair<int, string> > > asymmetricUnitConnectivity;
             
+            //structureDescriptors[i].
+        }
+
+
+         
+
     }
 
 

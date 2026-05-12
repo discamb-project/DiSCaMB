@@ -226,6 +226,68 @@ namespace discamb {
 
     }
 
+    void RingCalculator::calculateRings(
+        const std::vector<std::vector<int> >& connectivityMatrix,
+        const std::vector<bool>& atomPlanarity,
+        int maxRingSize, std::vector<std::vector<int> >& rings)
+    {
+        int atom, nAtoms, maxDistance;
+        vector<vector<int> > atomRings;
+        vector<int> newRingsIndices;
+        vector<vector<int> > updatedConnectivityMatrix;
+        vector<int> nRingsPerAtom;
+
+        rings.clear();
+        nAtoms = connectivityMatrix.size();
+
+        //-------------
+        vector<double> fakePlanarityEsd(nAtoms);
+        for(int i = 0; i < nAtoms; i++)
+            fakePlanarityEsd[i] = atomPlanarity[i] ? 0.0 : mMaxAtomPlanarityEsd + 1.0;
+        disconnectUnfitAtoms(connectivityMatrix, fakePlanarityEsd, mMaxAtomPlanarityEsd, mMaxNeighboursCount, updatedConnectivityMatrix);
+        
+        //-------------
+
+        nRingsPerAtom.assign(connectivityMatrix.size(), 0);
+        maxDistance = maxRingSize / 2;
+
+        for (atom = 0; atom < nAtoms; atom++)
+        {
+            if (nRingsPerAtom[atom] == 1 && updatedConnectivityMatrix[atom].size() == 2)
+                continue;
+            //cout << atom << "/" << nAtoms << endl;
+            findRings(atom, updatedConnectivityMatrix, maxRingSize, atomRings);
+            checkIfRingsDefined(atomRings, rings, newRingsIndices);
+            for (int i = 0; i < newRingsIndices.size(); i++)
+            {
+                rings.push_back(atomRings[newRingsIndices[i]]);
+                for (int j = 0; j < atomRings[newRingsIndices[i]].size(); j++)
+                    nRingsPerAtom[atomRings[newRingsIndices[i]][j]]++;
+            }
+        }
+
+        // check rings planarity & optionally max interatomic distances
+
+        vector<vector<int> > planarRings;
+        vector<Vector3d> ringAtomsPositions;
+        double d;
+        for (int i = 0; i < rings.size(); i++)
+        {
+            Tribool planarity = Tribool::True;
+            for (int j = 0; j < rings[i].size(); j++)
+                if(!atomPlanarity[rings[i][j]])
+                {
+                    planarity = Tribool::False;
+                    break;
+                }
+
+            if (planarity == Tribool::True)
+                planarRings.push_back(rings[i]);
+        }
+
+        planarRings.swap(rings);
+        removeIncludingRings(rings);
+    }
 
 
     void RingCalculator::calculateRings(

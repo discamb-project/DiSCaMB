@@ -54,10 +54,13 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string& algorithm,
-        const std::optional<MacromolecularStructuralInformation>& macromolInfo)
+        const std::vector<StructureWithDescriptors>& structuresWithDescriptors)/*,
+        const std::optional<MacromolecularStructuralInformation>& macromolInfo)*/
     {
-        set(crystal, atomList, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, macromolInfo);
+        set(crystal, atomList, atomTypes, parameters, slaterWavefunctionsDatabankId,
+            electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge,
+            iamTable, iamElectronScattering, frozen_lcs, algorithm, structuresWithDescriptors);//, macromolInfo);
 
     }
 
@@ -331,7 +334,8 @@ namespace discamb {
         bool iamElectronScattering,
         bool frozen_lcs,
         const std::string &algorithm,
-        const std::optional<MacromolecularStructuralInformation>& macromolInfo)
+        const std::vector<StructureWithDescriptors>& structuresWithDescriptors/*,
+        const std::optional<MacromolecularStructuralInformation>& macromolInfo*/)
     {
         //_DEBUG
 
@@ -366,11 +370,16 @@ namespace discamb {
             string multipolarCif = _multipolarCif;
             if (!multipolarCif.empty())
                 multipolarCif += idxStr;
-
-            mCalculators.push_back(make_shared<HcAtomBankStructureFactorCalculator>(
-                subcrystal, atomTypes, bankParameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile,
-                assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable,
-                iamElectronScattering, frozen_lcs, algorithm));
+            if(structuresWithDescriptors.empty())
+                mCalculators.push_back(make_shared<HcAtomBankStructureFactorCalculator>(
+                    subcrystal, atomTypes, bankParameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile,
+                    assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable,
+                    iamElectronScattering, frozen_lcs, algorithm));
+            else
+                mCalculators.push_back(make_shared<HcAtomBankStructureFactorCalculator>(
+                    subcrystal, atomTypes, bankParameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile,
+                    assignmentCsvFile, parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable,
+                    iamElectronScattering, frozen_lcs, algorithm, false, "CPU", structuresWithDescriptors[idx - 2]));
         }
     }
 

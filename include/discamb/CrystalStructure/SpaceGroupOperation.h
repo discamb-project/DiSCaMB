@@ -142,9 +142,11 @@ private:
     static bool isCrystallographicDenominator(int denominator);
 
     static bool crystallographicFraction(double fraction,int &numerator,int &denominator);
+    friend bool operator==(const SpaceGroupOperation& op1, const SpaceGroupOperation& op2);
 };
 
 SpaceGroupOperation operator*(const SpaceGroupOperation &op1,const SpaceGroupOperation &op2);
+
 
 /**@}*/
 

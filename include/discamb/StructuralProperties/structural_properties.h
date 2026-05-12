@@ -115,6 +115,19 @@ namespace discamb {
             double threshold,
             std::vector<int> &shellSizes);
 
+        void assymetricUnitWithNeighbours(
+            const Crystal& c,
+            const std::vector< std::vector<std::pair<int, std::string> > > & asuConnectivity,
+            std::vector< std::pair<int, std::string> >& asuWithNeighbours,
+            int neighbourRange);
+
+        void assymetricUnitWithNeighbours(
+            const Crystal& _crystal,
+            const std::vector< std::vector<std::pair<int, std::string> > >& asuConnectivity,
+            std::vector< std::pair<int, SpaceGroupOperation> >& asuWithNeighbours,
+            int neighbourRange);
+
+
         void assymetricUnitWithNeighbours(const Crystal &c,
             std::vector< std::pair<int, std::string> > &asuWithNeighbours,
             std::vector<int> &atomicNumbers,

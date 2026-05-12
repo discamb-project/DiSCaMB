@@ -4453,12 +4453,54 @@ void test_taam_new_engine(
     out.close();
 }
 
+void testAsuWithNeighbours(
+    const string &structureFile,
+    const string &asuConnectivityFile,
+    int nNeighbours)
+{
+    Crystal crystal;
+    structure_io::read_structure(structureFile, crystal);
+    ifstream in(asuConnectivityFile);
+    vector<vector<pair<int, string> > > connectivity;
+    map<string, int> label2Idx;
+    int nAtoms = crystal.atoms.size();
+    for (int i = 0; i < nAtoms; i++)
+        label2Idx[crystal.atoms[i].label] = i;
+    
+    connectivity.resize(nAtoms); 
+    for (int i = 0; i < nAtoms; i++)
+    {
+        string line;
+        getline(in, line);
+        vector<string> words;
+        vector<pair<string, string> > neighbours;
+        string_utilities::split(line, words);
+        crystal_structure_utilities::splitIntoAtomAndSymmOp(words, neighbours, true);
+        for(auto &neighbour: neighbours)
+            connectivity[i].push_back({ label2Idx [neighbour.first], neighbour.second});
+    }
+    vector<pair<int, string> > asuWithNeoghbours;
+
+    structural_properties::assymetricUnitWithNeighbours(crystal, connectivity, asuWithNeoghbours, nNeighbours);
+    cout << "asymmetric unit with neighbours" << endl;
+    for(auto &atom : asuWithNeoghbours)
+        cout << atom.first << " " << atom.second << endl;
+}
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 3)
+            on_error::throwException("expected structure file, bonds file and neighbours range\n", __FILE__, __LINE__);
+
+        testAsuWithNeighbours(
+            arguments[0], arguments[1], stoi(arguments[2]));
+
+        return 0;
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);

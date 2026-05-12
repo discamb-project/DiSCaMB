@@ -1186,6 +1186,21 @@ namespace
 
     }
 
+    bool belongsToGroup(
+        const Crystal &crystal,
+        int atomIdx,
+        const SpaceGroupOperation &symmOp,
+        const vector<pair<int, SpaceGroupOperation> >& atomGroup)
+    {
+        for(const auto &atom: atomGroup)
+        {
+            if (atom.first != atomIdx)
+                continue;
+            if (crystal_structure_utilities::sameAtom(crystal, atomIdx, symmOp, atom.second))
+                return true;
+        }
+        return false;
+    }
 }
 
 namespace structural_properties {
@@ -1430,6 +1445,92 @@ namespace structural_properties {
         vector<int> shellSizes;
         assymetricUnitWithNeighbours(crystal, asuWithNeighbours, neighbourRange, threshold, shellSizes);
     }
+
+    void assymetricUnitWithNeighbours(
+        const Crystal& _crystal,
+        const std::vector< std::vector<std::pair<int, std::string> > >& asuConnectivity,
+        std::vector< std::pair<int, SpaceGroupOperation> >& asuPlus,
+        int neighbourRange)
+    {
+        Crystal crystal = _crystal;
+        
+        for (int i = 0; i < crystal.atoms.size(); i++)
+        {
+            std::vector<std::vector<SpaceGroupOperation> > pointGroups;
+            crystal_structure_utilities::findAtomSymmetry(crystal, i, pointGroups, 0.005);
+            crystal.atoms[i].siteSymetry = pointGroups[0];
+        }
+
+
+        asuPlus.clear();
+        
+        vector<pair<int, SpaceGroupOperation> > currentShell, nextShell, previousShell;
+
+        for(int i=0; i< crystal.atoms.size(); i++)
+            asuPlus.push_back({ i, SpaceGroupOperation() });
+        if(neighbourRange < 1)
+            return;
+        for (int i = 0; i < asuConnectivity.size(); i++)
+        {
+            for (auto& neighbour : asuConnectivity[i])
+            {
+                SpaceGroupOperation symmOp(neighbour.second);
+                if(!symmOp.isIdentity())
+                    if(!belongsToGroup(crystal, neighbour.first, symmOp, nextShell))
+                        nextShell.push_back({ neighbour.first, symmOp });
+            }
+        }
+        asuPlus.insert(asuPlus.end(), nextShell.begin(), nextShell.end());
+        if(nextShell.empty() || neighbourRange == 1)
+            return;
+        
+        for (int i = 2; i <= neighbourRange; i++)
+        {
+            if (i > 2)
+                previousShell = currentShell;
+            currentShell = nextShell;
+            nextShell.clear();
+            for(auto &atom: currentShell)
+            {
+                for (auto& neighbour : asuConnectivity[atom.first])
+                {
+                    SpaceGroupOperation neighbourSymmOp(atom.second * neighbour.second);
+                    if (crystal_structure_utilities::sameAtom(crystal, neighbour.first, neighbourSymmOp, SpaceGroupOperation()))
+                        continue;
+                    if (neighbourSymmOp.isIdentity())
+                        continue;
+                    // already in current shell?
+                    if (!belongsToGroup(crystal, neighbour.first, neighbourSymmOp, previousShell))
+                        if (!belongsToGroup(crystal, neighbour.first, neighbourSymmOp, currentShell))
+                            if (!belongsToGroup(crystal, neighbour.first, neighbourSymmOp, nextShell))
+                                nextShell.push_back({ neighbour.first, neighbourSymmOp });
+                }
+            }
+            if (nextShell.empty())
+                return;
+            asuPlus.insert(asuPlus.end(), nextShell.begin(), nextShell.end());
+        }
+
+    }
+
+    void assymetricUnitWithNeighbours(
+        const Crystal& _crystal,
+        const std::vector< std::vector<std::pair<int, std::string> > >& asuConnectivity,
+        std::vector< std::pair<int, std::string> >& asuWithNeighbours,
+        int neighbourRange)
+    {
+        asuWithNeighbours.clear();
+
+        vector< pair<int, SpaceGroupOperation> > asuPlus;
+
+        assymetricUnitWithNeighbours(_crystal, asuConnectivity, asuPlus, neighbourRange);
+        for (auto& atom : asuPlus)
+            asuWithNeighbours.push_back({ atom.first, atom.second.string() });
+    }
+
+
+
+
 
     void assymetricUnitWithNeighbours(const Crystal &crystal,
         std::vector< std::pair<int, std::string> > &asuWithNeighbours,

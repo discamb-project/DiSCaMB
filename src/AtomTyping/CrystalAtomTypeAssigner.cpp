@@ -380,6 +380,35 @@ namespace discamb {
         
     }*/
 
+    void CrystalAtomTypeAssigner::assign(
+        const Crystal& crystal,
+        const StructureWithDescriptors& structureWithDescriptors,
+        const std::vector<AtomInCrystalID>& nonAsymmetricUnitAtoms,
+        std::vector<int>& typeID,
+        std::vector<LocalCoordinateSystem<AtomInCrystalID> >& lcs)
+        const
+    {
+        vector<int> atomToAssign(crystal.atoms.size());
+
+        for (int i = 0; i < crystal.atoms.size(); i++)
+            atomToAssign[i] = i;
+
+        vector<LocalCoordinateSystem<int> > lcsMolecule;
+        mAssigner.assign(structureWithDescriptors, atomToAssign, typeID, lcsMolecule);
+        vector<AtomInCrystalID> atomsInstructureWithDescriptors;
+        for(int atomIdx=0; atomIdx<crystal.atoms.size(); atomIdx++)
+            atomsInstructureWithDescriptors.push_back({ atomIdx, SpaceGroupOperation() });
+        atomsInstructureWithDescriptors.insert(atomsInstructureWithDescriptors.end(),
+            nonAsymmetricUnitAtoms.begin(), nonAsymmetricUnitAtoms.end());
+        // convert lcs molecule to lcs crystal
+        int lcsIdx, nLcs = lcsMolecule.size();
+        lcs.clear();
+        lcs.resize(nLcs);
+        for (lcsIdx = 0; lcsIdx < nLcs; lcsIdx++)
+            convertUbdbLcs(lcsMolecule[lcsIdx], atomsInstructureWithDescriptors, lcs[lcsIdx]);
+
+    }
+
 
     void CrystalAtomTypeAssigner::assign(
         const Crystal& crystal,

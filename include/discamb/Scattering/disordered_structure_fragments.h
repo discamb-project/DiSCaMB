@@ -1,5 +1,6 @@
 #pragma once
 
+#include "discamb/AtomTyping/StructureWithDescriptors.h"
 #include "discamb/CrystalStructure/Crystal.h"
 #include "discamb/StructuralProperties/MacromolecularStructuralInformation.h"
 //#include "discamb/Scattering
@@ -39,8 +40,32 @@ namespace disordered_structure_fragments{
 
     void split_with_macromol_info(
         const Crystal& crystal,
-        const MacromolecularStructuralInformation &macromolInfo,
+        const MacromolecularStructuralInformation& macromolInfo,
         std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts);
+
+    /**
+    splits crystal into ordered crystals based on ordered_parts
+    and sets structureDescriptors for each paert, i.e. for asymmetric unit atoms
+    and their neighbours (up to n-th neighbor as given by descriptorRange) 
+    for each ordered_part, reports ordered_parts_asu_with_neighbours 
+    which is a list of atoms in asymmetric unit and their neighbours 
+    (up to n-th neighbour as given by descriptorRange) 
+
+    */
+    void describe_with_macromol_info(
+        const Crystal& crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        const std::vector< std::vector<int> >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors,
+        std::vector< std::vector<std::pair<std::string, std::string> > >& ordered_parts_asu_with_neighbours,
+        int descriptorRange);
+
+    void split_and_describe_with_macromol_info(
+        const Crystal& crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors);
+
 
 
     void split_with_labels(

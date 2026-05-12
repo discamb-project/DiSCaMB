@@ -13,6 +13,11 @@ namespace discamb{
             return "TRUE";
         return "UNDEFINED";
     }
+
+    inline Tribool bool_to_tribool(bool value)
+    {
+        return value ? Tribool::True : Tribool::False;
+    }
 }
 
 

@@ -186,7 +186,7 @@ namespace discamb {
         const TaamSfCalculatorSettings& settings)
     {
         vector<vector<pair<string, double> > > orderedSubcrystalAtoms = settings.orderedSubcrystalAtoms;
-
+        vector<StructureWithDescriptors> descriptors;
         if (settings.splitWithLabels && settings.orderedSubcrystalAtoms.empty())
             disordered_structure_fragments::split_with_labels(crystal, orderedSubcrystalAtoms);
         
@@ -201,6 +201,7 @@ namespace discamb {
                     crystal,
                     settings.macromolecularInfo,
                     orderedSubcrystalAtoms);
+                //descriptors
             }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
             auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(
