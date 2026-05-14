@@ -71,12 +71,13 @@ namespace discamb {
         bool def_val_symm,
         const std::string& engine,
         const StructureWithDescriptors& structureWithDescriptors,
+        const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms,
         const std::vector<int>& predefinedTypeID,
         const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs)
     {
         set(crystal, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
             parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, 
-            algorithm, def_val_symm, engine, structureWithDescriptors, predefinedTypeID, predefinedLcs);
+            algorithm, def_val_symm, engine, structureWithDescriptors, structureDescriptorsNonAsymmetricUnitAtoms, predefinedTypeID, predefinedLcs);
 
     }
 
@@ -322,6 +323,7 @@ namespace discamb {
         bool def_val_symm,
         const std::string& engine,
         const StructureWithDescriptors& structureWithDescriptors,
+        const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms,
         const std::vector<int>& predefinedTypeID,
         const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs//,
         /*bool generateAssignmentInfo*/ )
@@ -355,11 +357,12 @@ namespace discamb {
             if(structureWithDescriptors.atomDescriptors.empty())
                 assigner.assign(crystal, types, lcs); 
             else
-            {
-                //assigner.assign(crystal, types, lcs, structureWithDescriptors);
-                //assigner.assign(crystal, types, lcs);
-            }
-            
+                assigner.assign(
+                    crystal,
+                    structureWithDescriptors,
+                    structureDescriptorsNonAsymmetricUnitAtoms,
+                    types,
+                    lcs);            
         }
 
         if (!assignemntInfoFile.empty())

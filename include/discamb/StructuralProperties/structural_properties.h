@@ -96,6 +96,13 @@ namespace discamb {
             std::vector<Vector3d>& positions,
             const std::vector<int>& atomicNumbers);
 
+        bool areBonded(
+            const Crystal& crystal, 
+            int atomIdx1, 
+            const SpaceGroupOperation &symmOp1,
+            int atomIdx2,
+            const SpaceGroupOperation& symmOp2,
+            const std::vector<std::vector<std::pair<int, std::string> > >& asymmetricUnitConnectivity);
 
         void asymmetricUnitConnectivity(
             const Crystal &c,

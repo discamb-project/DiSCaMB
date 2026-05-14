@@ -41,6 +41,15 @@ namespace discamb {
             std::vector<double>& ringPlanarityEsd,
             const std::vector<int>& atomicNumbers);// = std::vector<int>(),
 
+
+        /**
+        this version ignores planarity thresholds
+        and assumes that ring is planar if all its atoms are planar 
+        and all atoms in the ring have number of neighbours
+        in the ring not exceeding maxNeighboursCount
+        */
+
+
         void calculateRings(
             const std::vector<std::vector<int> >& connectivityMatrix,
             const std::vector<bool>& atomPlanarity,

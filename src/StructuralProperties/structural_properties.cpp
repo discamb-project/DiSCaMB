@@ -1390,6 +1390,35 @@ namespace structural_properties {
 
     }
 
+    bool areBonded(
+        const Crystal& crystal,
+        int atomIdx1,
+        const SpaceGroupOperation& symmOp1,
+        int atomIdx2,
+        const SpaceGroupOperation& symmOp2,
+        const std::vector<std::vector<std::pair<int, std::string> > >& asymmetricUnitConnectivity)
+    {
+        vector<pair<int, string> > neighbourCandidates;
+        for(const auto &neighbour : asymmetricUnitConnectivity[atomIdx1])
+            if(neighbour.first == atomIdx2)
+                neighbourCandidates.push_back(neighbour);
+
+        if(neighbourCandidates.empty())
+            return false;
+
+        SpaceGroupOperation symmOpAux = symmOp1;// .inverse()* symmOp2;
+        symmOpAux.invert();
+        SpaceGroupOperation symmOp = symmOpAux * symmOp2;
+        
+        for (auto& neighbour: neighbourCandidates)
+        {
+            SpaceGroupOperation neighbourSymmOp(neighbour.second);
+            if (crystal_structure_utilities::sameAtom(crystal, atomIdx2, symmOp, neighbourSymmOp))
+                return true;
+        }
+        return false;
+    }
+
 
     void asymmetricUnitConnectivity(
         const Crystal& c,

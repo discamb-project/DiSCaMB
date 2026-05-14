@@ -1,6 +1,8 @@
 #include "discamb/Scattering/disordered_structure_fragments.h"
+
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
+#include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/StructuralProperties/structural_properties.h"
 
 #include<fstream>
@@ -583,14 +585,149 @@ namespace disordered_structure_fragments{
 
     }
 
-    void describe_with_macromol_info(
+    void split_and_describe_with_macromol_info_asymm(
         const Crystal& crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        std::vector< std::vector<std::pair<std::string, double> > >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors)
+    {
+        split_with_macromol_info(crystal, macromolInfo, ordered_parts);
+        vector<vector<int> > ordered_parts_idx(ordered_parts.size());
+        map<string, int> label2idx;
+        for(int i=0;i<crystal.atoms.size();i++)
+            label2idx[crystal.atoms[i].label] = i;
+
+        for(int i=0;i<ordered_parts.size();i++)
+            for(auto& atom: ordered_parts[i])
+                ordered_parts_idx[i].push_back(label2idx[atom.first]);
+
+        describe_with_macromol_info_asymm(
+            crystal, 
+            macromolInfo, 
+            ordered_parts_idx, 
+            structureDescriptors);
+    }
+
+
+    void describe_with_macromol_info_asymm(
+        const Crystal& crystal,
+        const MacromolecularStructuralInformation& macromolInfo,
+        const std::vector< std::vector<int> >& ordered_parts,
+        std::vector<StructureWithDescriptors>& structureDescriptors)
+    {
+        structureDescriptors.clear();
+
+        if (macromolInfo.connectivity.empty())
+        {
+            string message = "connectivity information is required for structure description";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+        if (macromolInfo.connectivity.size() != crystal.atoms.size())
+        {
+            string message = "connectivity information size does not match number of atoms in the crystal";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
+        int nAtomsCrystal = crystal.atoms.size();
+        int nParts = ordered_parts.size();
+        structureDescriptors.resize(nParts);
+        map<string, int> label2idx;
+        for (int atomIdx = 0; atomIdx < nAtomsCrystal; atomIdx++)
+            label2idx[crystal.atoms[atomIdx].label] = atomIdx;
+        vector<int> atomicNumbers;
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+        vector<bool> atomInPart; (nAtomsCrystal, false);
+        for (int partIdx = 0; partIdx < nParts; partIdx++)
+        {
+            atomInPart.assign(nAtomsCrystal, false);
+            int nAtomsPart = ordered_parts[partIdx].size();
+            vector<vector<int> > connectivity;
+            vector<bool> planarity(nAtomsPart, false);
+            vector<int> atomicNumbersPart;
+            vector<Vector3d> positionsPart;
+            vector<string> labels;
+
+
+            map<string, int> partLabel2idx;
+            for (int i = 0; i < nAtomsPart; i++)
+                partLabel2idx[crystal.atoms[ordered_parts[partIdx][i]].label] = i;
+
+            for (int i = 0; i < nAtomsPart; i++)
+                atomInPart[ordered_parts[partIdx][i]] = true;
+
+            for (int atomIdx = 0; atomIdx < nAtomsCrystal; atomIdx++)
+                if (atomInPart[atomIdx])
+                {
+                    int atomIdxInPart = partLabel2idx[crystal.atoms[atomIdx].label];
+                    vector<int> neighbours_part_numeration, neighbours_crystal_numeration;
+
+                    atomicNumbersPart.push_back(atomicNumbers[atomIdx]);
+                    Vector3d cartCoords;
+                    crystal.unitCell.fractionalToCartesian(crystal.atoms[atomIdx].coordinates, cartCoords);
+                    positionsPart.push_back(cartCoords);
+                    labels.push_back(crystal.atoms[atomIdx].label);
+
+                    for (auto& neighbour : macromolInfo.connectivity[atomIdx])
+                        if (atomInPart[neighbour.first])
+                        {
+                            int idxInPart = partLabel2idx[crystal.atoms[neighbour.first].label];
+                            neighbours_part_numeration.push_back(idxInPart);
+                            neighbours_crystal_numeration.push_back(neighbour.first);
+                        }
+                    connectivity.push_back(neighbours_part_numeration);
+
+                    // planarity
+                    if (!macromolInfo.planes.empty())
+                    {
+                        int nNeighbours = neighbours_crystal_numeration.size();
+                        bool planar = false;
+                        if (nNeighbours > 2)
+                        {
+                            planar = true;
+                            vector<int> planeAtomIndices;
+                            for(const auto & plane: macromolInfo.planes[atomIdx])
+                                planeAtomIndices.push_back(plane.first);
+                            for (int neighbourIdx = 0; neighbourIdx < nNeighbours; neighbourIdx++)
+                            {
+                                const auto it = find(planeAtomIndices.begin(), planeAtomIndices.end(), neighbours_crystal_numeration[neighbourIdx]);
+                                if (it == planeAtomIndices.end())
+                                    planar = false;
+                            }
+                        }
+                        planarity[atomIdxInPart] = planar;
+
+                    }
+                    else // planarity descriptor calculation is not implemented for structures without planarity information provided
+                        on_error::not_implemented(__FILE__, __LINE__);
+
+
+                }
+
+            structureDescriptors[partIdx].set(
+                atomicNumbersPart,
+                positionsPart, connectivity,
+                planarity, labels);
+        }
+
+    }
+
+
+    void describe_with_macromol_info(
+        const Crystal& _crystal,
         const MacromolecularStructuralInformation& macromolInfo,
         const std::vector< std::vector<int> >& ordered_parts,
         std::vector<StructureWithDescriptors>& structureDescriptors,
         int descriptorRange)
     {
         structureDescriptors.clear();
+        
+        Crystal crystal = _crystal;
+        for(int atomIdx=0; atomIdx<crystal.atoms.size(); atomIdx++)
+            if (crystal.atoms[atomIdx].siteSymetry.empty())
+            {
+                vector<vector<SpaceGroupOperation> > pointGroups;
+                crystal_structure_utilities::findAtomSymmetry(crystal, atomIdx, pointGroups, 0.005);
+                crystal.atoms[atomIdx].siteSymetry = pointGroups[0];
+            }
 
         if(macromolInfo.connectivity.empty())
         {
@@ -666,7 +803,29 @@ namespace disordered_structure_fragments{
             structural_properties::assymetricUnitWithNeighbours(
                 crystal, asymmetricUnitConnectivity, asuWithNeighbours,
                 descriptorRange);
-            
+            int nAtomsAsuPlus = asuWithNeighbours.size();
+            int nAtomsAsu = asymmetricUnitConnectivity.size();
+            vector<vector<int> > connectivityMol(nAtomsAsuPlus);
+            Crystal subcrystal = crystal;
+            subcrystal.atoms.clear();
+            for (int atomIdx : ordered_parts[partIdx])
+                subcrystal.atoms.push_back(crystal.atoms[atomIdx]);
+
+            SpaceGroupOperation identity;
+            for(int i=0;i<nAtomsAsu;i++)
+                for (auto& neighbour : asymmetricUnitConnectivity[i])
+                {
+                    SpaceGroupOperation symm(neighbour.second);
+                    if (symm.isIdentity())
+                        connectivityMol[i].push_back(neighbour.first);
+                    else
+                        for (int j = nAtomsAsu; j < nAtomsAsuPlus; j++)
+                            if (neighbour.first == asuWithNeighbours[j].first)
+                                if (structural_properties::areBonded(subcrystal, i, identity, neighbour.first,
+                                    SpaceGroupOperation(neighbour.second), asymmetricUnitConnectivity))
+                                    connectivityMol[i].push_back(neighbour.first);
+                }
+
             //structureDescriptors[partIdx].
         }
     }

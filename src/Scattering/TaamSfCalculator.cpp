@@ -197,10 +197,18 @@ namespace discamb {
         {
             if (orderedSubcrystalAtoms.empty())
             {
-                disordered_structure_fragments::split_with_macromol_info(
-                    crystal,
-                    settings.macromolecularInfo,
-                    orderedSubcrystalAtoms);
+                if(settings.macromolecularInfo.connectivity.empty() || settings.macromolecularInfo.planes.empty())
+                    disordered_structure_fragments::split_with_macromol_info(
+                        crystal,
+                        settings.macromolecularInfo,
+                        orderedSubcrystalAtoms);
+                else
+                    disordered_structure_fragments::split_and_describe_with_macromol_info(
+                        crystal,
+                        settings.macromolecularInfo,
+                        orderedSubcrystalAtoms,
+                        descriptors);
+
                 //descriptors
             }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
@@ -222,7 +230,8 @@ namespace discamb {
                 settings.iamTable,
                 settings.iamElectronScattering,
                 settings.frozen_lcs,
-                settings.algorithm);
+                settings.algorithm,
+                descriptors);
             mImplementation = impl;
             return;
         }

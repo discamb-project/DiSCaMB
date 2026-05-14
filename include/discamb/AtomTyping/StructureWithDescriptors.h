@@ -59,6 +59,13 @@ namespace discamb {
                  const std::vector<std::vector<int> > &predefinedConnectivity, 
                  const  std::vector<std::string> &labels = std::vector<std::string>(0));
 
+        void set(const std::vector<int>& atomicNumbers,
+            const std::vector<Vector3d>& positions,
+            const std::vector<std::vector<int> >& predefinedConnectivity,
+            const std::vector<bool>& predefinedPlanarity,
+            const  std::vector<std::string>& labels = std::vector<std::string>(0));
+
+
         struct DataForCrystalFragment{
             std::vector<std::vector<int> > shells;
             std::vector<int> mapToCoreShellAtoms;

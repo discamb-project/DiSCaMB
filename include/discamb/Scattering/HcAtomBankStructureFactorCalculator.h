@@ -39,6 +39,9 @@ namespace discamb {
         if assignemntInfoFile is empty the assignment info is not printed
         if structureWithDescriptors is not empty, the atom types are assigned based 
         on the descriptors and not on the atomic numbers and positions
+        structureDescriptorsNonAsymmetricUnitAtoms - first N atoms in structureWithDescriptors
+        should correspond to atoms in crystal asymmetric unit, 
+        the remaining ones should be included in this list in the same order as in structureWithDescriptors
         */
         HcAtomBankStructureFactorCalculator(
             const Crystal &crystal,
@@ -61,6 +64,7 @@ namespace discamb {
             bool def_val_symm = false,
             const std::string &engine = "CPU",
             const StructureWithDescriptors& structureWithDescriptors = StructureWithDescriptors(),
+            const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms = std::vector<AtomInCrystalID>(),
             const std::vector<int>& predefinedTypeID = std::vector<int>(), 
             const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >());
         
@@ -102,6 +106,7 @@ namespace discamb {
             bool def_val_symm = false,
             const std::string& engine = "CPU",
             const StructureWithDescriptors& structureWithDescriptors = StructureWithDescriptors(),
+            const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms = std::vector<AtomInCrystalID>(),
             const std::vector<int>& predefinedTypeID = std::vector<int>(),
             const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs = std::vector<LocalCoordinateSystem<AtomInCrystalID> >()            /*,
             bool generateAssignmentInfo = false*/);
