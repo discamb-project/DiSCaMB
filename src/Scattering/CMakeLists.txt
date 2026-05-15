@@ -123,8 +123,10 @@ if(SYCL)
 
   if(SYCL_TARGETS)
     set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_FLAGS "-fsycl -fsycl-targets=${SYCL_TARGETS}")
+    target_link_options(Scattering PUBLIC "-fsycl" "-fsycl-targets=${SYCL_TARGETS}")
   else()
     set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_FLAGS -fsycl)
+    target_link_options(Scattering PUBLIC "-fsycl")
   endif()
 
   find_library(SYCL_LIB NAMES sycl HINTS "${SYCL_LIBRARY_DIR}" REQUIRED)
