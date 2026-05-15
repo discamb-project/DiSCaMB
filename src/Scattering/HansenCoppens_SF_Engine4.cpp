@@ -29,7 +29,7 @@
 #include "sycl/access/access.hpp"
 #include "sycl/buffer.hpp"
 #include "sycl/detail/builtins/builtins.hpp"
-#include "sycl/vector.hpp"
+#include "sycl/exception.hpp"
 
 namespace vecnd_detail {
 
@@ -150,16 +150,15 @@ inline int index_flat(const OffsetAccessor &offsets_ax,
       buf_name_prefix##_offsets_data.flat);
 
 #define vecnd_buffer_accessors(buf_name_prefix)                                \
-  sycl::accessor buf_name_prefix##_value_ax(buf_name_prefix##_value_buf,       \
+  sycl::accessor buf_name_prefix##_value_ax(buf_name_prefix##_value_buf, cgh,  \
                                             sycl::read_only);                  \
   sycl::accessor buf_name_prefix##_offset_ax(buf_name_prefix##_offsets_buf,    \
-                                             sycl::read_only);
+                                             cgh, sycl::read_only);
 
 #define index_vecnd_buffer(buf_name_prefix, ...)                               \
   (buf_name_prefix##_value_ax[vecnd_detail::index_flat(                        \
       buf_name_prefix##_offset_ax, buf_name_prefix##_level_offsets,            \
       std::array<int, buf_name_prefix##_depth>{__VA_ARGS__})])
-
 #endif
 
 #include <array>
@@ -169,6 +168,192 @@ inline int index_flat(const OffsetAccessor &offsets_ax,
 using namespace std;
 
 namespace discamb {
+
+#ifdef SYCL
+template <int l>
+inline REAL gFunction_sycl_impl(const int n, REAL const h, REAL const Z) {
+  const REAL K =
+      (REAL)(2.0 * REAL(M_PI)) * h; // K and Z symbols like in Coppens book
+
+  const REAL K_pow2 = K * K;
+  const REAL K_pow3 = K_pow2 * K;
+  const REAL K_pow4 = K_pow2 * K_pow2;
+  const REAL K_pow5 = K_pow2 * K_pow3;
+  const REAL K_pow6 = K_pow4 * K_pow2;
+  const REAL K_pow7 = K_pow6 * K;
+  const REAL K_pow8 = K_pow4 * K_pow4;
+  const REAL K_pow9 = K_pow8 * K;
+
+  const REAL Z_pow2 = Z * Z;
+  const REAL Z_pow3 = Z_pow2 * Z;
+  const REAL Z_pow4 = Z_pow2 * Z_pow2;
+  const REAL Z_pow5 = Z_pow2 * Z_pow3;
+  const REAL Z_pow6 = Z_pow4 * Z_pow2;
+  const REAL Z_pow7 = Z_pow6 * Z;
+  const REAL Z_pow8 = Z_pow4 * Z_pow4;
+  const REAL Z_pow9 = Z_pow8 * Z;
+
+  const REAL d = K_pow2 + Z_pow2;
+
+  const REAL d_inv = (REAL)1.0 / d;
+  const REAL d_inv_pow2 = d_inv * d_inv;
+  const REAL d_inv_pow4 = d_inv_pow2 * d_inv_pow2;
+  const REAL d_inv_pow8 = d_inv_pow4 * d_inv_pow4;
+  const REAL d_inv_pow3 = d_inv_pow2 * d_inv;
+  const REAL d_inv_pow5 = d_inv_pow4 * d_inv;
+  const REAL d_inv_pow6 = d_inv_pow4 * d_inv_pow2;
+  const REAL d_inv_pow7 = d_inv_pow6 * d_inv;
+  const REAL d_inv_pow9 = d_inv_pow8 * d_inv;
+  const REAL d_inv_pow10 = d_inv_pow4 * d_inv_pow6;
+
+  REAL value = (REAL)0;
+  assert(l >= 0 && l <= 4);
+
+  if (l == 0) {
+    assert(n >= 2 && n <= 10);
+    if (n == 2)
+      value = 2 * Z * d_inv_pow2;
+    else if (n == 3)
+      value = 2 * (3 * Z_pow2 - K_pow2) * d_inv_pow3;
+    else if (n == 4)
+      value = 24 * Z * (Z_pow2 - K_pow2) * d_inv_pow4;
+    else if (n == 5)
+      value = 24 * (5 * Z_pow4 - 10 * K_pow2 * Z_pow2 + K_pow4) *
+              d_inv_pow5; // poprawionywspolczynnk!
+    else if (n == 6)
+      value =
+          240 * Z * (K_pow2 - 3 * Z_pow2) * (3 * K_pow2 - Z_pow2) * d_inv_pow6;
+    else if (n == 7)
+      value =
+          720 *
+          (7 * Z_pow6 - 35 * K_pow2 * Z_pow4 + 21 * K_pow4 * Z_pow2 - K_pow6) *
+          d_inv_pow7;
+    else if (n == 8)
+      value =
+          40320 *
+          (Z_pow7 - 7 * K_pow2 * Z_pow5 + 7 * K_pow4 * Z_pow3 - K_pow6 * Z) *
+          d_inv_pow8;
+    else if (n == 9)
+      value = (362880 * Z_pow8 - 3386880 * K_pow2 * Z_pow6 +
+               5080320 * K_pow4 * Z_pow4 - 1451520 * K_pow6 * Z_pow2 +
+               40320 * K_pow8) *
+              d_inv_pow9;
+    else if (n == 10)
+      value = (3628800 * Z_pow9 - 43545600 * K_pow2 * Z_pow7 +
+               91445760 * K_pow4 * Z_pow5 - 43545600 * K_pow6 * Z_pow3 +
+               3628800 * K_pow8 * Z) *
+              d_inv_pow10;
+  }
+
+  if (l == 1) {
+    assert(n >= 3 && n <= 10);
+    if (n == 3)
+      value = 8 * K * Z * d_inv_pow3;
+    else if (n == 4)
+      value = 8 * K * (5 * Z_pow2 - K_pow2) * d_inv_pow4;
+    else if (n == 5)
+      value = 48 * K * Z * (5 * Z_pow2 - 3 * K_pow2) * d_inv_pow5;
+    else if (n == 6)
+      value = 48 * K * (35 * Z_pow4 - 42 * K_pow2 * Z_pow2 + 3 * K_pow4) *
+              d_inv_pow6;
+    else if (n == 7)
+      value = 1920 * K * Z * (7 * Z_pow4 - 14 * K_pow2 * Z_pow2 + 3 * K_pow4) *
+              d_inv_pow7;
+    else if (n == 8)
+      value =
+          5760 * K *
+          (21 * Z_pow6 - 63 * K_pow2 * Z_pow4 + 27 * K_pow4 * Z_pow2 - K_pow6) *
+          d_inv_pow8;
+    else if (n == 9)
+      value = (1209600 * K * Z_pow7 - 5080320 * K_pow3 * Z_pow5 +
+               3628800 * K_pow5 * Z_pow3 - 403200 * K_pow7 * Z) *
+              d_inv_pow9;
+    else if (n == 10)
+      value = (13305600 * K * Z_pow8 - 74511360 * K_pow3 * Z_pow6 +
+               79833600 * K_pow5 * Z_pow4 - 17740800 * K_pow7 * Z_pow2 +
+               403200 * K_pow9) *
+              d_inv_pow10;
+  }
+
+  if (l == 2) {
+    assert(n >= 4 && n <= 10);
+    if (n == 4)
+      value = 48 * K_pow2 * Z * d_inv_pow4;
+    else if (n == 5)
+      value = 48 * K_pow2 * (7 * Z_pow2 - K_pow2) * d_inv_pow5;
+    else if (n == 6)
+      value = 384 * K_pow2 * Z * (7 * Z_pow2 - 3 * K_pow2) * d_inv_pow6;
+    else if (n == 7)
+      value = 1152 * K_pow2 * (21 * Z_pow4 - 18 * K_pow2 * Z_pow2 + K_pow4) *
+              d_inv_pow7;
+    else if (n == 8)
+      value = 11520 * K_pow2 * Z *
+              (21 * Z_pow4 - 30 * K_pow2 * Z_pow2 + 5 * K_pow4) * d_inv_pow8;
+    else if (n == 9)
+      value = (2661120 * K_pow2 * Z_pow6 - 5702400 * K_pow4 * Z_pow4 +
+               1900800 * K_pow6 * Z_pow2 - 57600 * K_pow8) *
+              d_inv_pow9;
+    else if (n == 10)
+      value = (31933440 * K_pow2 * Z_pow7 - 95800320 * K_pow4 * Z_pow5 +
+               53222400 * K_pow6 * Z_pow3 - 4838400 * K_pow8 * Z) *
+              d_inv_pow10;
+  }
+  if (l == 3) {
+    assert(n >= 5 && n <= 10);
+    if (n == 5)
+      value = (384 * K_pow3 * Z) * d_inv_pow5;
+    else if (n == 6)
+      value = (3456 * K_pow3 * Z_pow2 - 384 * K_pow5) * d_inv_pow6;
+    else if (n == 7)
+      value = (34560 * K_pow3 * Z_pow3 - 11520 * K_pow5 * Z) * d_inv_pow7;
+    else if (n == 8)
+      value = (380160 * K_pow3 * Z_pow4 - 253440 * K_pow5 * Z_pow2 +
+               11520 * K_pow7) *
+              d_inv_pow8;
+    else if (n == 9)
+      value = (4561920 * K_pow3 * Z_pow5 - 5068800 * K_pow5 * Z_pow3 +
+               691200 * K_pow7 * Z) *
+              d_inv_pow9;
+    else if (n == 10)
+      value = (59304960 * K_pow3 * Z_pow6 - 98841600 * K_pow5 * Z_pow4 +
+               26956800 * K_pow7 * Z_pow2 - 691200 * K_pow9) *
+              d_inv_pow10;
+  }
+  if (l == 4) {
+    assert(n >= 6 && n <= 10);
+    if (n == 6)
+      value = (3840 * K_pow4 * Z) * d_inv_pow6;
+    else if (n == 7)
+      value = (42240 * K_pow4 * Z_pow2 - 3840 * K_pow6) * d_inv_pow7;
+    else if (n == 8)
+      value = (506880 * K_pow4 * Z_pow3 - 138240 * K_pow6 * Z) * d_inv_pow8;
+    else if (n == 9)
+      value = (6589440 * K_pow4 * Z_pow4 - 3594240 * K_pow6 * Z_pow2 +
+               138240 * K_pow8) *
+              d_inv_pow9;
+    else if (n == 10)
+      value = (92252160 * K_pow4 * Z_pow5 - 83865600 * K_pow6 * Z_pow3 +
+               9676800 * K_pow8 * Z) *
+              d_inv_pow10;
+  }
+
+  return value;
+}
+
+inline REAL gFunction_sycl(int l, const int n, REAL const h, REAL const Z) {
+  if (l == 0)
+    return gFunction_sycl_impl<0>(n, h, Z);
+  if (l == 1)
+    return gFunction_sycl_impl<1>(n, h, Z);
+  if (l == 2)
+    return gFunction_sycl_impl<2>(n, h, Z);
+  if (l == 3)
+    return gFunction_sycl_impl<3>(n, h, Z);
+  if (l == 4)
+    return gFunction_sycl_impl<4>(n, h, Z);
+  return 0.0;
+}
+#endif
 
 HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4() { mUseIAM = false; }
 
@@ -2146,51 +2331,55 @@ infrequentValueLog("scale[2]", scale[2]);
   sycl::buffer<int> def_valence_pows_buff(def_valence_pows);
 
   queue.submit([&](sycl::handler &cgh) {
-    sycl::accessor f_ax(f_buf, sycl::write_only);
-    sycl::accessor f_core_ax(f_core_buf, sycl::read_write);
-    sycl::accessor val_ax(val_buf, sycl::read_write);
-    sycl::accessor sym_op_f_mult_ax(sym_op_f_mult_buf, sycl::read_write);
-    sycl::accessor hkl_ax(hkl_buf, sycl::read_only);
-    sycl::accessor used_bins_ax(used_bins_buf, sycl::read_only);
-    sycl::accessor used_wfn_type_combo_ax(used_wfn_type_combo_buf,
+    sycl::accessor f_ax(f_buf, cgh, sycl::write_only);
+    sycl::accessor f_core_ax(f_core_buf, cgh, sycl::read_write);
+    sycl::accessor val_ax(val_buf, cgh, sycl::read_write);
+    sycl::accessor sym_op_f_mult_ax(sym_op_f_mult_buf, cgh, sycl::read_write);
+    sycl::accessor hkl_ax(hkl_buf, cgh, sycl::read_only);
+    sycl::accessor used_bins_ax(used_bins_buf, cgh, sycl::read_only);
+    sycl::accessor used_wfn_type_combo_ax(used_wfn_type_combo_buf, cgh,
                                           sycl::read_only);
-    sycl::accessor type_kappa_spherical_ax(type_kappa_spherical_buf,
+    sycl::accessor type_kappa_spherical_ax(type_kappa_spherical_buf, cgh,
                                            sycl::read_only);
-    sycl::accessor type_p_val_ax(type_p_val_buf, sycl::read_only);
-    sycl::accessor type_kappa_def_valence_ax(type_kappa_def_valence_buf,
+    sycl::accessor type_p_val_ax(type_p_val_buf, cgh, sycl::read_only);
+    sycl::accessor type_kappa_def_valence_ax(type_kappa_def_valence_buf, cgh,
                                              sycl::read_only);
-    sycl::accessor wfn_def_valence_exp_ax(wfn_def_valence_exp_buf,
+    sycl::accessor wfn_def_valence_exp_ax(wfn_def_valence_exp_buf, cgh,
                                           sycl::read_only);
     sycl::accessor atom_to_used_wfn_type_combo_ax(
-        atom_to_used_wfn_type_combo_buf, sycl::read_only);
-    sycl::accessor atomic_occupancy_ax(atomic_occupancy_buf, sycl::read_only);
+        atom_to_used_wfn_type_combo_buf, cgh, sycl::read_only);
+    sycl::accessor atomic_occupancy_ax(atomic_occupancy_buf, cgh,
+                                       sycl::read_only);
     sycl::accessor atomic_multiplicity_factor_ax(atomic_multiplicity_factor_buf,
-                                                 sycl::read_only);
-    sycl::accessor used_atom_indices_ax(used_atom_indices_buf, sycl::read_only);
-    sycl::accessor used_wfns_ax(used_wfns_buf, sycl::read_only);
-    sycl::accessor used_types_ax(used_types_buf, sycl::read_only);
+                                                 cgh, sycl::read_only);
+    sycl::accessor used_atom_indices_ax(used_atom_indices_buf, cgh,
+                                        sycl::read_only);
+    sycl::accessor used_wfns_ax(used_wfns_buf, cgh, sycl::read_only);
+    sycl::accessor used_types_ax(used_types_buf, cgh, sycl::read_only);
     sycl::accessor atomic_displacement_parameters_value_ax(
-        atomic_displacement_parameters_value_buf, sycl::read_only);
+        atomic_displacement_parameters_value_buf, cgh, sycl::read_only);
     sycl::accessor atomic_displacement_parameters_offset_ax(
-        atomic_displacement_parameters_offset_buf, sycl::read_only);
-    sycl::accessor atom_to_wfn_map_ax(atom_to_wfn_map_buf, sycl::read_only);
-    sycl::accessor atom_to_type_map_ax(atom_to_type_map_buf, sycl::read_only);
-    sycl::accessor n_value_ax(n_value_buf, sycl::read_only);
-    sycl::accessor n_offset_ax(n_offset_buf, sycl::read_only);
-    sycl::accessor sym_op_mults_column0_ax(sym_op_mults_column0_buf,
+        atomic_displacement_parameters_offset_buf, cgh, sycl::read_only);
+    sycl::accessor atom_to_wfn_map_ax(atom_to_wfn_map_buf, cgh,
+                                      sycl::read_only);
+    sycl::accessor atom_to_type_map_ax(atom_to_type_map_buf, cgh,
+                                       sycl::read_only);
+    sycl::accessor n_value_ax(n_value_buf, cgh, sycl::read_only);
+    sycl::accessor n_offset_ax(n_offset_buf, cgh, sycl::read_only);
+    sycl::accessor sym_op_mults_column0_ax(sym_op_mults_column0_buf, cgh,
                                            sycl::read_only);
-    sycl::accessor sym_op_mults_column1_ax(sym_op_mults_column1_buf,
+    sycl::accessor sym_op_mults_column1_ax(sym_op_mults_column1_buf, cgh,
                                            sycl::read_only);
-    sycl::accessor sym_op_mults_column2_ax(sym_op_mults_column2_buf,
+    sycl::accessor sym_op_mults_column2_ax(sym_op_mults_column2_buf, cgh,
                                            sycl::read_only);
     sycl::accessor local_coordinate_systems_column0_ax(
-        local_coordinate_systems_column0_buf, sycl::read_only);
+        local_coordinate_systems_column0_buf, cgh, sycl::read_only);
     sycl::accessor local_coordinate_systems_column1_ax(
-        local_coordinate_systems_column1_buf, sycl::read_only);
+        local_coordinate_systems_column1_buf, cgh, sycl::read_only);
     sycl::accessor local_coordinate_systems_column2_ax(
-        local_coordinate_systems_column2_buf, sycl::read_only);
-    sycl::accessor all_bins_map_ax(all_bins_map_buf, sycl::read_only);
-    sycl::accessor sym_op_to_mult_ax(sym_op_to_mult_buf, sycl::read_only);
+        local_coordinate_systems_column2_buf, cgh, sycl::read_only);
+    sycl::accessor all_bins_map_ax(all_bins_map_buf, cgh, sycl::read_only);
+    sycl::accessor sym_op_to_mult_ax(sym_op_to_mult_buf, cgh, sycl::read_only);
     vecnd_buffer_accessors(temperature_factor_roots);
     vecnd_buffer_accessors(per_bin_temperature_factor_mult);
     vecnd_buffer_accessors(temperature_factor_mults0);
@@ -2209,14 +2398,16 @@ infrequentValueLog("scale[2]", scale[2]);
     vecnd_buffer_accessors(virt_hkl_t_mul);
 
     // Wcn params
-    sycl::accessor wfn_param_metas_ax(wfn_param_metas_buff, sycl::read_only);
-    sycl::accessor core_coeffs_ax(core_coeffs_buff, sycl::read_only);
-    sycl::accessor core_exps_ax(core_exps_buff, sycl::read_only);
-    sycl::accessor core_pows_ax(core_pows_buff, sycl::read_only);
-    sycl::accessor valence_coeffs_ax(valence_coeffs_buff, sycl::read_only);
-    sycl::accessor valence_exps_ax(valence_exps_buff, sycl::read_only);
-    sycl::accessor valence_pows_ax(valence_pows_buff, sycl::read_only);
-    sycl::accessor def_valence_pows_ax(def_valence_pows_buff, sycl::read_only);
+    sycl::accessor wfn_param_metas_ax(wfn_param_metas_buff, cgh,
+                                      sycl::read_only);
+    sycl::accessor core_coeffs_ax(core_coeffs_buff, cgh, sycl::read_only);
+    sycl::accessor core_exps_ax(core_exps_buff, cgh, sycl::read_only);
+    sycl::accessor core_pows_ax(core_pows_buff, cgh, sycl::read_only);
+    sycl::accessor valence_coeffs_ax(valence_coeffs_buff, cgh, sycl::read_only);
+    sycl::accessor valence_exps_ax(valence_exps_buff, cgh, sycl::read_only);
+    sycl::accessor valence_pows_ax(valence_pows_buff, cgh, sycl::read_only);
+    sycl::accessor def_valence_pows_ax(def_valence_pows_buff, cgh,
+                                       sycl::read_only);
 
     cgh.parallel_for(job_num, [=](sycl::id<1> job_id) {
       size_t id = job_id.get(0);
@@ -2238,11 +2429,12 @@ infrequentValueLog("scale[2]", scale[2]);
                     (used_bins_ax[binIdx][i] * binSize[i]);
 
       sycl::vec<REAL, 3> cartesian_h(0);
-      sycl::vec<REAL, 3> tmp = f2c_0 * hkl.as<REAL>();
+      sycl::vec<REAL, 3> hkl_real{hkl[0], hkl[1], hkl[2]};
+      sycl::vec<REAL, 3> tmp = f2c_0 * hkl_real;
       cartesian_h[0] = tmp[0] + tmp[1] + tmp[2];
-      tmp = f2c_1 * hkl.as<REAL>();
+      tmp = f2c_1 * hkl_real;
       cartesian_h[1] = tmp[0] + tmp[1] + tmp[2];
-      tmp = f2c_2 * hkl.as<REAL>();
+      tmp = f2c_2 * hkl_real;
       cartesian_h[2] = tmp[0] + tmp[1] + tmp[2];
 
       REAL h_length = sycl::sqrt(cartesian_h[0] * cartesian_h[0] +
@@ -2261,11 +2453,10 @@ infrequentValueLog("scale[2]", scale[2]);
               core_coeffs_ax[wfn_param_metas_ax[i].core_pow_off + k];
           REAL core_exp_k =
               core_coeffs_ax[wfn_param_metas_ax[i].core_exp_off + k];
-          f_core[i] +=
-              core_coeff_k *
-              sto_scattering::gFunction(0, core_pow_k + 2, h_length,
-                                        core_exp_k); // TODO find out why pow+2
-                                                     // in all gFunction pow
+          f_core[i] += core_coeff_k *
+                       gFunction_sycl(0, core_pow_k + 2, h_length,
+                                      core_exp_k); // TODO find out why pow+2
+                                                   // in all gFunction pow
           f_core[i] *= four_pi;
         }
 
@@ -2284,8 +2475,7 @@ infrequentValueLog("scale[2]", scale[2]);
                 valence_coeffs_ax[wfn_param_metas_ax[combo[0]]
                                       .valence_coeff_off];
             val[i] += valence_coeff_k *
-                      sto_scattering::gFunction(0, valence_pow_k + 2, h,
-                                                valence_exp_k);
+                      gFunction_sycl(0, valence_pow_k + 2, h, valence_exp_k);
           }
           val[i] *= type_p_val_ax[type] * four_pi;
         }
@@ -2366,7 +2556,6 @@ infrequentValueLog("scale[2]", scale[2]);
             }
 
             const int wfn_i = atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
-            const auto &wfn = wfnParams[wfn_i];
             const auto type_i =
                 atom_to_type_map_ax[used_atom_indices_ax[atom_i]];
 
@@ -2388,28 +2577,28 @@ infrequentValueLog("scale[2]", scale[2]);
                 h_times_sym, local_coordinate_system_col0,
                 local_coordinate_system_col1, local_coordinate_system_col2);
 
-            const int nl = sycl::min(wfn_param_metas_ax[i].def_valence_pow_sz,
-                                     type_i < typeCount - 1
-                                         ? (type_p_lm_offset_ax[type_i + 1] -
-                                            type_p_lm_offset_ax[type_i])
-                                         : (type_p_lm_level_offsets[1] -
-                                            type_p_lm_offset_ax[type_i]));
+            const int nl = std::min(
+                (int)wfn_param_metas_ax[wfn_i].def_valence_pow_sz,
+                type_i < typeCount - 1 ? (type_p_lm_offset_ax[type_i + 1] -
+                                          type_p_lm_offset_ax[type_i])
+                                       : (type_p_lm_level_offsets[1] -
+                                          type_p_lm_offset_ax[type_i]));
             std::complex<REAL> dval;
             for (int l = 0; l < nl; l++) {
               // may be ordered differently than in publication
               // because the publication doesn't seem to have a
               // consistent ordering of arguments passed to g
               REAL def_valence_pow_l = def_valence_pows_ax
-                  [wfn_param_metas_ax[i].def_valence_pow_off + l];
-              const REAL multPerL = sto_scattering::gFunction(
-                  l, def_valence_pow_l + 2,
-                  h_length / type_kappa_def_valence_ax[type_i],
-                  wfn_def_valence_exp_ax[wfn_i]);
+                  [wfn_param_metas_ax[wfn_i].def_valence_pow_off + l];
+              const REAL multPerL =
+                  gFunction_sycl(l, def_valence_pow_l + 2,
+                                 h_length / type_kappa_def_valence_ax[type_i],
+                                 wfn_def_valence_exp_ax[wfn_i]);
 
               REAL sumPerM = 0.0;
               for (int m = -l; m <= l; m++) {
                 sumPerM += index_vecnd_buffer(type_p_lm, type_i, l, m + l) *
-                           real_spherical_harmonics::densityNormalized(h, l, m);
+                           densityNormalizedSycl(h, l, m);
               }
               dval += n_value_ax[n_offset_ax[wfn_i] + l] * (multPerL * sumPerM);
             }

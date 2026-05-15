@@ -104,6 +104,9 @@ SET(TARGET_SRC
 option(SYCL "Enable using SYCL for calculations.")
 option(SYCL_TARGETS "SYCL targets to compile for.")
 option(SYCL_INCLUDE_DIR "Directory to where sycl/sycl.hpp resides. Required if using SYCL.")
+option(SYCL_LIBRARY_DIR "Directory to where libsycl.so resides. Optional if cmake can find it on its own.")
+
+ADD_LIBRARY(Scattering OBJECT ${TARGET_H} ${TARGET_SRC})
 
 if(SYCL)
   include(CheckCXXCompilerFlag)
@@ -123,9 +126,10 @@ if(SYCL)
   else()
     set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_FLAGS -fsycl)
   endif()
-endif()
 
-ADD_LIBRARY(Scattering OBJECT ${TARGET_H} ${TARGET_SRC})
+  find_library(SYCL_LIB NAMES sycl HINTS "${SYCL_LIBRARY_DIR}" REQUIRED)
+  target_link_libraries(Scattering PRIVATE "${SYCL_LIB}")
+endif()
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
