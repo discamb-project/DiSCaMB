@@ -41,10 +41,12 @@ SET(TARGET_SRC basis_set_data.cpp
             
 ADD_LIBRARY(QuantumChemistry OBJECT ${TARGET_H} ${TARGET_SRC})
 
-find_package(OpenMP)
+if(NOT SYCL)
+  find_package(OpenMP)
 
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(QuantumChemistry PUBLIC OpenMP::OpenMP_CXX)
+  if(OpenMP_CXX_FOUND)
+      target_link_libraries(QuantumChemistry PUBLIC OpenMP::OpenMP_CXX)
+  endif()
 endif()
 
 SET_PROPERTY(TARGET QuantumChemistry PROPERTY FOLDER "libs") 
