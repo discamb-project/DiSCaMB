@@ -39,22 +39,46 @@ namespace discamb {
                 if (atom_data.find("name") != atom_data.end() && atom_data["name"].is_string())
                     atomNames.push_back(atom_data["name"].get<std::string>());
 
-                if (atom_data.find("plane") != atom_data.end() && atom_data["altloc"].is_array()) {
-                    vector<pair<int, string> > plane_list;
-                    for (const auto& atom_in_plane : atom_data["plane"]) {
-                        if (atom_in_plane.is_number_integer())
-                            plane_list.push_back(make_pair<int, string>(atom_in_plane.get<int>(), string("x,y,z")));
-                        if (atom_in_plane.is_string()) {
-                            vector<string> words;
-                            string_utilities::split(atom_in_plane.get<string>(), words, ',');
-                            if (words.size() == 2) {
-                                plane_list.push_back({ stoi(words[0]), words[1] });
-                            }
-                            else
-                                on_error::throwException("Error parsing atom plane information from JSON data.", __FILE__, __LINE__);
-                        }
+                if (atom_data.find("bonding") != atom_data.end())
+                {
+                    vector<pair<int, string> > neighbours;
 
-                    }
+                    if(atom_data["bonding"].is_array())                 
+                        for (const auto& neighbour : atom_data["bonding"])
+                        {
+                            if (neighbour.is_number_integer())
+                                neighbours.push_back(make_pair<int, string>(neighbour.get<int>(), string("x,y,z")));
+                            if (neighbour.is_string()) {
+                                vector<string> words;
+                                string_utilities::split(neighbour.get<string>(), words, ',');
+                                if (words.size() == 2) {
+                                    neighbours.push_back({ stoi(words[0]), words[1] });
+                                }
+                                else
+                                    on_error::throwException("Error parsing atom plane information from JSON data.", __FILE__, __LINE__);
+                            }
+                        }
+                    connectivity.push_back(neighbours);
+                }
+                
+                if (atom_data.find("plane") != atom_data.end())
+                {
+                    vector<pair<int, string> > plane_list;
+                    if (atom_data["plane"].is_array()) 
+                        for (const auto& atom_in_plane : atom_data["plane"]) 
+                        {
+                            if (atom_in_plane.is_number_integer())
+                                plane_list.push_back(make_pair<int, string>(atom_in_plane.get<int>(), string("x,y,z")));
+                            if (atom_in_plane.is_string()) {
+                                vector<string> words;
+                                string_utilities::split(atom_in_plane.get<string>(), words, ',');
+                                if (words.size() == 2) {
+                                    plane_list.push_back({ stoi(words[0]), words[1] });
+                                }
+                                else
+                                    on_error::throwException("Error parsing atom plane information from JSON data.", __FILE__, __LINE__);
+                            }
+                        }
                     planes.push_back(plane_list);
                 }
             }

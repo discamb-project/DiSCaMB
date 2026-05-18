@@ -353,16 +353,19 @@ namespace discamb {
         }
         else
         {
+            bool predefinedDescriptors = !structureWithDescriptors.atomDescriptors.empty();
+            //predefinedDescriptors = false;
             assigner.setDescriptorsSettings(settings);
-            if(structureWithDescriptors.atomDescriptors.empty())
-                assigner.assign(crystal, types, lcs); 
-            else
+
+            if(predefinedDescriptors)
                 assigner.assign(
                     crystal,
                     structureWithDescriptors,
                     structureDescriptorsNonAsymmetricUnitAtoms,
                     types,
                     lcs);            
+            else
+                assigner.assign(crystal, types, lcs);
         }
 
         if (!assignemntInfoFile.empty())

@@ -203,7 +203,7 @@ namespace discamb {
                         settings.macromolecularInfo,
                         orderedSubcrystalAtoms);
                 else
-                    disordered_structure_fragments::split_and_describe_with_macromol_info(
+                    disordered_structure_fragments::split_and_describe_with_macromol_info_asymm(
                         crystal,
                         settings.macromolecularInfo,
                         orderedSubcrystalAtoms,

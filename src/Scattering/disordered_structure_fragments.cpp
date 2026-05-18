@@ -3,6 +3,9 @@
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
+//DEBUG
+#include "discamb/IO/structure_io.h"
+//EOF DEBUG
 #include "discamb/StructuralProperties/structural_properties.h"
 
 #include<fstream>
@@ -601,6 +604,19 @@ namespace disordered_structure_fragments{
             for(auto& atom: ordered_parts[i])
                 ordered_parts_idx[i].push_back(label2idx[atom.first]);
 
+        // DEBUG print out parts
+
+        for (int i = 0; i < ordered_parts.size(); i++)
+        {
+            Crystal c = crystal;
+            c.atoms.clear();
+            for (auto& atomIdx : ordered_parts_idx[i])
+                c.atoms.push_back(crystal.atoms[atomIdx]);
+            structure_io::write_structure("part_" + to_string(i + 1) + ".res", c);
+        }
+
+        // EOF DEBUG
+
         describe_with_macromol_info_asymm(
             crystal, 
             macromolInfo, 
@@ -640,7 +656,7 @@ namespace disordered_structure_fragments{
         {
             atomInPart.assign(nAtomsCrystal, false);
             int nAtomsPart = ordered_parts[partIdx].size();
-            vector<vector<int> > connectivity;
+            vector<vector<int> > connectivity(nAtomsPart);
             vector<bool> planarity(nAtomsPart, false);
             vector<int> atomicNumbersPart;
             vector<Vector3d> positionsPart;
@@ -652,19 +668,21 @@ namespace disordered_structure_fragments{
                 partLabel2idx[crystal.atoms[ordered_parts[partIdx][i]].label] = i;
 
             for (int i = 0; i < nAtomsPart; i++)
+            {
                 atomInPart[ordered_parts[partIdx][i]] = true;
+                int idxInCrystal = ordered_parts[partIdx][i];
+                atomicNumbersPart.push_back(atomicNumbers[idxInCrystal]);
+                Vector3d cartCoords;
+                crystal.unitCell.fractionalToCartesian(crystal.atoms[idxInCrystal].coordinates, cartCoords);
+                positionsPart.push_back(cartCoords);
+                labels.push_back(crystal.atoms[idxInCrystal].label);
+            }
 
             for (int atomIdx = 0; atomIdx < nAtomsCrystal; atomIdx++)
                 if (atomInPart[atomIdx])
                 {
                     int atomIdxInPart = partLabel2idx[crystal.atoms[atomIdx].label];
                     vector<int> neighbours_part_numeration, neighbours_crystal_numeration;
-
-                    atomicNumbersPart.push_back(atomicNumbers[atomIdx]);
-                    Vector3d cartCoords;
-                    crystal.unitCell.fractionalToCartesian(crystal.atoms[atomIdx].coordinates, cartCoords);
-                    positionsPart.push_back(cartCoords);
-                    labels.push_back(crystal.atoms[atomIdx].label);
 
                     for (auto& neighbour : macromolInfo.connectivity[atomIdx])
                         if (atomInPart[neighbour.first])
@@ -673,7 +691,7 @@ namespace disordered_structure_fragments{
                             neighbours_part_numeration.push_back(idxInPart);
                             neighbours_crystal_numeration.push_back(neighbour.first);
                         }
-                    connectivity.push_back(neighbours_part_numeration);
+                    connectivity[atomIdxInPart] = neighbours_part_numeration;
 
                     // planarity
                     if (!macromolInfo.planes.empty())
@@ -868,9 +886,15 @@ namespace disordered_structure_fragments{
         ordered_parts = ordered_parts_new_labels;
         int nOrderedParts = ordered_parts.size();
         structureDescriptors.resize(nOrderedParts);
+
+        vector<int> atomicNumbers;
+        crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
+
         for(int i=0;i<nOrderedParts;i++)
 //        for (auto& ordered_part : ordered_parts)
         {
+            vector<int> atomicNumbersPart;
+            vector<double> positinosPart;
             for (auto& atom : ordered_parts[i])
                 atom.first = _crystal.atoms[new_label2idx[atom.first]].label;
         
@@ -878,7 +902,7 @@ namespace disordered_structure_fragments{
             // extract connectivity
             vector<vector<pair<int, string> > > asymmetricUnitConnectivity;
             
-            //structureDescriptors[i].
+            //structureDescriptors[i].set()
         }
 
 
