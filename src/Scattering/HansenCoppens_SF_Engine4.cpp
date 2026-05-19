@@ -2493,24 +2493,20 @@ void HansenCoppens_SF_Engine4::calculateSF(
         return tmp;                  \
     }())
 
-#define vector_of_Vector3_to_buffer(type, value)               \
-    ([value]() {                                               \
-        std::vector<sycl::vec<type, 3>> tmp_vec(value.size()); \
-        for (size_t i = 0; i < value.size(); ++i) {            \
-            Vector3<type> vec = value[i];                      \
-            tmp_vec[i] = Vector3_to_vec(type, vec);            \
-        }                                                      \
-        sycl::buffer<sycl::vec<type, 3>> buf(tmp_vec);         \
-        return buf;                                            \
-    }())
+#define vector_of_Vector3_to_buffer(type, value, name_prefix)        \
+    std::vector<sycl::vec<type, 3>> name_prefix##_vec(value.size()); \
+    for (size_t i = 0; i < value.size(); ++i) {                      \
+        Vector3<type> vec = value[i];                                \
+        name_prefix##_vec[i] = Vector3_to_vec(type, vec);            \
+    }                                                                \
+    sycl::buffer<sycl::vec<type, 3>> name_prefix##_buf(name_prefix##_vec);
 
-#define vector_of_objects_to_buffer_of_values_for_property(type, list, prop) \
-    ([list]() {                                                              \
-        std::vector<type> tmp_vec;                                           \
-        for (size_t i = 0; i < list.size(); ++i) tmp_vec[i] = list[i].prop;  \
-        sycl::buffer<type> buf(tmp_vec);                                     \
-        return buf;                                                          \
-    }())
+#define vector_of_objects_to_buffer_of_values_for_property( \
+    type, list, prop, name_prefix)                          \
+    std::vector<type> name_prefix##_vec(list.size());       \
+    for (size_t i = 0; i < list.size(); ++i)                \
+        name_prefix##_vec[i] = list[i].prop;                \
+    sycl::buffer<type> name_prefix##_buf(name_prefix##_vec);
 
 #define flattened(list)                                              \
     ([list]() {                                                      \
@@ -2573,67 +2569,10 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::buffer<sycl::vec<REAL, 3>> buf_name_prefix##_column2_buf( \
         buf_name_prefix##_tmp[2]);
 
-    // #define vecvecvec_to_buffers(list, buf_name_prefix) \
-    //   std::remove_reference<decltype(list)>::type::value_type::value_type \
-    //       buf_name_prefix##_value_vec([list]() { \
-    //         std::remove_reference<decltype(list)>::type::value_type tmp_ = \
-    //             flattened(list); \
-    //         return flattened(tmp_); \
-    //       }()); \
-    //   sycl::buffer<std::remove_reference< \
-    //       decltype(list)>::type::value_type::value_type::value_type> \
-    //       buf_name_prefix##_value_buf(buf_name_prefix##_value_vec); \
-    //   std::vector<int> buf_name_prefix##_inner_offset_vec([list]() { \
-    //     std::vector<int> tmp; \
-    //     int offset = 0; \
-    //     for (auto &vec : list) { \
-    //       for (auto &vec_ : vec) { \
-    //         tmp.push_back(offset); \
-    //         offset += vec_.size(); \
-    //       } \
-    //       offset = 0; \
-    //     } \
-    //     return tmp; \
-    //   }()); \
-    //   sycl::buffer<int> buf_name_prefix##_inner_offset_buf( \
-    //       buf_name_prefix##_inner_offset_vec); \
-    //   std::vector<sycl::vec<int, 2>>
-    //   buf_name_prefix##_outer_offset_vec([list]() { \
-    //     std::vector<sycl::vec<int, 2>> tmp; \
-    //     sycl::vec<int, 2> offsets{0}; \
-    //     for (auto &vec : list) { \
-    //       tmp.push_back(offsets); \
-    //       offsets[0] += flattened(vec).size(); \
-    //       offsets[1] += vec.size(); \
-    //     } \
-    //     return tmp; \
-    //   }()); \
-    //   sycl::buffer<sycl::vec<int, 2>> buf_name_prefix##_outer_offset_buf( \
-    //       buf_name_prefix##_outer_offset_vec);
-    //
-    // #define vecvecvec_buffer_accessors(buf_name_prefix) \
-    //   sycl::accessor buf_name_prefix##_value_ax(buf_name_prefix##_value_buf,
-    //   \
-    //                                             sycl::read_only); \
-    //   sycl::accessor buf_name_prefix##_inner_offset_ax( \
-    //       buf_name_prefix##_inner_offset_buf, sycl::read_only); \
-    //   sycl::accessor buf_name_prefix##_outer_offset_ax( \
-    //       buf_name_prefix##_outer_offset_buf, sycl::read_only);
-    //
-    // #define index_vecvecvec_buffer(buf_name_prefix, i, j, k) \
-    //   (buf_name_prefix##_value_ax[buf_name_prefix##_outer_offset_ax[i][0] + \
-    //                               buf_name_prefix##_inner_offset_ax \
-    //                                   [buf_name_prefix##_outer_offset_ax[i][1]
-    //                                   +   \
-    //                                    (j)] + \
-    //                               (k)])
-
     sycl::range<1> job_num(hklCount);
 
-    sycl::buffer<sycl::vec<int, 3>> hkl_buf =
-        vector_of_Vector3_to_buffer(int, hkl_indices);
-    sycl::buffer<sycl::vec<int, 3>> used_bins_buf =
-        vector_of_Vector3_to_buffer(int, usedBins);
+    vector_of_Vector3_to_buffer(int, hkl_indices, hkl);
+    vector_of_Vector3_to_buffer(int, usedBins, used_bins);
 
     sycl::buffer<std::complex<REAL>> f_buf(hklCount);
     sycl::buffer<REAL, 2> f_core_buf(sycl::range(hklCount, wfnCount));
@@ -2641,18 +2580,14 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::buffer<std::complex<REAL>, 2> sym_op_f_mult_buf(
         sycl::range(hklCount, symOpMultCount));
     sycl::buffer<std::array<int, 2>> used_wfn_type_combo_buf(usedWfnTypeCombo);
-    sycl::buffer<REAL> type_kappa_spherical_buf =
-        vector_of_objects_to_buffer_of_values_for_property(
-            REAL, typeParams, kappa_spherical);
-    sycl::buffer<REAL> type_p_val_buf =
-        vector_of_objects_to_buffer_of_values_for_property(
-            REAL, typeParams, p_val);
-    sycl::buffer<REAL> type_kappa_def_valence_buf =
-        vector_of_objects_to_buffer_of_values_for_property(
-            REAL, typeParams, kappa_def_valence);
-    sycl::buffer<REAL> wfn_def_valence_exp_buf =
-        vector_of_objects_to_buffer_of_values_for_property(
-            REAL, wfnParams, def_valence_exp);
+    vector_of_objects_to_buffer_of_values_for_property(
+        REAL, typeParams, kappa_spherical, type_kappa_spherical);
+    vector_of_objects_to_buffer_of_values_for_property(
+        REAL, typeParams, p_val, type_p_val);
+    vector_of_objects_to_buffer_of_values_for_property(
+        REAL, typeParams, kappa_def_valence, type_kappa_def_valence);
+    vector_of_objects_to_buffer_of_values_for_property(
+        REAL, wfnParams, def_valence_exp, wfn_def_valence_exp);
     sycl::buffer<int> atom_to_used_wfn_type_combo_buf(atomToUsedWfnTypeCombo);
     sycl::buffer<REAL> atomic_occupancy_buf(atomic_occupancy);
     sycl::buffer<REAL> atomic_multiplicity_factor_buf(
@@ -2876,7 +2811,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
         sycl::accessor def_valence_pows_ax(
             def_valence_pows_buff, cgh, sycl::read_only);
 
-        cgh.parallel_for(job_num, [=](sycl::id<1> job_id) {
+        cgh.parallel_for<class calculate_sf>(job_num, [=](sycl::id<1> job_id) {
             size_t id = job_id.get(0);
             sycl::vec<int, 3> hkl = hkl_ax[id];
 
@@ -2920,9 +2855,9 @@ void HansenCoppens_SF_Engine4::calculateSF(
                         core_coeffs_ax[wfn_param_metas_ax[i].core_coeff_off +
                                        k];
                     REAL core_pow_k =
-                        core_coeffs_ax[wfn_param_metas_ax[i].core_pow_off + k];
+                        core_pows_ax[wfn_param_metas_ax[i].core_pow_off + k];
                     REAL core_exp_k =
-                        core_coeffs_ax[wfn_param_metas_ax[i].core_exp_off + k];
+                        core_exps_ax[wfn_param_metas_ax[i].core_exp_off + k];
                     f_core[i] +=
                         core_coeff_k *
                         gFunction_sycl(0,
