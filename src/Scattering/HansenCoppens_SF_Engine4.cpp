@@ -1200,6 +1200,56 @@ REAL sin(REAL x){
 return std::sinf(std::fmodf(x, two_pi));
 }
 */
+
+#include <algorithm>
+#include <complex>
+#include <iomanip>
+#include <iostream>
+
+// -----------------------------------------------------------------------------
+// Helper print utilities
+// -----------------------------------------------------------------------------
+
+template <typename T>
+void printVector3(const Vector3<T> &v, const std::string &name) {
+    std::cout << name << " = (" << v.x << ", " << v.y << ", " << v.z << ")\n";
+}
+
+template <typename T>
+void printMatrix3(const Matrix3<T> &m, const std::string &name) {
+    std::cout << name << " =\n";
+
+    for (int r = 0; r < 3; ++r) {
+        std::cout << "    [ ";
+        for (int c = 0; c < 3; ++c) {
+            std::cout << std::setw(12) << m(r, c) << " ";
+        }
+        std::cout << "]\n";
+    }
+}
+
+template <typename T>
+void printStdVector(const std::vector<T> &v, const std::string &name,
+                    size_t maxCount = 5) {
+    std::cout << name << " (size = " << v.size() << "): ";
+
+    size_t n = std::min(v.size(), maxCount);
+
+    for (size_t i = 0; i < n; ++i) {
+        std::cout << v[i];
+        if (i + 1 < n) std::cout << ", ";
+    }
+
+    if (v.size() > maxCount) std::cout << " ...";
+
+    std::cout << "\n";
+}
+
+template <typename T>
+void printComplex(const std::complex<T> &c, const std::string &name) {
+    std::cout << name << " = " << c.real() << " + " << c.imag() << "i\n";
+}
+
 void HansenCoppens_SF_Engine4::calculateSF(
     const UnitCell &unitCell,
     const std::vector<sf_engine_data_types::HC_WfnParam> &wfnParams,  // per wfn
@@ -1231,7 +1281,234 @@ void HansenCoppens_SF_Engine4::calculateSF(
     bool electron,                                 // TODO use
     const std::vector<int> &atomic_numbers)        // TODO use
 {
+    std::cout << "\n";
+    std::cout << "=====================================================\n";
+    std::cout << "                 INPUT DEBUG DUMP\n";
+    std::cout << "=====================================================\n\n";
+
+    // -------------------------------------------------------------------------
+    // Unit cell
+    // -------------------------------------------------------------------------
+
+    std::cout << "---------------- UNIT CELL ----------------\n";
+
+    std::cout << "a      = " << unitCell.a() << "\n"
+              << "b      = " << unitCell.b() << "\n"
+              << "c      = " << unitCell.c() << "\n"
+              << "alpha  = " << unitCell.alpha() << "\n"
+              << "beta   = " << unitCell.beta() << "\n"
+              << "gamma  = " << unitCell.gamma() << "\n\n";
+
+    printMatrix3(unitCell.getFractionalToCartesianMatrix(),
+                 "Fractional -> Cartesian");
+
+    std::cout << "\n";
+
+    printMatrix3(unitCell.getCartesianToFractionalMatrix(),
+                 "Cartesian -> Fractional");
+
+    // -------------------------------------------------------------------------
+    // Sizes
+    // -------------------------------------------------------------------------
+
+    std::cout << "\n---------------- CONTAINER SIZES ----------------\n";
+
+    std::cout << "wfnParams.size()                    = " << wfnParams.size()
+              << "\n"
+              << "typeParams.size()                   = " << typeParams.size()
+              << "\n"
+              << "atomicPositions.size()              = "
+              << atomicPositions.size() << "\n"
+              << "symOps.size()                       = " << symOps.size()
+              << "\n"
+              << "hVectors.size()                     = " << hVectors.size()
+              << "\n"
+              << "f.size()                            = " << f.size() << "\n"
+              << "dTarget_dparam.size()               = "
+              << dTarget_dparam.size() << "\n";
+
+    // -------------------------------------------------------------------------
+    // Wavefunction params
+    // -------------------------------------------------------------------------
+
+    if (!wfnParams.empty()) {
+        std::cout << "\n---------------- FIRST WFN PARAM ----------------\n";
+
+        const auto &w = wfnParams.front();
+
+        std::cout << "label = " << w.label << "\n";
+
+        printStdVector(w.core_coeff, "core_coeff");
+        printStdVector(w.core_exp, "core_exp");
+        printStdVector(w.core_pow, "core_pow");
+
+        printStdVector(w.valence_coeff, "valence_coeff");
+        printStdVector(w.valence_exp, "valence_exp");
+        printStdVector(w.valence_pow, "valence_pow");
+
+        std::cout << "def_valence_exp = " << w.def_valence_exp << "\n";
+
+        printStdVector(w.def_valence_pow, "def_valence_pow");
+
+        printComplex(w.anomalous_scattering, "anomalous_scattering");
+    }
+
+    // -------------------------------------------------------------------------
+    // Type params
+    // -------------------------------------------------------------------------
+
+    if (!typeParams.empty()) {
+        std::cout << "\n---------------- FIRST TYPE PARAM ----------------\n";
+
+        const auto &t = typeParams.front();
+
+        std::cout << "p_val               = " << t.p_val << "\n"
+                  << "kappa_def_valence   = " << t.kappa_def_valence << "\n"
+                  << "kappa_spherical     = " << t.kappa_spherical << "\n";
+
+        std::cout << "p_lm rows           = " << t.p_lm.size() << "\n";
+
+        if (!t.p_lm.empty()) {
+            printStdVector(t.p_lm[0], "p_lm[0]");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Atom data
+    // -------------------------------------------------------------------------
+
+    std::cout << "\n---------------- ATOM DATA ----------------\n";
+
+    size_t atomsToPrint = std::min<size_t>(atomicPositions.size(), 3);
+
+    for (size_t i = 0; i < atomsToPrint; ++i) {
+        std::cout << "\nAtom #" << i << "\n";
+
+        printVector3(atomicPositions[i], "position");
+
+        if (i < atomic_numbers.size())
+            std::cout << "atomic number = " << atomic_numbers[i] << "\n";
+
+        if (i < atom_to_wfn_map.size())
+            std::cout << "wfn map       = " << atom_to_wfn_map[i] << "\n";
+
+        if (i < atom_to_type_map.size())
+            std::cout << "type map      = " << atom_to_type_map[i] << "\n";
+
+        if (i < atomic_occupancy.size())
+            std::cout << "occupancy     = " << atomic_occupancy[i] << "\n";
+
+        if (i < atomic_multiplicity_factor.size())
+            std::cout << "multiplicity  = " << atomic_multiplicity_factor[i]
+                      << "\n";
+
+        if (i < anomalous_dispersion.size()) {
+            printComplex(anomalous_dispersion[i], "anomalous_dispersion");
+        }
+
+        if (i < atomic_displacement_parameters.size()) {
+            printStdVector(atomic_displacement_parameters[i], "ADP");
+        }
+
+        if (i < local_coordinate_systems.size()) {
+            printMatrix3(local_coordinate_systems[i],
+                         "local_coordinate_system");
+        }
+
+        if (i < include_atom_contribution.size()) {
+            std::cout << "include contribution = " << std::boolalpha
+                      << include_atom_contribution[i] << "\n";
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Symmetry operations
+    // -------------------------------------------------------------------------
+
+    if (!symOps.empty()) {
+        std::cout << "\n---------------- FIRST SYMMETRY OP ----------------\n";
+
+        printMatrix3(symOps[0].rotation, "rotation");
+
+        printVector3(symOps[0].translation, "translation");
+    }
+
+    // -------------------------------------------------------------------------
+    // h vectors
+    // -------------------------------------------------------------------------
+
+    if (!hVectors.empty()) {
+        std::cout << "\n---------------- FIRST H VECTORS ----------------\n";
+
+        size_t n = std::min<size_t>(hVectors.size(), 5);
+
+        for (size_t i = 0; i < n; ++i) {
+            printVector3(hVectors[i], "hVector[" + std::to_string(i) + "]");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // HKL
+    // -------------------------------------------------------------------------
+
+    if (!hkl_indices.empty()) {
+        std::cout << "\n---------------- FIRST HKL INDICES ----------------\n";
+
+        size_t n = std::min<size_t>(hkl_indices.size(), 5);
+
+        for (size_t i = 0; i < n; ++i) {
+            std::cout << "HKL[" << i << "] = (" << hkl_indices[i].x << ", "
+                      << hkl_indices[i].y << ", " << hkl_indices[i].z << ")\n";
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Structure factors
+    // -------------------------------------------------------------------------
+
+    if (!f.empty()) {
+        std::cout
+            << "\n---------------- FIRST STRUCTURE FACTORS ----------------\n";
+
+        size_t n = std::min<size_t>(f.size(), 5);
+
+        for (size_t i = 0; i < n; ++i) {
+            printComplex(f[i], "f[" + std::to_string(i) + "]");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Derivatives
+    // -------------------------------------------------------------------------
+
+    std::cout << "\n---------------- DERIVATIVES SETTINGS ----------------\n";
+
+    std::cout << "d_xyz  = " << derivativesSwitch.d_xyz << "\n"
+              << "d_adp  = " << derivativesSwitch.d_adp << "\n"
+              << "d_occ  = " << derivativesSwitch.d_occ << "\n"
+              << "d_anom = " << derivativesSwitch.d_anom << "\n";
+
+    // -------------------------------------------------------------------------
+    // Misc
+    // -------------------------------------------------------------------------
+
+    std::cout << "\n---------------- MISC ----------------\n";
+
+    std::cout << "centrosymmetric = " << std::boolalpha << centrosymmetric
+              << "\n";
+
+    printVector3(inversionTranslation, "inversionTranslation");
+
+    std::cout << "electron = " << electron << "\n";
+
+    std::cout << "nThreads = " << nThreads << "\n";
+
+    std::cout << "\n=====================================================\n";
+    std::cout << "                  END DEBUG DUMP\n";
+    std::cout << "=====================================================\n";
+
 #ifndef TEST
+
     save_to_file("unit_cell.bin", unitCell);
     save_to_file("wfn_parameters.bin", wfnParams);
     save_to_file("type_parameters.bin", typeParams);
