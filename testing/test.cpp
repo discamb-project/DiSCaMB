@@ -108,7 +108,7 @@ int main() {
         engine.calculateSF(unit_cell,
                            wfn_parameters,
                            type_parameters,
-                           atom_to_type_map,
+                           atom_to_wfn_map,
                            atom_to_type_map,
                            atomic_positions,
                            atomic_displacement_parameters,
