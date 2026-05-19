@@ -4494,6 +4494,12 @@ int main(int argc, char* argv[])
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
 
+        if (arguments.size() < 2)
+            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
+
+        test_next_gen_taam(arguments[0], arguments[1]);
+        return 0;
+
         if (arguments.size() < 3)
             on_error::throwException("expected structure file, bonds file and neighbours range\n", __FILE__, __LINE__);
 
@@ -4507,12 +4513,6 @@ int main(int argc, char* argv[])
 
         test_taam_new_engine(arguments[0], arguments[1]);
 
-        return 0;
-
-        if (arguments.size() < 2)
-            on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);
-
-        test_next_gen_taam(arguments[0], arguments[1]);
         return 0;
 
         if (arguments.size() != 1)
