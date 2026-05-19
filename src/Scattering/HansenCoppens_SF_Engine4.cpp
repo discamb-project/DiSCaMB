@@ -1230,19 +1230,44 @@ void printMatrix3(const Matrix3<T> &m, const std::string &name) {
 
 template <typename T>
 void printStdVector(const std::vector<T> &v, const std::string &name,
-                    size_t maxCount = 5) {
-    std::cout << name << " (size = " << v.size() << "): ";
+                    size_t start = 0, size_t count = 5) {
+    std::cout << name << " (size = " << v.size() << ", range = [" << start
+              << ":" << (start + count) << "]) : ";
 
-    size_t n = std::min(v.size(), maxCount);
-
-    for (size_t i = 0; i < n; ++i) {
-        std::cout << v[i];
-        if (i + 1 < n) std::cout << ", ";
+    if (start >= v.size()) {
+        std::cout << "<out of range>\n";
+        return;
     }
 
-    if (v.size() > maxCount) std::cout << " ...";
+    size_t end = std::min(start + count, v.size());
+
+    for (size_t i = start; i < end; ++i) {
+        std::cout << v[i];
+
+        if (i + 1 < end) std::cout << ", ";
+    }
+
+    if (end < v.size()) std::cout << " ...";
 
     std::cout << "\n";
+}
+template <typename T>
+void printVector3Array(const std::vector<Vector3<T>> &v,
+                       const std::string &name, size_t start = 0,
+                       size_t count = 5) {
+    std::cout << name << " (size = " << v.size() << ")\n";
+
+    if (start >= v.size()) {
+        std::cout << "  <out of range>\n";
+        return;
+    }
+
+    size_t end = std::min(start + count, v.size());
+
+    for (size_t i = start; i < end; ++i) {
+        std::cout << "  [" << i << "] = (" << v[i].x << ", " << v[i].y << ", "
+                  << v[i].z << ")\n";
+    }
 }
 
 template <typename T>
@@ -1338,17 +1363,25 @@ void HansenCoppens_SF_Engine4::calculateSF(
 
         std::cout << "label = " << w.label << "\n";
 
-        printStdVector(w.core_coeff, "core_coeff");
-        printStdVector(w.core_exp, "core_exp");
-        printStdVector(w.core_pow, "core_pow");
+        // ---- multiple ranges ----
 
-        printStdVector(w.valence_coeff, "valence_coeff");
-        printStdVector(w.valence_exp, "valence_exp");
-        printStdVector(w.valence_pow, "valence_pow");
+        printStdVector(w.core_coeff, "core_coeff [0:5]", 0, 5);
+        printStdVector(w.core_coeff, "core_coeff [10:15]", 10, 5);
+
+        printStdVector(w.core_exp, "core_exp [0:5]", 0, 5);
+        printStdVector(w.core_exp, "core_exp [10:15]", 10, 5);
+
+        printStdVector(w.core_pow, "core_pow [0:5]", 0, 5);
+
+        printStdVector(w.valence_coeff, "valence_coeff [0:5]", 0, 5);
+        printStdVector(w.valence_coeff, "valence_coeff [10:15]", 10, 5);
+
+        printStdVector(w.valence_exp, "valence_exp [0:5]", 0, 5);
+        printStdVector(w.valence_pow, "valence_pow [10:15]", 10, 5);
 
         std::cout << "def_valence_exp = " << w.def_valence_exp << "\n";
 
-        printStdVector(w.def_valence_pow, "def_valence_pow");
+        printStdVector(w.def_valence_pow, "def_valence_pow [0:5]", 0, 5);
 
         printComplex(w.anomalous_scattering, "anomalous_scattering");
     }
@@ -1369,7 +1402,9 @@ void HansenCoppens_SF_Engine4::calculateSF(
         std::cout << "p_lm rows           = " << t.p_lm.size() << "\n";
 
         if (!t.p_lm.empty()) {
-            printStdVector(t.p_lm[0], "p_lm[0]");
+            printStdVector(t.p_lm[0], "p_lm[0] [0:5]", 0, 5);
+
+            printStdVector(t.p_lm[0], "p_lm[0] [10:15]", 10, 5);
         }
     }
 
@@ -1379,45 +1414,59 @@ void HansenCoppens_SF_Engine4::calculateSF(
 
     std::cout << "\n---------------- ATOM DATA ----------------\n";
 
-    size_t atomsToPrint = std::min<size_t>(atomicPositions.size(), 3);
+    // print different atom ranges
+    std::vector<size_t> atomStarts = {0, 10, 100};
 
-    for (size_t i = 0; i < atomsToPrint; ++i) {
-        std::cout << "\nAtom #" << i << "\n";
+    for (size_t start : atomStarts) {
+        if (start >= atomicPositions.size()) continue;
 
-        printVector3(atomicPositions[i], "position");
+        size_t end = std::min(start + 3, atomicPositions.size());
 
-        if (i < atomic_numbers.size())
-            std::cout << "atomic number = " << atomic_numbers[i] << "\n";
+        std::cout << "\n========== ATOMS " << start << " -> " << (end - 1)
+                  << " ==========\n";
 
-        if (i < atom_to_wfn_map.size())
-            std::cout << "wfn map       = " << atom_to_wfn_map[i] << "\n";
+        for (size_t i = start; i < end; ++i) {
+            std::cout << "\nAtom #" << i << "\n";
 
-        if (i < atom_to_type_map.size())
-            std::cout << "type map      = " << atom_to_type_map[i] << "\n";
+            printVector3(atomicPositions[i], "position");
 
-        if (i < atomic_occupancy.size())
-            std::cout << "occupancy     = " << atomic_occupancy[i] << "\n";
+            if (i < atomic_numbers.size())
+                std::cout << "atomic number = " << atomic_numbers[i] << "\n";
 
-        if (i < atomic_multiplicity_factor.size())
-            std::cout << "multiplicity  = " << atomic_multiplicity_factor[i]
-                      << "\n";
+            if (i < atom_to_wfn_map.size())
+                std::cout << "wfn map       = " << atom_to_wfn_map[i] << "\n";
 
-        if (i < anomalous_dispersion.size()) {
-            printComplex(anomalous_dispersion[i], "anomalous_dispersion");
-        }
+            if (i < atom_to_type_map.size())
+                std::cout << "type map      = " << atom_to_type_map[i] << "\n";
 
-        if (i < atomic_displacement_parameters.size()) {
-            printStdVector(atomic_displacement_parameters[i], "ADP");
-        }
+            if (i < atomic_occupancy.size())
+                std::cout << "occupancy     = " << atomic_occupancy[i] << "\n";
 
-        if (i < local_coordinate_systems.size()) {
-            printMatrix3(local_coordinate_systems[i],
-                         "local_coordinate_system");
-        }
+            if (i < atomic_multiplicity_factor.size())
+                std::cout << "multiplicity  = " << atomic_multiplicity_factor[i]
+                          << "\n";
 
-        if (i < include_atom_contribution.size()) {
-            std::cout << "include contribution = " << std::boolalpha
-                      << include_atom_contribution[i] << "\n";
+            if (i < anomalous_dispersion.size()) {
+                printComplex(anomalous_dispersion[i], "anomalous_dispersion");
+            }
+
+            if (i < atomic_displacement_parameters.size()) {
+                printStdVector(
+                    atomic_displacement_parameters[i], "ADP [0:6]", 0, 6);
+
+                printStdVector(
+                    atomic_displacement_parameters[i], "ADP [6:12]", 6, 6);
+            }
+
+            if (i < local_coordinate_systems.size()) {
+                printMatrix3(local_coordinate_systems[i],
+                             "local_coordinate_system");
+            }
+
+            if (i < include_atom_contribution.size()) {
+                std::cout << "include contribution = " << std::boolalpha
+                          << include_atom_contribution[i] << "\n";
+            }
         }
     }
 
@@ -1426,11 +1475,17 @@ void HansenCoppens_SF_Engine4::calculateSF(
     // -------------------------------------------------------------------------
 
     if (!symOps.empty()) {
-        std::cout << "\n---------------- FIRST SYMMETRY OP ----------------\n";
+        std::cout << "\n---------------- SYMMETRY OPS ----------------\n";
 
-        printMatrix3(symOps[0].rotation, "rotation");
+        size_t n = std::min<size_t>(symOps.size(), 3);
 
-        printVector3(symOps[0].translation, "translation");
+        for (size_t i = 0; i < n; ++i) {
+            std::cout << "\nSymmetry op #" << i << "\n";
+
+            printMatrix3(symOps[i].rotation, "rotation");
+
+            printVector3(symOps[i].translation, "translation");
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1438,13 +1493,13 @@ void HansenCoppens_SF_Engine4::calculateSF(
     // -------------------------------------------------------------------------
 
     if (!hVectors.empty()) {
-        std::cout << "\n---------------- FIRST H VECTORS ----------------\n";
+        std::cout << "\n---------------- H VECTORS ----------------\n";
 
-        size_t n = std::min<size_t>(hVectors.size(), 5);
+        printVector3Array(hVectors, "hVectors [0:5]", 0, 5);
 
-        for (size_t i = 0; i < n; ++i) {
-            printVector3(hVectors[i], "hVector[" + std::to_string(i) + "]");
-        }
+        printVector3Array(hVectors, "hVectors [100:105]", 100, 5);
+
+        printVector3Array(hVectors, "hVectors [1000:1005]", 1000, 5);
     }
 
     // -------------------------------------------------------------------------
@@ -1452,13 +1507,22 @@ void HansenCoppens_SF_Engine4::calculateSF(
     // -------------------------------------------------------------------------
 
     if (!hkl_indices.empty()) {
-        std::cout << "\n---------------- FIRST HKL INDICES ----------------\n";
+        std::cout << "\n---------------- HKL INDICES ----------------\n";
 
-        size_t n = std::min<size_t>(hkl_indices.size(), 5);
+        std::vector<size_t> starts = {0, 100, 1000};
 
-        for (size_t i = 0; i < n; ++i) {
-            std::cout << "HKL[" << i << "] = (" << hkl_indices[i].x << ", "
-                      << hkl_indices[i].y << ", " << hkl_indices[i].z << ")\n";
+        for (size_t start : starts) {
+            if (start >= hkl_indices.size()) continue;
+
+            size_t end = std::min(start + 5, hkl_indices.size());
+
+            std::cout << "\nHKL range [" << start << ":" << end << "]\n";
+
+            for (size_t i = start; i < end; ++i) {
+                std::cout << "HKL[" << i << "] = (" << hkl_indices[i].x << ", "
+                          << hkl_indices[i].y << ", " << hkl_indices[i].z
+                          << ")\n";
+            }
         }
     }
 
@@ -1467,13 +1531,20 @@ void HansenCoppens_SF_Engine4::calculateSF(
     // -------------------------------------------------------------------------
 
     if (!f.empty()) {
-        std::cout
-            << "\n---------------- FIRST STRUCTURE FACTORS ----------------\n";
+        std::cout << "\n---------------- STRUCTURE FACTORS ----------------\n";
 
-        size_t n = std::min<size_t>(f.size(), 5);
+        std::vector<size_t> starts = {0, 100, 1000};
 
-        for (size_t i = 0; i < n; ++i) {
-            printComplex(f[i], "f[" + std::to_string(i) + "]");
+        for (size_t start : starts) {
+            if (start >= f.size()) continue;
+
+            size_t end = std::min(start + 5, f.size());
+
+            std::cout << "\nf range [" << start << ":" << end << "]\n";
+
+            for (size_t i = start; i < end; ++i) {
+                printComplex(f[i], "f[" + std::to_string(i) + "]");
+            }
         }
     }
 
