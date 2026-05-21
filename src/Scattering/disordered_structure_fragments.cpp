@@ -4,7 +4,7 @@
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 //DEBUG
-#include "discamb/IO/structure_io.h"
+//#include "discamb/IO/structure_io.h"
 //EOF DEBUG
 #include "discamb/StructuralProperties/structural_properties.h"
 
@@ -606,14 +606,14 @@ namespace disordered_structure_fragments{
 
         // DEBUG print out parts
 
-        for (int i = 0; i < ordered_parts.size(); i++)
-        {
-            Crystal c = crystal;
-            c.atoms.clear();
-            for (auto& atomIdx : ordered_parts_idx[i])
-                c.atoms.push_back(crystal.atoms[atomIdx]);
-            structure_io::write_structure("part_" + to_string(i + 1) + ".res", c);
-        }
+        //for (int i = 0; i < ordered_parts.size(); i++)
+        //{
+        //    Crystal c = crystal;
+        //    c.atoms.clear();
+        //    for (auto& atomIdx : ordered_parts_idx[i])
+        //        c.atoms.push_back(crystal.atoms[atomIdx]);
+        //    structure_io::write_structure("part_" + to_string(i + 1) + ".res", c);
+        //}
 
         // EOF DEBUG
 
@@ -990,12 +990,13 @@ namespace disordered_structure_fragments{
             
             Crystal c = crystal;
             c.atoms.clear();
-
+            vector<int> crystal2partIdx(nAtoms, -1);
             // add ordered part
             for (int atomIdx : orderedAtoms)
             {
                 c.atoms.push_back(crystal.atoms[atomIdx]);
                 ordered_parts[partIdx].push_back({ atomIdx, 0.0 });
+                crystal2partIdx[atomIdx] = c.atoms.size() - 1;
             }
             // add disordered part
             for (auto& group : aletrnativeAtomGroups)
@@ -1009,13 +1010,29 @@ namespace disordered_structure_fragments{
                 nContatiningConfigurations[atomIdx]++;
                 c.atoms.push_back(crystal.atoms[atomIdx]);
                 ordered_parts[partIdx].push_back({ atomIdx, 1.0 });
+                crystal2partIdx[atomIdx] = c.atoms.size() - 1;
             }
             // find connectivity and use in weight calculations
             vector<vector<pair<int, string> > > connectivity;
             if (_connectivity.empty())
                 structural_properties::asymmetricUnitConnectivity(c, connectivity, 0.4);
             else
-                connectivity = _connectivity;
+            {
+                int nAtomsPart = c.atoms.size();
+                connectivity.resize(nAtomsPart);
+                for (int i = 0; i < nAtomsPart; i++)
+                {
+                    int idxInOriginalCrystal = ordered_parts[partIdx][i].first;
+                    for (int j = 0; j < _connectivity[idxInOriginalCrystal].size(); j++)
+                    {
+                        int neighbourIdxInOriginalCrystal = _connectivity[idxInOriginalCrystal][j].first;
+                        int neighbourIdxInPart = crystal2partIdx[neighbourIdxInOriginalCrystal];
+                        if (neighbourIdxInPart != -1)
+                            connectivity[i].push_back({ neighbourIdxInPart, _connectivity[idxInOriginalCrystal][j].second });
+                    }
+                }
+                //connectivity = _connectivity;
+            }
 
             for (int i = 0; i < nOrdered; i++)
                 for (int j = 0; j < connectivity[i].size(); j++)
