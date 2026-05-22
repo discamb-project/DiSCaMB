@@ -363,10 +363,6 @@ inline REAL gFunction_sycl(int l, const int n, REAL const h, REAL const Z) {
     return 0.0;
 }
 
-HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4() { mUseIAM = false; }
-
-HansenCoppens_SF_Engine4::~HansenCoppens_SF_Engine4() {}
-
 double polynomialSycl(const sycl::vec<REAL, 3> &v,  // noralized 3D vector,
                       int l, int m) {
     REAL x = v[0];
@@ -456,6 +452,10 @@ double densityNormalizedSycl(const sycl::vec<REAL, 3> &normalizedVector3D,
 }
 
 #endif
+
+HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4() { mUseIAM = false; }
+
+HansenCoppens_SF_Engine4::~HansenCoppens_SF_Engine4() {}
 
 inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
     REAL &occupancy_derivative, const complex<REAL> &dTarget_dF,
