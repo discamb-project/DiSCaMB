@@ -362,7 +362,6 @@ inline REAL gFunction_sycl(int l, const int n, REAL const h, REAL const Z) {
     if (l == 4) return gFunction_sycl_impl<4>(n, h, Z);
     return 0.0;
 }
-#endif
 
 HansenCoppens_SF_Engine4::HansenCoppens_SF_Engine4() { mUseIAM = false; }
 
@@ -455,6 +454,8 @@ double densityNormalizedSycl(const sycl::vec<REAL, 3> &normalizedVector3D,
     return real_spherical_harmonics::densityNormalizationMultipliers[l][l + m] *
            polynomialSycl(normalizedVector3D, l, m);
 }
+
+#endif
 
 inline void HansenCoppens_SF_Engine4::add_contribution_to_occupancy_derivative(
     REAL &occupancy_derivative, const complex<REAL> &dTarget_dF,
