@@ -103,7 +103,7 @@ SET(TARGET_SRC
 
 option(SYCL "Enable using SYCL for calculations.")
 option(SYCL_TARGETS "SYCL targets to compile for.")
-option(SYCL_INCLUDE_DIR "Directory to where sycl/sycl.hpp resides. Required if using SYCL.")
+option(SYCL_INCLUDE_DIR "Directory to where sycl/sycl.hpp resides. Optional if SYCL headers are present in system directories.")
 option(SYCL_LIBRARY_DIR "Directory to where libsycl.so resides. Optional if cmake can find it on its own.")
 
 ADD_LIBRARY(Scattering OBJECT ${TARGET_H} ${TARGET_SRC})
@@ -115,11 +115,11 @@ if(SYCL)
     message(SEND_ERROR "SYCL is not supported by the chosen compiler")
   endif()
 
-  if(NOT SYCL_INCLUDE_DIR)
-    message(SEND_ERROR "SYCL_INCLUDE_DIR not defined while using SYCL")
-  else()
-    set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_DEFINITIONS SYCL INCLUDE_DIRECTORIES ${SYCL_INCLUDE_DIR})
+  if(SYCL_INCLUDE_DIR)
+    set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES INCLUDE_DIRECTORIES ${SYCL_INCLUDE_DIR})
   endif()
+
+  set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_DEFINITIONS SYCL)
 
   if(SYCL_TARGETS)
     set_source_files_properties(HansenCoppens_SF_Engine4.cpp PROPERTIES COMPILE_FLAGS "-fsycl -fsycl-targets=${SYCL_TARGETS}")

@@ -2665,7 +2665,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::vec<REAL, 3> f2c_2;
     for (int i = 0; i < 3; ++i) f2c_2[i] = f2c(2, i);
 
-    // Wcn params
+    // Wfn params
     struct wfn_param_meta {
         uint32_t core_coeff_off;
         uint32_t core_coeff_sz;
@@ -2730,6 +2730,11 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::buffer<int> valence_pows_buff(valence_pows);
     sycl::buffer<int> def_valence_pows_buff(def_valence_pows);
 
+    std::vector<int> type_p_lm_sizes_vec(typeParams.size());
+    for (int i = 0; i < typeParams.size(); ++i)
+        type_p_lm_sizes_vec[i] = typeParams[i].p_lm.size();
+    sycl::buffer<int> type_p_lm_sizes_buf(type_p_lm_sizes_vec);
+
     queue.submit([&](sycl::handler &cgh) {
         sycl::accessor f_ax(f_buf, cgh, sycl::write_only);
         sycl::accessor f_core_ax(f_core_buf, cgh, sycl::read_write);
@@ -2782,6 +2787,8 @@ void HansenCoppens_SF_Engine4::calculateSF(
         sycl::accessor all_bins_map_ax(all_bins_map_buf, cgh, sycl::read_only);
         sycl::accessor sym_op_to_mult_ax(
             sym_op_to_mult_buf, cgh, sycl::read_only);
+        sycl::accessor type_p_lm_sizes_ax(
+            type_p_lm_sizes_buf, cgh, sycl::read_only);
         vecnd_buffer_accessors(temperature_factor_roots);
         vecnd_buffer_accessors(per_bin_temperature_factor_mult);
         vecnd_buffer_accessors(temperature_factor_mults0);
@@ -2799,7 +2806,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
         vecnd_buffer_accessors(temperature_factor_mults_square2);
         vecnd_buffer_accessors(virt_hkl_t_mul);
 
-        // Wcn params
+        // Wfn params
         sycl::accessor wfn_param_metas_ax(
             wfn_param_metas_buff, cgh, sycl::read_only);
         sycl::accessor core_coeffs_ax(core_coeffs_buff, cgh, sycl::read_only);
@@ -2814,6 +2821,7 @@ void HansenCoppens_SF_Engine4::calculateSF(
 
         cgh.parallel_for<class calculate_sf>(job_num, [=](sycl::id<1> job_id) {
             size_t id = job_id.get(0);
+
             sycl::vec<int, 3> hkl = hkl_ax[id];
 
             sycl::vec<int, 3> orig_bin;
@@ -2849,16 +2857,14 @@ void HansenCoppens_SF_Engine4::calculateSF(
             auto f_core = f_core_ax[id];
 
             for (int i = 0; i < wfnCount; ++i) {
-                const int kMax = wfn_param_metas_ax[i].core_coeff_sz;
+                wfn_param_meta wfn_meta = wfn_param_metas_ax[i];
+                const int kMax = wfn_meta.core_coeff_sz;
 
                 for (int k = 0; k < kMax; k++) {
                     REAL core_coeff_k =
-                        core_coeffs_ax[wfn_param_metas_ax[i].core_coeff_off +
-                                       k];
-                    REAL core_pow_k =
-                        core_pows_ax[wfn_param_metas_ax[i].core_pow_off + k];
-                    REAL core_exp_k =
-                        core_exps_ax[wfn_param_metas_ax[i].core_exp_off + k];
+                        core_coeffs_ax[wfn_meta.core_coeff_off + k];
+                    REAL core_pow_k = core_pows_ax[wfn_meta.core_pow_off + k];
+                    REAL core_exp_k = core_exps_ax[wfn_meta.core_exp_off + k];
                     f_core[i] +=
                         core_coeff_k *
                         gFunction_sycl(0,
@@ -2866,227 +2872,215 @@ void HansenCoppens_SF_Engine4::calculateSF(
                                        h_length,
                                        core_exp_k);  // TODO find out why pow+2
                                                      // in all gFunction pow
-                    f_core[i] *= four_pi;
+                }
+                f_core[i] *= four_pi;
+            }
+
+            auto val = val_ax[id];
+            for (int i = 0; i < comboCount; ++i) {
+                const auto &combo =
+                    used_wfn_type_combo_ax[i];  // Use extract combo
+                const auto type_i = used_types_ax[combo[1]];
+                wfn_param_meta wfn_meta = wfn_param_metas_ax[combo[0]];
+                const int kMax = wfn_meta.valence_coeff_sz;
+                const auto h = h_length / type_kappa_spherical_ax[type_i];
+                for (int k = 0; k < kMax; k++) {
+                    REAL valence_pow_k =
+                        valence_pows_ax[wfn_meta.valence_pow_off + k];
+                    REAL valence_exp_k =
+                        valence_exps_ax[wfn_meta.valence_exp_off + k];
+                    REAL valence_coeff_k =
+                        valence_coeffs_ax[wfn_meta.valence_coeff_off + k];
+                    val[i] +=
+                        valence_coeff_k *
+                        gFunction_sycl(0, valence_pow_k + 2, h, valence_exp_k);
+                }
+                val[i] *= type_p_val_ax[type_i] * four_pi;
+            }
+
+            sycl::vec<REAL, 3> h_versor = closeToZero(h_length)
+                                              ? sycl::vec<REAL, 3>{0}
+                                              : cartesian_h / h_length;
+
+            int virtHklPhaseCurrent;
+            if constexpr (virtHklPhaseFlag)
+                virtHklPhaseCurrent =
+                    (offset[0] * binSize[1] + offset[1]) * binSize[2] +
+                    offset[2];
+
+            int virtHklTemperatureCurrent;
+            if constexpr (virtHklTemperatureFlag)
+                virtHklTemperatureCurrent =
+                    (offset[0] * binSize[1] + offset[1]) * binSize[2] +
+                    offset[2];
+
+            for (int atom_i = 0; atom_i < nAtoms; ++atom_i) {
+                std::complex<REAL> perAtomF = 0.0;
+                auto symOpFMult = sym_op_f_mult_ax[id];
+                for (int i = 0; i < symOpMultCount; ++i) symOpFMult[i] = 0;
+                for (int symOpIdx = 0; symOpIdx < nSymOps; symOpIdx++) {
+                    std::complex<REAL> localF = index_vecnd_buffer(
+                        phase_factor_roots, binIdx, atom_i, symOpIdx);
+                    if constexpr (virtHklPhaseFlag) {
+                        localF *= index_vecnd_buffer(virt_hkl_phase,
+                                                     virtHklPhaseCurrent,
+                                                     atom_i,
+                                                     symOpIdx);
+                    } else {
+                        localF *= index_vecnd_buffer(phase_factor_mults0,
+                                                     atom_i,
+                                                     symOpIdx,
+                                                     offset[0]) *
+                                  index_vecnd_buffer(phase_factor_mults1,
+                                                     atom_i,
+                                                     symOpIdx,
+                                                     offset[1]) *
+                                  index_vecnd_buffer(phase_factor_mults2,
+                                                     atom_i,
+                                                     symOpIdx,
+                                                     offset[2]);
+                    }
+                    symOpFMult[sym_op_to_mult_ax[symOpIdx]] += localF;
                 }
 
-                auto val = val_ax[id];
-                for (int i = 0; i < comboCount; ++i) {
-                    const auto &combo =
-                        used_wfn_type_combo_ax[i];  // Use extract combo
-                    const auto type = used_types_ax[combo[1]];
-                    const int kMax =
-                        wfn_param_metas_ax[combo[0]].valence_coeff_off;
-                    const auto h = h_length / type_kappa_spherical_ax[type];
-                    for (int k = 0; k < kMax; k++) {
-                        REAL valence_pow_k =
-                            valence_pows_ax[wfn_param_metas_ax[combo[0]]
-                                                .valence_pow_off];
-                        REAL valence_exp_k =
-                            valence_exps_ax[wfn_param_metas_ax[combo[0]]
-                                                .valence_exp_off];
-                        REAL valence_coeff_k =
-                            valence_coeffs_ax[wfn_param_metas_ax[combo[0]]
-                                                  .valence_coeff_off];
-                        val[i] += valence_coeff_k *
-                                  gFunction_sycl(
-                                      0, valence_pow_k + 2, h, valence_exp_k);
-                    }
-                    val[i] *= type_p_val_ax[type] * four_pi;
-                }
+                for (int symOpIdx = 0; symOpIdx < symOpMultCount; symOpIdx++) {
+                    bool iso = (used_atom_indices_ax[atom_i] + 1 ==
+                                        atomic_displacement_parameters_size
+                                    ? atomic_displacement_parameter_count
+                                    : atomic_displacement_parameters_offset_ax
+                                          [used_atom_indices_ax[atom_i] + 1]) -
+                                   atomic_displacement_parameters_offset_ax
+                                       [used_atom_indices_ax[atom_i]] ==
+                               1;
 
-                sycl::vec<REAL, 3> h_versor = cartesian_h / h_length;
-
-                int virtHklPhaseCurrent;
-                if constexpr (virtHklPhaseFlag)
-                    virtHklPhaseCurrent =
-                        (offset[0] * binSize[1] + offset[1]) * binSize[2] +
-                        offset[2];
-
-                int virtHklTemperatureCurrent;
-                if constexpr (virtHklTemperatureFlag)
-                    virtHklTemperatureCurrent =
-                        (offset[0] * binSize[1] + offset[1]) * binSize[2] +
-                        offset[2];
-
-                for (int atom_i = 0; atom_i < nAtoms; ++atom_i) {
-                    std::complex<REAL> perAtomF = 0.0;
-                    auto symOpFMult = sym_op_f_mult_ax[id];
-                    for (int symOpIdx = 0; symOpIdx < nSymOps; symOpIdx++) {
-                        std::complex<REAL> localF = index_vecnd_buffer(
-                            phase_factor_roots, binIdx, atom_i, symOpIdx);
-                        if constexpr (virtHklPhaseFlag) {
-                            localF *= index_vecnd_buffer(virt_hkl_phase,
-                                                         virtHklPhaseCurrent,
-                                                         atom_i,
-                                                         symOpIdx);
-                        } else {
-                            localF *= index_vecnd_buffer(phase_factor_mults0,
-                                                         atom_i,
-                                                         symOpIdx,
-                                                         offset[0]) *
-                                      index_vecnd_buffer(phase_factor_mults1,
-                                                         atom_i,
-                                                         symOpIdx,
-                                                         offset[1]) *
-                                      index_vecnd_buffer(phase_factor_mults2,
-                                                         atom_i,
-                                                         symOpIdx,
-                                                         offset[2]);
-                        }
-                        symOpFMult[sym_op_to_mult_ax[symOpIdx]] += localF;
-                    }
-                    for (int symOpIdx = 0; symOpIdx < symOpMultCount;
-                         symOpIdx++) {
-                        bool iso =
-                            (used_atom_indices_ax[atom_i] + 1 ==
-                                     atomic_displacement_parameters_size
-                                 ? atomic_displacement_parameter_count
-                                 : atomic_displacement_parameters_offset_ax
-                                       [used_atom_indices_ax[atom_i] + 1]) -
-                                atomic_displacement_parameters_offset_ax
-                                    [used_atom_indices_ax[atom_i]] ==
-                            1;
-
-                        REAL localF =
-                            index_vecnd_buffer(temperature_factor_roots,
-                                               binIdx,
+                    REAL localF = index_vecnd_buffer(temperature_factor_roots,
+                                                     binIdx,
+                                                     atom_i,
+                                                     iso ? 0 : symOpIdx);
+                    if constexpr (virtHklTemperatureFlag) {
+                        localF *= index_vecnd_buffer(virt_hkl_temperature,
+                                                     virtHklTemperatureCurrent,
+                                                     atom_i,
+                                                     iso ? 0 : symOpIdx);
+                    } else {
+                        localF *=
+                            index_vecnd_buffer(temperature_factor_mults0,
                                                atom_i,
-                                               iso ? 0 : symOpIdx);
-                        if constexpr (virtHklTemperatureFlag) {
-                            localF *=
-                                index_vecnd_buffer(virt_hkl_temperature,
-                                                   virtHklTemperatureCurrent,
-                                                   atom_i,
-                                                   iso ? 0 : symOpIdx);
-                        } else {
-                            localF *=
-                                index_vecnd_buffer(temperature_factor_mults0,
-                                                   atom_i,
-                                                   iso ? 0 : symOpIdx,
-                                                   offset[0]) *
-                                index_vecnd_buffer(temperature_factor_mults1,
-                                                   atom_i,
-                                                   iso ? 0 : symOpIdx,
-                                                   offset[1]) *
-                                index_vecnd_buffer(temperature_factor_mults2,
-                                                   atom_i,
-                                                   iso ? 0 : symOpIdx,
-                                                   offset[2]) *
-                                index_vecnd_buffer(
-                                    temperature_factor_mults_square0,
-                                    atom_i,
-                                    iso ? 0 : symOpIdx,
-                                    offset[1],
-                                    offset[2]) *
-                                index_vecnd_buffer(
-                                    temperature_factor_mults_square1,
-                                    atom_i,
-                                    iso ? 0 : symOpIdx,
-                                    offset[2],
-                                    offset[0]) *
-                                index_vecnd_buffer(
-                                    temperature_factor_mults_square2,
-                                    atom_i,
-                                    iso ? 0 : symOpIdx,
-                                    offset[0],
-                                    offset[1]);
-                        }
-
-                        for (int i = 0; i < 3; i++) {
-                            if constexpr (virtHklTMulFlag)
-                                localF *=
-                                    index_vecnd_buffer(virt_hkl_t_mul,
-                                                       binIdx,
-                                                       i,
-                                                       offset[i],
-                                                       atom_i,
-                                                       iso ? 0 : symOpIdx);
-                            else
-                                localF *= sycl::pow(
-                                    index_vecnd_buffer(
-                                        per_bin_temperature_factor_mult,
-                                        binIdx,
-                                        atom_i,
-                                        iso ? 0 : symOpIdx)[i],
-                                    offset[i]);
-                        }
-
-                        const int wfn_i =
-                            atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
-                        const auto type_i =
-                            atom_to_type_map_ax[used_atom_indices_ax[atom_i]];
-
-                        auto sym_op_mult_col0 =
-                            sym_op_mults_column0_ax[symOpIdx];
-                        auto sym_op_mult_col1 =
-                            sym_op_mults_column1_ax[symOpIdx];
-                        auto sym_op_mult_col2 =
-                            sym_op_mults_column2_ax[symOpIdx];
-                        auto local_coordinate_system_col0 =
-                            local_coordinate_systems_column0_ax
-                                [used_atom_indices_ax[atom_i]];
-                        auto local_coordinate_system_col1 =
-                            local_coordinate_systems_column1_ax
-                                [used_atom_indices_ax[atom_i]];
-                        auto local_coordinate_system_col2 =
-                            local_coordinate_systems_column2_ax
-                                [used_atom_indices_ax[atom_i]];
-                        auto h_times_sym =
-                            vector_times_matrix(h_versor,
-                                                sym_op_mult_col0,
-                                                sym_op_mult_col1,
-                                                sym_op_mult_col2);
-                        const auto h =
-                            vector_times_matrix(h_times_sym,
-                                                local_coordinate_system_col0,
-                                                local_coordinate_system_col1,
-                                                local_coordinate_system_col2);
-
-                        const int nl = std::min(
-                            (int)wfn_param_metas_ax[wfn_i].def_valence_pow_sz,
-                            type_i < typeCount - 1
-                                ? (type_p_lm_offset_ax[type_i + 1] -
-                                   type_p_lm_offset_ax[type_i])
-                                : (type_p_lm_level_offsets[1] -
-                                   type_p_lm_offset_ax[type_i]));
-                        std::complex<REAL> dval;
-                        for (int l = 0; l < nl; l++) {
-                            // may be ordered differently than in publication
-                            // because the publication doesn't seem to have a
-                            // consistent ordering of arguments passed to g
-                            REAL def_valence_pow_l =
-                                def_valence_pows_ax[wfn_param_metas_ax[wfn_i]
-                                                        .def_valence_pow_off +
-                                                    l];
-                            const REAL multPerL = gFunction_sycl(
-                                l,
-                                def_valence_pow_l + 2,
-                                h_length / type_kappa_def_valence_ax[type_i],
-                                wfn_def_valence_exp_ax[wfn_i]);
-
-                            REAL sumPerM = 0.0;
-                            for (int m = -l; m <= l; m++) {
-                                sumPerM += index_vecnd_buffer(
-                                               type_p_lm, type_i, l, m + l) *
-                                           densityNormalizedSycl(h, l, m);
-                            }
-                            dval += n_value_ax[n_offset_ax[wfn_i] + l] *
-                                    (multPerL * sumPerM);
-                        }
-
-                        perAtomF +=
-                            symOpFMult[symOpIdx] * localF *
-                            (dval +
-                             1.0 * f_core[used_wfn_type_combo_ax
-                                              [atom_to_used_wfn_type_combo_ax
-                                                   [atom_i]][0]] +
-                             val[atom_to_used_wfn_type_combo_ax[atom_i]]);
+                                               iso ? 0 : symOpIdx,
+                                               offset[0]) *
+                            index_vecnd_buffer(temperature_factor_mults1,
+                                               atom_i,
+                                               iso ? 0 : symOpIdx,
+                                               offset[1]) *
+                            index_vecnd_buffer(temperature_factor_mults2,
+                                               atom_i,
+                                               iso ? 0 : symOpIdx,
+                                               offset[2]) *
+                            index_vecnd_buffer(temperature_factor_mults_square0,
+                                               atom_i,
+                                               iso ? 0 : symOpIdx,
+                                               offset[1],
+                                               offset[2]) *
+                            index_vecnd_buffer(temperature_factor_mults_square1,
+                                               atom_i,
+                                               iso ? 0 : symOpIdx,
+                                               offset[2],
+                                               offset[0]) *
+                            index_vecnd_buffer(temperature_factor_mults_square2,
+                                               atom_i,
+                                               iso ? 0 : symOpIdx,
+                                               offset[0],
+                                               offset[1]);
                     }
-                    f_acc += perAtomF *
-                             atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
-                             atomic_multiplicity_factor_ax
-                                 [used_atom_indices_ax[atom_i]];
+
+                    for (int i = 0; i < 3; i++) {
+                        if constexpr (virtHklTMulFlag)
+                            localF *= index_vecnd_buffer(virt_hkl_t_mul,
+                                                         binIdx,
+                                                         i,
+                                                         offset[i],
+                                                         atom_i,
+                                                         iso ? 0 : symOpIdx);
+                        else
+                            localF *=
+                                sycl::pow(index_vecnd_buffer(
+                                              per_bin_temperature_factor_mult,
+                                              binIdx,
+                                              atom_i,
+                                              iso ? 0 : symOpIdx)[i],
+                                          offset[i]);
+                    }
+
+                    const int wfn_i =
+                        atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
+                    const auto type_i =
+                        atom_to_type_map_ax[used_atom_indices_ax[atom_i]];
+
+                    auto sym_op_mult_col0 = sym_op_mults_column0_ax[symOpIdx];
+                    auto sym_op_mult_col1 = sym_op_mults_column1_ax[symOpIdx];
+                    auto sym_op_mult_col2 = sym_op_mults_column2_ax[symOpIdx];
+                    auto local_coordinate_system_col0 =
+                        local_coordinate_systems_column0_ax
+                            [used_atom_indices_ax[atom_i]];
+                    auto local_coordinate_system_col1 =
+                        local_coordinate_systems_column1_ax
+                            [used_atom_indices_ax[atom_i]];
+                    auto local_coordinate_system_col2 =
+                        local_coordinate_systems_column2_ax
+                            [used_atom_indices_ax[atom_i]];
+                    auto h_times_sym = vector_times_matrix(h_versor,
+                                                           sym_op_mult_col0,
+                                                           sym_op_mult_col1,
+                                                           sym_op_mult_col2);
+                    const auto h =
+                        vector_times_matrix(h_times_sym,
+                                            local_coordinate_system_col0,
+                                            local_coordinate_system_col1,
+                                            local_coordinate_system_col2);
+
+                    const int nl = std::min(
+                        (int)wfn_param_metas_ax[wfn_i].def_valence_pow_sz,
+                        type_p_lm_sizes_ax[type_i]);
+                    std::complex<REAL> dval;
+                    const int used_wfn_i = used_wfn_type_combo_ax
+                        [atom_to_used_wfn_type_combo_ax[atom_i]][0];
+                    for (int l = 0; l < nl; l++) {
+                        // may be ordered differently than in publication
+                        // because the publication doesn't seem to have a
+                        // consistent ordering of arguments passed to g
+                        REAL def_valence_pow_l =
+                            def_valence_pows_ax[wfn_param_metas_ax[used_wfn_i]
+                                                    .def_valence_pow_off +
+                                                l];
+                        const REAL multPerL = gFunction_sycl(
+                            l,
+                            def_valence_pow_l + 2,
+                            h_length / type_kappa_def_valence_ax[type_i],
+                            wfn_def_valence_exp_ax[wfn_i]);
+
+                        REAL sumPerM = 0.0;
+                        for (int m = -l; m <= l; m++) {
+                            sumPerM += index_vecnd_buffer(
+                                           type_p_lm, type_i, l, m + l) *
+                                       densityNormalizedSycl(h, l, m);
+                        }
+                        dval += n_value_ax[n_offset_ax[wfn_i] + l] *
+                                (multPerL * sumPerM);
+                    }
+
+                    perAtomF +=
+                        symOpFMult[symOpIdx] * localF *
+                        (dval +
+                         1.0 *
+                             f_core[used_wfn_type_combo_ax
+                                        [atom_to_used_wfn_type_combo_ax[atom_i]]
+                                        [0]] +
+                         val[atom_to_used_wfn_type_combo_ax[atom_i]]);
                 }
+                f_acc +=
+                    perAtomF *
+                    atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
+                    atomic_multiplicity_factor_ax[used_atom_indices_ax[atom_i]];
             }
             f_ax[id] = f_acc;
         });
