@@ -35,6 +35,10 @@ int main(int argc, char* argv[])
         Crystal crystal;
         structure_io::read_structure(structureFile, crystal);
 
+        // rename atoms
+        for (int i = 0; i < crystal.atoms.size(); i++)
+            crystal.atoms[i].label = crystal.atoms[i].type + to_string(i + 1);
+
         nlohmann::json json_data;
         std::ifstream json_file("aspher.json");
         json_file >> json_data;

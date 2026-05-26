@@ -68,7 +68,7 @@ namespace discamb {
     private:
         std::unique_ptr<StockholderAtomSfCalculator> mSfCalculator;
         void set(const Crystal& crystal, const HirshfeldAtomModelSettings& settings, const MacromolecularStructuralInformation& macromolInfo, bool electronScattering = false, const std::string& jobname = "ham");
-        void make_fragments(const MacromolecularStructuralInformation& macromolInfo, std::vector<QmFragmentInCrystal> &fragments);
+        void make_fragments(const Crystal &crystal, const MacromolecularStructuralInformation& macromolInfo, std::vector<QmFragmentInCrystal> &fragments);
     };
     /** @}*/
 }
