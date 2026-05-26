@@ -1,3 +1,4 @@
+#pragma once
 #include "discamb/CrystalStructure/UnitCellContent.h"
 
 #include "discamb/Scattering/AnyIamCalculator.h"

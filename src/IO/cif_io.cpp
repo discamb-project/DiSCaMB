@@ -4,6 +4,7 @@
 #include "discamb/BasicChemistry/basic_chemistry_utilities.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
 #include "discamb/MathUtilities/math_utilities.h"
@@ -1160,7 +1161,7 @@ namespace discamb {
                     loop.values[33 + 2*l].push_back(string_utilities::realToString(value, 4, true));
                     value = 1.0;
                     if (l <= maxL)
-                        value = parameters.wfn_parameters[wfnIdx].deformation_valence_exponent;
+                        value = parameters.wfn_parameters[wfnIdx].deformation_valence_exponent / constants::Angstrom;
                     loop.values[33 + 2 * l + 1].push_back(string_utilities::realToString(value, 4, true));
 
                 }

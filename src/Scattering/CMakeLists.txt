@@ -15,6 +15,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/deformation_valence_calc.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/disordered_structure_fragments.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/ElectronFromXrayFormFactorCalculationsManager.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/FragHarMacromol.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/gar_utilities.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine2.h"
@@ -67,6 +68,7 @@ SET(TARGET_SRC
     deformation_valence_calc.cpp
     disordered_structure_fragments.cpp
     ElectronFromXrayFormFactorCalculationsManager.cpp
+	FragHarMacromol.cpp
     gar_utilities.cpp
     HansenCoppens_SF_Engine.cpp 
     HansenCoppens_SF_Engine2.cpp
