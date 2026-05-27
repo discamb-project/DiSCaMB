@@ -141,8 +141,8 @@ namespace discamb {
     {
         HirshfeldAtomModelSettings settings = _settings;
         
-        make_fragments(crystal, macromolInfo, settings.crystalFragments);
-        
+        make_fragments(crystal, macromolInfo, settings.crystalFragments, settings.representatives);
+        settings.fragmentWfnCalculation.resize(settings.crystalFragments.size());
         //settings.
         /*
         vector< vector<pair<string, double> > > ordered_parts;
@@ -182,7 +182,8 @@ namespace discamb {
     void FragHarMacromol::make_fragments(
         const Crystal& crystal,
         const MacromolecularStructuralInformation& macromolInfo,
-        std::vector<QmFragmentInCrystal>& fragments)
+        std::vector<QmFragmentInCrystal>& fragments,
+        std::vector<std::vector<AtomRepresentativeInfo> >& representatives)
     {
         fragments.clear();
         vector<vector<int> > residueAtoms;
@@ -193,9 +194,23 @@ namespace discamb {
             if (macromolInfo.residueSequenceNumbers[atomIdx] > nResidues)
                 nResidues = macromolInfo.residueSequenceNumbers[atomIdx];
 
+        representatives.clear();
+        representatives.resize(nAtoms);
         residueAtoms.resize(nResidues);
         for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
-            residueAtoms[macromolInfo.residueSequenceNumbers[atomIdx] - 1].push_back(atomIdx);
+        {
+            AtomRepresentativeInfo representative;
+            representative.atomLabel = crystal.atoms[atomIdx].label;
+            representative.fixedWeightValue = 1.0;
+            int residueIdx = macromolInfo.residueSequenceNumbers[atomIdx] - 1;
+            representative.fragmentIdx = residueIdx;
+            representative.idxInSubsystem = residueAtoms[residueIdx].size();
+            representative.isWeightFixed = true;
+            representative.transformType = "identity";
+            representatives[atomIdx].push_back(representative);
+
+            residueAtoms[residueIdx].push_back(atomIdx);
+        }
 
         for (int resIdx = 0; resIdx < nResidues; resIdx++)
         {

@@ -6,6 +6,7 @@
 #include "discamb/BasicUtilities/discamb_env.h"
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/IO/wfn_io.h"
+#include "discamb/discamb_config.h"
 
 #include <iomanip>
 
