@@ -8,7 +8,7 @@
 #include "discamb/IO/mol2_io.h"
 #include "discamb/IO/vtk_io.h"
 #include "discamb/IO/wfn_io.h"
-#include "discamb/BasicUtilities/Constants.h"
+#include "discamb/BasicUtilities/constants.h"
 #include "discamb/AtomTyping/MolecularLcsCalculator.h"
 #include "discamb/MathUtilities/radial_grid.h"
 #include "discamb/MathUtilities/lebedev_laikov.h"
