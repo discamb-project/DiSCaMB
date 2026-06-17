@@ -24,6 +24,7 @@
 #include "discamb/Scattering/NGaussianFormFactorsTable.h"
 #include "discamb/Scattering/SlaterTypeOrbitalScattering.h"
 #include "discamb/Scattering/scattering_utilities.h"
+#include "sycl/accessor.hpp"
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -2674,6 +2675,9 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::vec<REAL, 3> f2c_2;
     for (int i = 0; i < 3; ++i) f2c_2[i] = f2c(2, i);
 
+    vector_of_objects_to_buffer_of_values_for_property(
+        REAL, dTarget_dparam, occupancy_derivatives, occupancy_derivatives);
+
     // Wfn params
     struct wfn_param_meta {
         uint32_t core_coeff_off;
@@ -2706,10 +2710,14 @@ void HansenCoppens_SF_Engine4::calculateSF(
     std::vector<REAL> valence_exps;
     std::vector<int> valence_pows;
     std::vector<int> def_valence_pows;
+    std::vector<std::complex<REAL>> anomalous_scatterings;
 
     for (uint32_t i = 0; i < wfnCount; i++) {
         wfn_param_meta meta{};
         const auto &wfn = wfnParams[usedWfns[i]];
+
+        anomalous_scatterings.push_back(wfn.anomalous_scattering);
+
 #define PROCESS_PARAM(name)                    \
     uint32_t name##_sz = wfn.name.size();      \
     meta.name##_sz = name##_sz;                \
@@ -2738,6 +2746,8 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::buffer<REAL> valence_exps_buff(valence_exps);
     sycl::buffer<int> valence_pows_buff(valence_pows);
     sycl::buffer<int> def_valence_pows_buff(def_valence_pows);
+    sycl::buffer<std::complex<REAL>> anomalous_scatterings_buff(
+        anomalous_scatterings);
 
     std::vector<int> type_p_lm_sizes_vec(typeParams.size());
     for (int i = 0; i < typeParams.size(); ++i)
@@ -2798,6 +2808,9 @@ void HansenCoppens_SF_Engine4::calculateSF(
             sym_op_to_mult_buf, cgh, sycl::read_only);
         sycl::accessor type_p_lm_sizes_ax(
             type_p_lm_sizes_buf, cgh, sycl::read_only);
+        sycl::accessor anomalous_scattering_ax(
+            anomalous_scatterings_buff, cgh, sycl::read_only);
+
         vecnd_buffer_accessors(temperature_factor_roots);
         vecnd_buffer_accessors(per_bin_temperature_factor_mult);
         vecnd_buffer_accessors(temperature_factor_mults0);
@@ -2952,16 +2965,27 @@ void HansenCoppens_SF_Engine4::calculateSF(
                     symOpFMult[sym_op_to_mult_ax[symOpIdx]] += localF;
                 }
 
-                for (int symOpIdx = 0; symOpIdx < symOpMultCount; symOpIdx++) {
-                    bool iso = (used_atom_indices_ax[atom_i] + 1 ==
-                                        atomic_displacement_parameters_size
-                                    ? atomic_displacement_parameter_count
-                                    : atomic_displacement_parameters_offset_ax
-                                          [used_atom_indices_ax[atom_i] + 1]) -
-                                   atomic_displacement_parameters_offset_ax
-                                       [used_atom_indices_ax[atom_i]] ==
-                               1;
+                bool iso = (used_atom_indices_ax[atom_i] + 1 ==
+                                    atomic_displacement_parameters_size
+                                ? atomic_displacement_parameter_count
+                                : atomic_displacement_parameters_offset_ax
+                                      [used_atom_indices_ax[atom_i] + 1]) -
+                               atomic_displacement_parameters_offset_ax
+                                   [used_atom_indices_ax[atom_i]] ==
+                           1;
+                const int wfn_i =
+                    atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
 
+                const auto anomalous =
+                    anomalous_dispersion.empty()
+
+                        ? anomalous_scattering_ax[wfn_i]
+                        : anomalous_dispersion[usedAtomIndices[atom_i]];
+
+                std::array<std::complex<REAL>, 6> d_adp_p;
+                std::array<std::complex<REAL>, 3> d_xyz_p;
+
+                for (int symOpIdx = 0; symOpIdx < symOpMultCount; symOpIdx++) {
                     REAL localF = index_vecnd_buffer(temperature_factor_roots,
                                                      binIdx,
                                                      atom_i,
@@ -3020,8 +3044,6 @@ void HansenCoppens_SF_Engine4::calculateSF(
                                           offset[i]);
                     }
 
-                    const int wfn_i =
-                        atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
                     const auto type_i =
                         atom_to_type_map_ax[used_atom_indices_ax[atom_i]];
 
@@ -3085,11 +3107,92 @@ void HansenCoppens_SF_Engine4::calculateSF(
                                         [atom_to_used_wfn_type_combo_ax[atom_i]]
                                         [0]] +
                          val[atom_to_used_wfn_type_combo_ax[atom_i]]);
+
+                    auto col0 = sym_op_mults_column0_ax[symOpIdx];
+                    auto col1 = sym_op_mults_column1_ax[symOpIdx];
+                    auto col2 = sym_op_mults_column2_ax[symOpIdx];
+                    const auto h_rot =
+                        vector_times_matrix(cartesian_h, col0, col1, col2);
+
+                    if (derivativesSwitch.d_adp and not iso) {
+                        const std::array<REAL, 6> d_adp_p_part = {
+                            h_rot[0] * h_rot[0],
+                            h_rot[1] * h_rot[1],
+                            h_rot[2] * h_rot[2],
+                            h_rot[0] * h_rot[1] * 2,
+                            h_rot[0] * h_rot[2] * 2,
+                            h_rot[1] * h_rot[2] * 2};
+                        for (int i = 0; i < 6; i++) {
+                            d_adp_p[i] +=
+                                d_adp_p_part[i] * symOpFMult[symOpIdx] *
+                                localF *
+                                (dval +
+                                 f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo
+                                                             [atom_i]][0]] +
+                                 val[atomToUsedWfnTypeCombo[atom_i]] +
+                                 anomalous);
+                        }
+                    }
+                    if (derivativesSwitch.d_xyz) {
+                        for (int i = 0; i < 3; i++) {
+                            d_xyz_p[i] +=
+                                h_rot[i] * symOpFMult[symOpIdx] * localF *
+                                (dval +
+                                 f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo
+                                                             [atom_i]][0]] +
+                                 val[atomToUsedWfnTypeCombo[atom_i]] +
+                                 anomalous);
+                        }
+                    }
                 }
                 f_acc +=
                     perAtomF *
                     atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
                     atomic_multiplicity_factor_ax[used_atom_indices_ax[atom_i]];
+
+                if (derivativesSwitch.d_xyz) {
+                    for (int i = 0; i < 3; i++) {
+                        dTarget_dparam[usedAtomIndices[atom_i]]
+                            .atomic_position_derivatives[i] -=
+                            (dTarget_df[id].real() * d_xyz_p[i].imag() +
+                             dTarget_df[id].imag() * d_xyz_p[i].real()) *
+                            atomic_occupancy_ax[usedAtomIndices[atom_i]] *
+                            atomic_multiplicity_factor
+                                [usedAtomIndices[atom_i]] *
+                            two_pi;
+                    }
+                }
+                if (derivativesSwitch.d_adp) {
+                    if (iso) {
+                        const auto d_adp_part = perAtomF * square(h_length);
+                        dTarget_dparam[usedAtomIndices[atom_i]]
+                            .adp_derivatives[0] +=
+                            (d_adp_part.imag() * dTarget_df[id].imag() -
+                             d_adp_part.real() * dTarget_df[id].real()) *
+                            two_pi_squared *
+                            atomic_occupancy_ax[usedAtomIndices[atom_i]] *
+                            atomic_multiplicity_factor[usedAtomIndices[atom_i]];
+                    } else {
+                        for (int i = 0; i < 6; i++)
+                            dTarget_dparam[usedAtomIndices[atom_i]]
+                                .adp_derivatives[i] +=
+                                (d_adp_p[i].imag() * dTarget_df[id].imag() -
+                                 d_adp_p[i].real() * dTarget_df[id].real()) *
+                                two_pi_squared *
+                                atomic_occupancy_ax[usedAtomIndices[atom_i]] *
+                                atomic_multiplicity_factor
+                                    [usedAtomIndices[atom_i]];
+                    }
+                }
+                if (derivativesSwitch.d_occ) {
+                    const auto d_occ_part =
+                        perAtomF *
+                        atomic_multiplicity_factor[usedAtomIndices[atom_i]];
+                    dTarget_dparam[usedAtomIndices[atom_i]]
+                        .occupancy_derivatives +=
+                        d_occ_part.real() * dTarget_df[id].real() -
+                        d_occ_part.imag() * dTarget_df[id].imag();
+                }
             }
             f_ax[id] = f_acc;
         });
