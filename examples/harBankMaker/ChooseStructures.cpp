@@ -106,6 +106,7 @@ void ChooseStructures::readAtomTypeAssignement()
 
     for (structureIdx = 0; structureIdx < nStructures; structureIdx++)
     {
+        
         /*
 structure ABEQUW.search1
  number of atoms 32
@@ -119,6 +120,7 @@ structure ABEQUW.search1
         in  >> s >> mParentStructureNames[structureIdx]
             >> s >> s >> s >> nAtoms
             >> s >> s >> s >> nSubstructures;
+        //cout << structureIdx << "  "  << nAtoms << "\n";
         getline(in, line);
         getline(in, line);
         vector<string> substructureFormulaString(nSubstructures);
@@ -132,7 +134,16 @@ structure ABEQUW.search1
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
             
-            in >> atomLabel >> z >> typeId >> substructureIdx;
+            getline(in, line);
+            vector<string> lineWords;
+            string_utilities::split(line, lineWords);
+            if(lineWords.size()<4)
+                on_error::throwException("unexpected format of atom type assignment log file", __FILE__, __LINE__);
+            atomLabel = lineWords[0];
+            z = stoi(lineWords[1]);
+            typeId = lineWords[2];
+            substructureIdx = stoi(lineWords[3]);
+
             int totalSubstructureIdx = substructureIdx + nSubstructuresBefore-1;
             if (totalSubstructureIdx >= mSubstructures.size())
             {
@@ -151,10 +162,8 @@ structure ABEQUW.search1
     for (auto& structure : mSubstructures)
         basic_chemistry_utilities::getFormula(structure.z, structure.formula);
 
-
-    getline(in, line);
-    getline(in, line);
-    getline(in, line);
+    for(int i=0; i<5; i++)
+        getline(in, line);
 
     /*
  TYPE STATISTICS
@@ -162,9 +171,6 @@ structure ABEQUW.search1
    O001             0            0
 
     */
-    getline(in, line);
-    getline(in, line);
-    getline(in, line);
     mTypeStatistics.clear();
     vector<string> underrepresentedTypes;
     while (in.good())

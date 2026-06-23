@@ -397,7 +397,7 @@ void AssignAtomTypes::run()
             out << setw(10) << mol2Data.substructureIdx[i];
             if(multipleTypesAssignment[i].size()>1)
             {
-                out << "   [";
+                out << "   [ ";
                 for(int tIdx: multipleTypesAssignment[i])
                     out << mAtomTypes[tIdx].id << " ";
                 out << "]";

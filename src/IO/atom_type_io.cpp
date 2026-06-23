@@ -1138,6 +1138,12 @@ namespace discamb {
         {
             atomType = AtomType();
             atomType.id = atomTypeId;
+
+            vector<string> atomTypeNameWords;
+            string_utilities::split(atomTypeId, atomTypeNameWords);
+            if(atomTypeNameWords.size()!=1)
+                on_error::throwException("atom type id should be one word without spaces, but '" + atomTypeId + "' is given", __FILE__, __LINE__);
+
             try {
 
                 if (data.find("atoms and bonds") != data.end())
