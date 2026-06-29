@@ -270,6 +270,12 @@ void AssignAtomTypes::run()
 
     vector<StructuralFormula> uniqueStructuralFormulas;
 
+    vector<vector<int> > typesGeneralized;
+    vector<vector<int> > hierarchyLevel;
+    atom_typing_utilities::typeGeneralization(mAtomTypes, typesGeneralized, hierarchyLevel);
+    std::set<pair<int, int> > conflicting_types;
+
+
     for (string& resFile : resFiles)
     {
         string fileNameCore = resFile.substr(0, resFile.size() - 4);
@@ -398,8 +404,21 @@ void AssignAtomTypes::run()
             if(multipleTypesAssignment[i].size()>1)
             {
                 out << "   [ ";
-                for(int tIdx: multipleTypesAssignment[i])
-                    out << mAtomTypes[tIdx].id << " ";
+                for (int tIdx : multipleTypesAssignment[i])
+                {
+                    
+                    out << mAtomTypes[tIdx].id;
+                    if (tIdx != typeId[i])
+                        if (find(typesGeneralized[tIdx].begin(), typesGeneralized[tIdx].end(), typeId[i]) == typesGeneralized[tIdx].end())
+                        {
+                            out << "@";
+                            if(tIdx < typeId[i])
+                                conflicting_types.insert({ tIdx, typeId[i] });
+                            else
+                                conflicting_types.insert({ typeId[i], tIdx });
+                        }
+                    out << " ";
+                }
                 out << "]";
             }
             out << "\n";
@@ -448,9 +467,6 @@ void AssignAtomTypes::run()
     out << "\n\n TYPE STATISTICS SORTED BY OCCURENCES including subtype contribution\n"
         << "  type id   n occurences    n containing   n with different\n"
         << "                             structures     formulas\n";
-    vector<vector<int> > typesGeneralized;
-    vector<vector<int> > hierarchyLevel;
-    atom_typing_utilities::typeGeneralization(mAtomTypes, typesGeneralized, hierarchyLevel);
 
     for (int i = 0; i < nOccurences.size(); i++)
     {
@@ -520,6 +536,11 @@ void AssignAtomTypes::run()
     }
 
     out.close();
+
+    out.open("conflicting_types.log");
+    for(auto &type_pair: conflicting_types)
+        out<< mAtomTypes[type_pair.first].id << " "  << mAtomTypes[type_pair.second].id << "\n";
+    out << endl;
 }
 
 
