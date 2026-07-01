@@ -24,7 +24,6 @@
 #include "discamb/Scattering/NGaussianFormFactorsTable.h"
 #include "discamb/Scattering/SlaterTypeOrbitalScattering.h"
 #include "discamb/Scattering/scattering_utilities.h"
-#include "sycl/accessor.hpp"
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -34,9 +33,8 @@
 #include <sycl/sycl.hpp>
 
 #include "sycl/access/access.hpp"
+#include "sycl/accessor.hpp"
 #include "sycl/buffer.hpp"
-#include "sycl/detail/builtins/builtins.hpp"
-#include "sycl/exception.hpp"
 
 namespace vecnd_detail {
 
@@ -2754,6 +2752,15 @@ void HansenCoppens_SF_Engine4::calculateSF(
         type_p_lm_sizes_vec[i] = typeParams[i].p_lm.size();
     sycl::buffer<int> type_p_lm_sizes_buf(type_p_lm_sizes_vec);
 
+    sycl::buffer<sycl::vec<REAL, 3>> atomic_position_derivatives_buf(
+        dTarget_dparam.size());
+    sycl::buffer<std::array<REAL, 6>> adp_derivatives_buf(
+        dTarget_dparam.size());
+    sycl::buffer<std::complex<REAL>> dtarget_df_buf(dTarget_df);
+    sycl::buffer<std::complex<REAL>> anomalous_dispersion_buf(
+        anomalous_dispersion);
+    const bool anomalous_dispersion_empty = anomalous_dispersion.empty();
+
     queue.submit([&](sycl::handler &cgh) {
         sycl::accessor f_ax(f_buf, cgh, sycl::write_only);
         sycl::accessor f_core_ax(f_core_buf, cgh, sycl::read_write);
@@ -2810,6 +2817,15 @@ void HansenCoppens_SF_Engine4::calculateSF(
             type_p_lm_sizes_buf, cgh, sycl::read_only);
         sycl::accessor anomalous_scattering_ax(
             anomalous_scatterings_buff, cgh, sycl::read_only);
+        sycl::accessor atomic_position_derivatives_ax(
+            atomic_position_derivatives_buf, cgh, sycl::read_write);
+        sycl::accessor adp_derivatives_ax(
+            adp_derivatives_buf, cgh, sycl::read_write);
+        sycl::accessor occupancy_derivatives_ax(
+            occupancy_derivatives_buf, cgh, sycl::read_write);
+        sycl::accessor dtarget_df_ax(dtarget_df_buf, cgh, sycl::read_only);
+        sycl::accessor anomalous_dispersion_ax(
+            anomalous_dispersion_buf, cgh, sycl::read_only);
 
         vecnd_buffer_accessors(temperature_factor_roots);
         vecnd_buffer_accessors(per_bin_temperature_factor_mult);
@@ -2977,10 +2993,10 @@ void HansenCoppens_SF_Engine4::calculateSF(
                     atom_to_wfn_map_ax[used_atom_indices_ax[atom_i]];
 
                 const auto anomalous =
-                    anomalous_dispersion.empty()
+                    anomalous_dispersion_empty
 
                         ? anomalous_scattering_ax[wfn_i]
-                        : anomalous_dispersion[usedAtomIndices[atom_i]];
+                        : anomalous_dispersion_ax[used_atom_indices_ax[atom_i]];
 
                 std::array<std::complex<REAL>, 6> d_adp_p;
                 std::array<std::complex<REAL>, 3> d_xyz_p;
@@ -3127,9 +3143,10 @@ void HansenCoppens_SF_Engine4::calculateSF(
                                 d_adp_p_part[i] * symOpFMult[symOpIdx] *
                                 localF *
                                 (dval +
-                                 f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo
-                                                             [atom_i]][0]] +
-                                 val[atomToUsedWfnTypeCombo[atom_i]] +
+                                 f_core[used_wfn_type_combo_ax
+                                            [atom_to_used_wfn_type_combo_ax
+                                                 [atom_i]][0]] +
+                                 val[atom_to_used_wfn_type_combo_ax[atom_i]] +
                                  anomalous);
                         }
                     }
@@ -3138,9 +3155,10 @@ void HansenCoppens_SF_Engine4::calculateSF(
                             d_xyz_p[i] +=
                                 h_rot[i] * symOpFMult[symOpIdx] * localF *
                                 (dval +
-                                 f_core[usedWfnTypeCombo[atomToUsedWfnTypeCombo
-                                                             [atom_i]][0]] +
-                                 val[atomToUsedWfnTypeCombo[atom_i]] +
+                                 f_core[used_wfn_type_combo_ax
+                                            [atom_to_used_wfn_type_combo_ax
+                                                 [atom_i]][0]] +
+                                 val[atom_to_used_wfn_type_combo_ax[atom_i]] +
                                  anomalous);
                         }
                     }
@@ -3152,46 +3170,46 @@ void HansenCoppens_SF_Engine4::calculateSF(
 
                 if (derivativesSwitch.d_xyz) {
                     for (int i = 0; i < 3; i++) {
-                        dTarget_dparam[usedAtomIndices[atom_i]]
-                            .atomic_position_derivatives[i] -=
-                            (dTarget_df[id].real() * d_xyz_p[i].imag() +
-                             dTarget_df[id].imag() * d_xyz_p[i].real()) *
-                            atomic_occupancy_ax[usedAtomIndices[atom_i]] *
-                            atomic_multiplicity_factor
-                                [usedAtomIndices[atom_i]] *
+                        atomic_position_derivatives_ax
+                            [used_atom_indices_ax[atom_i]][i] -=
+                            (dtarget_df_ax[id].real() * d_xyz_p[i].imag() +
+                             dtarget_df_ax[id].imag() * d_xyz_p[i].real()) *
+                            atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
+                            atomic_multiplicity_factor_ax
+                                [used_atom_indices_ax[atom_i]] *
                             two_pi;
                     }
                 }
                 if (derivativesSwitch.d_adp) {
                     if (iso) {
                         const auto d_adp_part = perAtomF * square(h_length);
-                        dTarget_dparam[usedAtomIndices[atom_i]]
-                            .adp_derivatives[0] +=
-                            (d_adp_part.imag() * dTarget_df[id].imag() -
-                             d_adp_part.real() * dTarget_df[id].real()) *
+                        adp_derivatives_ax[used_atom_indices_ax[atom_i]][0] +=
+                            (d_adp_part.imag() * dtarget_df_ax[id].imag() -
+                             d_adp_part.real() * dtarget_df_ax[id].real()) *
                             two_pi_squared *
-                            atomic_occupancy_ax[usedAtomIndices[atom_i]] *
-                            atomic_multiplicity_factor[usedAtomIndices[atom_i]];
+                            atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
+                            atomic_multiplicity_factor_ax
+                                [used_atom_indices_ax[atom_i]];
                     } else {
                         for (int i = 0; i < 6; i++)
-                            dTarget_dparam[usedAtomIndices[atom_i]]
-                                .adp_derivatives[i] +=
-                                (d_adp_p[i].imag() * dTarget_df[id].imag() -
-                                 d_adp_p[i].real() * dTarget_df[id].real()) *
+                            adp_derivatives_ax[used_atom_indices_ax[atom_i]]
+                                              [i] +=
+                                (d_adp_p[i].imag() * dtarget_df_ax[id].imag() -
+                                 d_adp_p[i].real() * dtarget_df_ax[id].real()) *
                                 two_pi_squared *
-                                atomic_occupancy_ax[usedAtomIndices[atom_i]] *
-                                atomic_multiplicity_factor
-                                    [usedAtomIndices[atom_i]];
+                                atomic_occupancy_ax
+                                    [used_atom_indices_ax[atom_i]] *
+                                atomic_multiplicity_factor_ax
+                                    [used_atom_indices_ax[atom_i]];
                     }
                 }
                 if (derivativesSwitch.d_occ) {
-                    const auto d_occ_part =
-                        perAtomF *
-                        atomic_multiplicity_factor[usedAtomIndices[atom_i]];
-                    dTarget_dparam[usedAtomIndices[atom_i]]
-                        .occupancy_derivatives +=
-                        d_occ_part.real() * dTarget_df[id].real() -
-                        d_occ_part.imag() * dTarget_df[id].imag();
+                    const auto d_occ_part = perAtomF *
+                                            atomic_multiplicity_factor_ax
+                                                [used_atom_indices_ax[atom_i]];
+                    occupancy_derivatives_ax[used_atom_indices_ax[atom_i]] +=
+                        d_occ_part.real() * dtarget_df_ax[id].real() -
+                        d_occ_part.imag() * dtarget_df_ax[id].imag();
                 }
             }
             f_ax[id] = f_acc;
@@ -3199,8 +3217,23 @@ void HansenCoppens_SF_Engine4::calculateSF(
     });
 
     sycl::host_accessor f_ax(f_buf, sycl::read_only);
+    sycl::host_accessor adp_derivatives_ax(adp_derivatives_buf,
+                                           sycl::read_only);
+    sycl::host_accessor occupancy_derivatives_ax(occupancy_derivatives_buf,
+                                                 sycl::read_only);
+    sycl::host_accessor atomic_position_derivatives_ax(
+        atomic_position_derivatives_buf, sycl::read_only);
 
     for (int i = 0; i < hklCount; ++i) f[i] = f_ax[i];
+    for (int i = 0; i < dTarget_dparam.size(); ++i) {
+        dTarget_dparam[i].occupancy_derivatives = occupancy_derivatives_ax[i];
+        const auto adp = adp_derivatives_ax[i];
+        for (int j = 0; j < atomic_displacement_parameters[i].size(); ++j)
+            dTarget_dparam[i].adp_derivatives[j] = adp[j];
+        for (int j = 0; j < 3; ++j)
+            dTarget_dparam[i].atomic_position_derivatives[j] =
+                atomic_position_derivatives_ax[i][j];
+    }
 #else
 #pragma omp parallel for num_threads(nThreads) schedule(guided)
     for (int hklIdx = 0; hklIdx < hklCount; hklIdx++) {
