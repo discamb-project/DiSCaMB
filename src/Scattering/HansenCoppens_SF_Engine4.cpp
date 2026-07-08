@@ -34,7 +34,9 @@
 
 #include "sycl/access/access.hpp"
 #include "sycl/accessor.hpp"
+#include "sycl/atomic_ref.hpp"
 #include "sycl/buffer.hpp"
+#include "sycl/memory_enums.hpp"
 
 namespace vecnd_detail {
 
@@ -2673,8 +2675,8 @@ void HansenCoppens_SF_Engine4::calculateSF(
     sycl::vec<REAL, 3> f2c_2;
     for (int i = 0; i < 3; ++i) f2c_2[i] = f2c(2, i);
 
-    vector_of_objects_to_buffer_of_values_for_property(
-        REAL, dTarget_dparam, occupancy_derivatives, occupancy_derivatives);
+    // vector_of_objects_to_buffer_of_values_for_property(
+    //     REAL, dTarget_dparam, occupancy_derivatives, occupancy_derivatives);
 
     // Wfn params
     struct wfn_param_meta {
@@ -2752,10 +2754,15 @@ void HansenCoppens_SF_Engine4::calculateSF(
         type_p_lm_sizes_vec[i] = typeParams[i].p_lm.size();
     sycl::buffer<int> type_p_lm_sizes_buf(type_p_lm_sizes_vec);
 
+    std::vector<sycl::vec<REAL, 3>> atomic_position_derivatives_vec(
+        dTarget_dparam.size(), sycl::vec{0., 0., 0.});
     sycl::buffer<sycl::vec<REAL, 3>> atomic_position_derivatives_buf(
-        dTarget_dparam.size());
-    sycl::buffer<std::array<REAL, 6>> adp_derivatives_buf(
-        dTarget_dparam.size());
+        atomic_position_derivatives_vec);
+    std::vector<std::array<REAL, 6>> adp_derivatives_vec(
+        dTarget_dparam.size(), std::array{0., 0., 0., 0., 0., 0.});
+    sycl::buffer<std::array<REAL, 6>> adp_derivatives_buf(adp_derivatives_vec);
+    std::vector<REAL> occupancy_derivatives_vec(dTarget_dparam.size(), 0);
+    sycl::buffer<REAL> occupancy_derivatives_buf(occupancy_derivatives_vec);
     sycl::buffer<std::complex<REAL>> dtarget_df_buf(dTarget_df);
     sycl::buffer<std::complex<REAL>> anomalous_dispersion_buf(
         anomalous_dispersion);
@@ -3122,7 +3129,8 @@ void HansenCoppens_SF_Engine4::calculateSF(
                              f_core[used_wfn_type_combo_ax
                                         [atom_to_used_wfn_type_combo_ax[atom_i]]
                                         [0]] +
-                         val[atom_to_used_wfn_type_combo_ax[atom_i]]);
+                         val[atom_to_used_wfn_type_combo_ax[atom_i]] +
+                         anomalous);
 
                     auto col0 = sym_op_mults_column0_ax[symOpIdx];
                     auto col1 = sym_op_mults_column1_ax[symOpIdx];
@@ -3170,46 +3178,71 @@ void HansenCoppens_SF_Engine4::calculateSF(
 
                 if (derivativesSwitch.d_xyz) {
                     for (int i = 0; i < 3; i++) {
-                        atomic_position_derivatives_ax
-                            [used_atom_indices_ax[atom_i]][i] -=
+                        auto ref = sycl::atomic_ref<
+                            REAL,
+                            sycl::memory_order::relaxed,
+                            sycl::memory_scope_device,
+                            sycl::access::address_space::global_space>(
+                            atomic_position_derivatives_ax
+                                [used_atom_indices_ax[atom_i]][i]);
+                        ref.fetch_sub(
                             (dtarget_df_ax[id].real() * d_xyz_p[i].imag() +
                              dtarget_df_ax[id].imag() * d_xyz_p[i].real()) *
                             atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
                             atomic_multiplicity_factor_ax
                                 [used_atom_indices_ax[atom_i]] *
-                            two_pi;
+                            two_pi);
                     }
                 }
                 if (derivativesSwitch.d_adp) {
                     if (iso) {
                         const auto d_adp_part = perAtomF * square(h_length);
-                        adp_derivatives_ax[used_atom_indices_ax[atom_i]][0] +=
+                        auto ref = sycl::atomic_ref<
+                            REAL,
+                            sycl::memory_order::relaxed,
+                            sycl::memory_scope_device,
+                            sycl::access::address_space::global_space>(
+                            adp_derivatives_ax[used_atom_indices_ax[atom_i]]
+                                              [0]);
+                        ref.fetch_add(
                             (d_adp_part.imag() * dtarget_df_ax[id].imag() -
                              d_adp_part.real() * dtarget_df_ax[id].real()) *
                             two_pi_squared *
                             atomic_occupancy_ax[used_atom_indices_ax[atom_i]] *
                             atomic_multiplicity_factor_ax
-                                [used_atom_indices_ax[atom_i]];
+                                [used_atom_indices_ax[atom_i]]);
                     } else {
-                        for (int i = 0; i < 6; i++)
-                            adp_derivatives_ax[used_atom_indices_ax[atom_i]]
-                                              [i] +=
+                        for (int i = 0; i < 6; i++) {
+                            auto ref = sycl::atomic_ref<
+                                REAL,
+                                sycl::memory_order::relaxed,
+                                sycl::memory_scope_device,
+                                sycl::access::address_space::global_space>(
+                                adp_derivatives_ax[used_atom_indices_ax[atom_i]]
+                                                  [i]);
+                            ref.fetch_add(
                                 (d_adp_p[i].imag() * dtarget_df_ax[id].imag() -
                                  d_adp_p[i].real() * dtarget_df_ax[id].real()) *
                                 two_pi_squared *
                                 atomic_occupancy_ax
                                     [used_atom_indices_ax[atom_i]] *
                                 atomic_multiplicity_factor_ax
-                                    [used_atom_indices_ax[atom_i]];
+                                    [used_atom_indices_ax[atom_i]]);
+                        }
                     }
                 }
                 if (derivativesSwitch.d_occ) {
                     const auto d_occ_part = perAtomF *
                                             atomic_multiplicity_factor_ax
                                                 [used_atom_indices_ax[atom_i]];
-                    occupancy_derivatives_ax[used_atom_indices_ax[atom_i]] +=
-                        d_occ_part.real() * dtarget_df_ax[id].real() -
-                        d_occ_part.imag() * dtarget_df_ax[id].imag();
+                    auto ref = sycl::atomic_ref<
+                        REAL,
+                        sycl::memory_order::relaxed,
+                        sycl::memory_scope_device,
+                        sycl::access::address_space::global_space>(
+                        occupancy_derivatives_ax[used_atom_indices_ax[atom_i]]);
+                    ref.fetch_add(d_occ_part.real() * dtarget_df_ax[id].real() -
+                                  d_occ_part.imag() * dtarget_df_ax[id].imag());
                 }
             }
             f_ax[id] = f_acc;
