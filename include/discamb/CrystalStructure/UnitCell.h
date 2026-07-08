@@ -76,18 +76,6 @@ class UnitCell {
     */
     const Matrix3d &getCartesianToFractionalMatrix() const;
 
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(mCartesianToFractional,
-           mFractionaToCartesian,
-           mA,
-           mB,
-           mC,
-           mAlpha,
-           mBeta,
-           mGamma);
-    }
-
    private:
     Matrix3d mCartesianToFractional, mFractionaToCartesian;
     double mA, mB, mC, mAlpha, mBeta, mGamma;

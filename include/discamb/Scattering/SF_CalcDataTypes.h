@@ -24,10 +24,6 @@ struct DerivativesSelector {
     bool d_adp = true;
     bool d_occ = true;
     bool d_anom = true;
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(d_anom, d_adp, d_occ, d_xyz);
-    }
 };
 
 /**
@@ -38,11 +34,6 @@ struct DerivativesSelector {
   */
 
 struct TargetFunctionAtomicParamDerivatives {
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(atomic_position_derivatives, adp_derivatives, occupancy_derivatives);
-    }
-
     Vector3<REAL> atomic_position_derivatives;
     std::vector<REAL> adp_derivatives;
     REAL occupancy_derivatives = 0;

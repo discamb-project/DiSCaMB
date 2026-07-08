@@ -69,19 +69,6 @@ struct HC_WfnParam {
     /** anomalous_scattering */
 
     std::complex<REAL> anomalous_scattering;
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(label,
-           core_coeff,
-           core_exp,
-           core_pow,
-           valence_coeff,
-           valence_exp,
-           valence_pow,
-           def_valence_exp,
-           def_valence_pow,
-           anomalous_scattering);
-    }
 };
 
 /**
@@ -106,10 +93,6 @@ struct HC_TypeParam {
 
     /** scale factor for spherical valence part of the electron density */
     REAL kappa_spherical;
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(p_lm, p_val, kappa_spherical, kappa_def_valence);
-    }
 };
 
 /**
@@ -127,11 +110,6 @@ struct HC_TypeParam {
 struct SymmetryOperation {
     Matrix3<REAL> rotation;
     Vector3<REAL> translation;
-
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(rotation, translation);
-    }
 };
 }  // namespace sf_engine_data_types
 

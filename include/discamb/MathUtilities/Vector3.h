@@ -19,10 +19,6 @@ class Vector3 {
    public:
     T x, y, z;
 
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(x, y, z);
-    }
     Vector3();
     Vector3(const T &x, const T &y, const T &z);
     Vector3(const Vector3<T> &v);

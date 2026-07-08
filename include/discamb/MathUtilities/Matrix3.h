@@ -93,11 +93,6 @@ class Matrix3 {
 
     void transpose();
 
-    template <class Archive>
-    void serialize(Archive &ar) {
-        ar(a);
-    }
-
    private:
     T a[9];  // row major order
 };
