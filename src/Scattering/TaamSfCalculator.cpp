@@ -186,7 +186,7 @@ namespace discamb {
         const TaamSfCalculatorSettings& settings)
     {
         vector<vector<pair<string, double> > > orderedSubcrystalAtoms = settings.orderedSubcrystalAtoms;
-
+        vector<StructureWithDescriptors> descriptors;
         if (settings.splitWithLabels && settings.orderedSubcrystalAtoms.empty())
             disordered_structure_fragments::split_with_labels(crystal, orderedSubcrystalAtoms);
         
@@ -197,10 +197,19 @@ namespace discamb {
         {
             if (orderedSubcrystalAtoms.empty())
             {
-                disordered_structure_fragments::split_with_macromol_info(
-                    crystal,
-                    settings.macromolecularInfo,
-                    orderedSubcrystalAtoms);
+                if(settings.macromolecularInfo.connectivity.empty() || settings.macromolecularInfo.planes.empty())
+                    disordered_structure_fragments::split_with_macromol_info(
+                        crystal,
+                        settings.macromolecularInfo,
+                        orderedSubcrystalAtoms);
+                else
+                    disordered_structure_fragments::split_and_describe_with_macromol_info_asymm(
+                        crystal,
+                        settings.macromolecularInfo,
+                        orderedSubcrystalAtoms,
+                        descriptors);
+
+                //descriptors
             }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
             auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(
@@ -221,7 +230,8 @@ namespace discamb {
                 settings.iamTable,
                 settings.iamElectronScattering,
                 settings.frozen_lcs,
-                settings.algorithm);
+                settings.algorithm,
+                descriptors);
             mImplementation = impl;
             return;
         }

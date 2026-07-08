@@ -90,6 +90,137 @@ void StructureWithDescriptors::set(
     set(atomicNumbers, positions, connectivity, labels);
 }
 
+void StructureWithDescriptors::set(
+    const std::vector<int>& atomicNumbers,
+    const std::vector<Vector3d>& positions,
+    const std::vector<std::vector<int> >& predefinedConnectivity,
+    const std::vector<bool>& predefinedAtomicPlanarity,
+    const  std::vector<std::string>& _labels)
+{
+    int nAtoms, atomIndex, ringIndex, nRings, ringSize, j, nNeighbors;
+    RingCalculator ringCalculator;
+
+    vector<string> labels = _labels;
+    if (labels.empty())
+        for (int z : atomicNumbers)
+            labels.push_back(periodic_table::symbol(z));
+
+
+    ringCalculator.set(
+        settings.ringPlanarityThreshold,
+        settings.atomInRingPlanarityThreshold,
+        settings.atomInRingMaxNeighbourCount,
+        settings.maxBondLengthAromaticRing);
+
+    connectivity = predefinedConnectivity;
+
+    nAtoms = connectivity.size();
+
+    atomDescriptors.clear();
+    atomDescriptors.resize(nAtoms);
+
+    for (atomIndex = 0; atomIndex < nAtoms; atomIndex++)
+    {
+
+        atomDescriptors[atomIndex].position = positions[atomIndex];
+        atomDescriptors[atomIndex].label = labels[atomIndex];
+        atomDescriptors[atomIndex].atomicNumber = atomicNumbers[atomIndex];
+        atomDescriptors[atomIndex].nNeighbors = connectivity[atomIndex].size();
+
+        nNeighbors = connectivity[atomIndex].size();
+
+        atomDescriptors[atomIndex].neighborsFormula.clear();
+        for (j = 0; j < nNeighbors; j++)
+            atomDescriptors[atomIndex].neighborsFormula.insert(atomicNumbers[connectivity[atomIndex][j]]);
+
+        atomDescriptors[atomIndex].planar = bool_to_tribool(predefinedAtomicPlanarity[atomIndex]);
+        atomDescriptors[atomIndex].planarityDisplacementEsd = 0.0;
+        atomDescriptors[atomIndex].planarRingsIndices.clear();
+        atomDescriptors[atomIndex].planarRingsSizes.clear();
+
+    }
+
+    vector<vector<int> > rings;
+    vector<double> atomPlanarityEsd(nAtoms);
+
+    //----
+
+
+    for (int i = 0; i < nAtoms; i++)
+        atomPlanarityEsd[i] = atomDescriptors[i].planarityDisplacementEsd;
+
+    ringCalculator.calculateRings(connectivity, predefinedAtomicPlanarity, maxRingSize, planarRings);
+        
+    nRings = planarRings.size();
+    vector<vector<pair<int, int> > > atomsRings(nAtoms);
+
+    for (ringIndex = 0; ringIndex < nRings; ringIndex++)
+    {
+        ringSize = planarRings[ringIndex].size();
+        for (int i = 0; i < ringSize; i++)
+        {
+            atomIndex = planarRings[ringIndex][i];
+            atomsRings[atomIndex].push_back({ ringSize , ringIndex });
+        }
+    }
+
+    for (atomIndex = 0; atomIndex < nAtoms; atomIndex++)
+    {
+        nRings = atomsRings[atomIndex].size();
+        sort(atomsRings[atomIndex].begin(), atomsRings[atomIndex].end());
+        for (ringIndex = 0; ringIndex < nRings; ringIndex++)
+        {
+            atomDescriptors[atomIndex].planarRingsIndices.push_back(atomsRings[atomIndex][ringIndex].second);
+            atomDescriptors[atomIndex].planarRingsSizes.push_back(atomsRings[atomIndex][ringIndex].first);
+        }
+    }
+
+    //RingCalculator smallRingCalculator;
+    vector<vector<int> > smallRings;
+
+    std::set<std::set<int> > rings3, rings4;
+    RingCalculator::calculate34Rings(connectivity, rings3, rings4);
+    for (auto& ring : rings3)
+        smallRings.push_back(vector<int>(ring.begin(), ring.end()));
+    for (auto& ring : rings4)
+        smallRings.push_back(vector<int>(ring.begin(), ring.end()));
+
+    for (auto& atom : atomDescriptors)
+    {
+        atom.n3memberRings = 0;
+        atom.n4memberRings = 0;
+    }
+
+
+    for (auto const& ring : smallRings)
+        if (ring.size() == 3)
+            for (auto atomIdx : ring)
+                atomDescriptors[atomIdx].n3memberRings++;
+        else
+            for (auto atomIdx : ring)
+                atomDescriptors[atomIdx].n4memberRings++;
+
+    //-----------
+
+    Vector3d interatomicVector;
+    nAtoms = atomicNumbers.size();
+    bondLengths.resize(nAtoms);
+
+
+    for (int i = 0; i < nAtoms; i++)
+    {
+        nNeighbors = connectivity[i].size();
+        bondLengths[i].resize(nNeighbors);
+
+        for (j = 0; j < nNeighbors; j++)
+        {
+            interatomicVector = positions[i] - positions[connectivity[i][j]];
+            bondLengths[i][j] = sqrt(interatomicVector * interatomicVector);
+        }
+    }
+
+}
+
 
 void StructureWithDescriptors::set(
     const std::vector<int> &atomicNumbers,

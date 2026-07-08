@@ -96,6 +96,13 @@ namespace discamb {
             std::vector<Vector3d>& positions,
             const std::vector<int>& atomicNumbers);
 
+        bool areBonded(
+            const Crystal& crystal, 
+            int atomIdx1, 
+            const SpaceGroupOperation &symmOp1,
+            int atomIdx2,
+            const SpaceGroupOperation& symmOp2,
+            const std::vector<std::vector<std::pair<int, std::string> > >& asymmetricUnitConnectivity);
 
         void asymmetricUnitConnectivity(
             const Crystal &c,
@@ -114,6 +121,19 @@ namespace discamb {
             int neighbourRange,
             double threshold,
             std::vector<int> &shellSizes);
+
+        void assymetricUnitWithNeighbours(
+            const Crystal& c,
+            const std::vector< std::vector<std::pair<int, std::string> > > & asuConnectivity,
+            std::vector< std::pair<int, std::string> >& asuWithNeighbours,
+            int neighbourRange);
+
+        void assymetricUnitWithNeighbours(
+            const Crystal& _crystal,
+            const std::vector< std::vector<std::pair<int, std::string> > >& asuConnectivity,
+            std::vector< std::pair<int, SpaceGroupOperation> >& asuWithNeighbours,
+            int neighbourRange);
+
 
         void assymetricUnitWithNeighbours(const Crystal &c,
             std::vector< std::pair<int, std::string> > &asuWithNeighbours,

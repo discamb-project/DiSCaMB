@@ -135,11 +135,17 @@ namespace discamb {
             const std::string& atomLabel2, 
             const std::string& symmOp2);
 
-
+        // threshold in angstroms
         bool findAtomSymmetry(const Crystal &crystal, 
                               int atomIdx, 
                               std::vector<std::vector<SpaceGroupOperation> > &pointGroups,
                               double threshold);
+
+        bool sameAtom(
+            const Crystal& crystal,
+            int atomIdx,
+            const SpaceGroupOperation& operationAtom1,
+            const SpaceGroupOperation& operationAtom2);
 
         void atomicNumbers(const Crystal &crystal, std::vector<int> &atomicNumbers);
 

@@ -614,6 +614,42 @@ namespace discamb {
 
         }
 
+        bool sameAtom(
+            const Crystal& crystal,
+            int atomIdx,
+            const SpaceGroupOperation& operationAtom1,
+            const SpaceGroupOperation& operationAtom2)
+        {
+            if(crystal.atoms[atomIdx].siteSymetry.empty())
+                on_error::throwException("site symmetry of atom with label '" + crystal.atoms[atomIdx].label + "' is not defined, cannot check if two symmetry operations belong to the same point group", __FILE__, __LINE__);
+            if(operationAtom1==operationAtom2)
+                return true;
+            bool foundSymmOp1 = false;
+            for (auto const& symmOp : crystal.atoms[atomIdx].siteSymetry)
+                if(symmOp == operationAtom1)
+                {
+                    foundSymmOp1 = true;
+                    break;
+                }
+
+            if (foundSymmOp1)
+            {
+                for (auto const& symmOp : crystal.atoms[atomIdx].siteSymetry)
+                    if (symmOp == operationAtom2)
+                        return true;
+                return false;
+            }
+            
+            for (auto const& symmOp : crystal.atoms[atomIdx].siteSymetry)
+            {
+                SpaceGroupOperation symmOpNew = symmOp * operationAtom1;
+                if (symmOpNew  == operationAtom2)
+                    return true;
+            }
+            return false;
+        }
+
+
         bool findAtomSymmetry(
             const Crystal &crystal,
             int atomIdx,

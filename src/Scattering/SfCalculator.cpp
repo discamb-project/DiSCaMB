@@ -4,6 +4,7 @@
 #include "discamb/BasicUtilities/string_utilities.h"
 #include "discamb/Scattering/AnyHcCalculator.h"
 #include "discamb/Scattering/AnyIamCalculator.h"
+#include "discamb/Scattering/FragHarMacromol.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator.h"
 #include "discamb/Scattering/HcAtomBankStructureFactorCalculator2.h"
 #include "discamb/Scattering/NumericalDensityIamSfCalculator.h"
@@ -50,6 +51,7 @@ namespace discamb {
                 {"gar", { "har", "multi_har", "gar"}},
                 {"tham",{"tham"}},
                 {"hc",{"hc"}},
+                {"frag_har",{"frag_har"}},
                 {"sab",{"sab"}},
                 {"niam",{"niam"}},
                 {"tsc",{"tsc"}},
@@ -226,6 +228,8 @@ namespace discamb {
             return new AnyIamCalculator(crystal, engineData);
         if (string("niam")==type)
             return new NumericalDensityIamSfCalculator(crystal, engineData);
+        if (string("frag_har") == type)
+            return new FragHarMacromol(crystal, engineData);
         if (string("gar") == type)
             return new StockholderAtomSfCalculator(crystal, engineData);
         if (string("hc") == type)

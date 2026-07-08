@@ -69,10 +69,15 @@ namespace discamb {
         bool frozen_lcs,
         const std::string& algorithm,
         bool def_val_symm,
-        const std::string& engine)
+        const std::string& engine,
+        const StructureWithDescriptors& structureWithDescriptors,
+        const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms,
+        const std::vector<int>& predefinedTypeID,
+        const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs)
     {
         set(crystal, atomTypes, parameters, slaterWavefunctionsDatabankId, electronScattering, settings, assignemntInfoFile, assignmentCsvFile,
-            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, algorithm, def_val_symm, engine);
+            parametersInfoFile, multipolarCif, nThreads, unitCellCharge, scaleToMatchCharge, iamTable, iamElectronScattering, frozen_lcs, 
+            algorithm, def_val_symm, engine, structureWithDescriptors, structureDescriptorsNonAsymmetricUnitAtoms, predefinedTypeID, predefinedLcs);
 
     }
 
@@ -141,8 +146,7 @@ namespace discamb {
             iamElectronScattering = data.find("iam electron scattering")->get<bool>();
         bool frozen_lcs = data.value("frozen lcs", false);
         string algorithm = data.value("algorithm", "standard");
-        
-        
+                
         string wfnDataBank = data.value("wavefunction bank", "CR");
         SlaterOrbitalWfnData::WfnDataBank slaterWavefunctionsDatabankId = SlaterOrbitalWfnData::databankIdFromString(wfnDataBank);
         
@@ -151,7 +155,7 @@ namespace discamb {
         vector<AtomTypeHC_Parameters> hcParameters;
         BankSettings bankSettings;
 
-
+        
 
         if (bankPath.empty())
         {
@@ -317,7 +321,11 @@ namespace discamb {
         bool frozen_lcs,
         const std::string &algorithm,
         bool def_val_symm,
-        const std::string& engine//,
+        const std::string& engine,
+        const StructureWithDescriptors& structureWithDescriptors,
+        const std::vector<AtomInCrystalID>& structureDescriptorsNonAsymmetricUnitAtoms,
+        const std::vector<int>& predefinedTypeID,
+        const std::vector<LocalCoordinateSystem<AtomInCrystalID> >& predefinedLcs//,
         /*bool generateAssignmentInfo*/ )
     {
         mModelInfo.clear();
@@ -330,10 +338,36 @@ namespace discamb {
 
         CrystalAtomTypeAssigner assigner;
         assigner.setAtomTypes(atomTypes);
-        assigner.setDescriptorsSettings(settings);
         vector < LocalCoordinateSystem<AtomInCrystalID> > lcs;
         vector<int> types;
-        assigner.assign(crystal, types, lcs);
+
+        if(!predefinedTypeID.empty() && predefinedTypeID.size() == crystal.atoms.size())
+        {
+            if(predefinedLcs.size() != crystal.atoms.size())
+                on_error::throwException("predefined local coordinate systems are not provided for all atoms", __FILE__, __LINE__);
+            if(predefinedTypeID.size() != crystal.atoms.size())
+                on_error::throwException("predefined type IDs are not provided for all atoms", __FILE__, __LINE__);
+            
+            types = predefinedTypeID;
+            lcs = predefinedLcs;
+        }
+        else
+        {
+            bool predefinedDescriptors = !structureWithDescriptors.atomDescriptors.empty();
+            //predefinedDescriptors = false;
+            assigner.setDescriptorsSettings(settings);
+
+            if(predefinedDescriptors)
+                assigner.assign(
+                    crystal,
+                    structureWithDescriptors,
+                    structureDescriptorsNonAsymmetricUnitAtoms,
+                    types,
+                    lcs);            
+            else
+                assigner.assign(crystal, types, lcs);
+        }
+
         if (!assignemntInfoFile.empty())
         {
             if (assignemntInfoFile == string("print_to_discamb2tsc_log_file") || assignemntInfoFile == string("print_to_discambMATTS2tsc_log_file"))

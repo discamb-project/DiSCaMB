@@ -70,7 +70,8 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string &algorithm = "standard",
-            const std::optional<MacromolecularStructuralInformation> &macromolInfo = std::nullopt);
+            const std::vector<StructureWithDescriptors>& structuresWithDescriptors = std::vector<StructureWithDescriptors>()/*,
+            const std::optional<MacromolecularStructuralInformation> &macromolInfo = std::nullopt*/);
         
         TaamSfCalculatorMultiOrderedImpl(const Crystal &crystal, const nlohmann::json &data);
         TaamSfCalculatorMultiOrderedImpl(const Crystal& crystal, const std::string &jsonFile);
@@ -109,7 +110,8 @@ namespace discamb {
             bool iamElectronScattering = false,
             bool frozen_lcs = false,
             const std::string& algorithm = "standard",
-            const std::optional<MacromolecularStructuralInformation>& macromolInfo = std::nullopt);
+            const std::vector<StructureWithDescriptors>& structuresWithDescriptors = std::vector<StructureWithDescriptors>()/*,
+            const std::optional<MacromolecularStructuralInformation>& macromolInfo = std::nullopt*/);
         
 
         virtual ~TaamSfCalculatorMultiOrderedImpl();

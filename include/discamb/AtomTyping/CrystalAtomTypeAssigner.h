@@ -44,12 +44,35 @@ namespace discamb {
         void assign(const Crystal& crystal, std::vector<int> &typeID, std::vector<LocalCoordinateSystem<AtomInCrystalID> > &lcs,
                     StructureWithDescriptors &descriptors) const;
 
+        /**
+         first N atoms in descriptors should correspond to atoms in crystal
+         (its asymmetric part, in the same order)
+         the remaining ones should be specified in the same order 
+         as nonAsymmetricUnitAtoms and should correspond to them
+        */
+
+        void assign(
+            const Crystal& crystal, 
+            const StructureWithDescriptors& structureWithDescriptors,
+            const std::vector<AtomInCrystalID> &nonAsymmetricUnitAtoms,
+            std::vector<int>& typeID, 
+            std::vector<LocalCoordinateSystem<AtomInCrystalID> >& lcs) const;
+
+
         void assign(
             const Crystal& crystal, 
             const std::vector<std::vector<AtomInCrystalID> >& fragments,
             const std::vector< std::vector<AtomRepresentativeInfo> > &atomRepresentatives,
             std::vector< std::vector<int> >& typeID, 
             std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > > & lcs) const;
+        
+        //void assign(
+        //    const Crystal& crystal,
+        //    const std::vector<std::vector<AtomInCrystalID> >& asuConnectivity,
+        //    const std::vector<std::vector<AtomInCrystalID> >& inPlaneWithAtom,
+        //    std::vector< std::vector<int> >& typeID,
+        //    std::vector< std::vector<LocalCoordinateSystem<AtomInCrystalID> > >& lcs) const;
+
 
         void assign_all_possible(const Crystal& crystal, std::vector< std::vector<int> >& typeID) const;
 
