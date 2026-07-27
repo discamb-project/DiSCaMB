@@ -83,7 +83,7 @@ namespace discamb {
             vector<set<int> > neighboursSubtype;
             set<int> set120;
 
-            for (int i = 0; i < 120; i++)
+            for (int i = 1; i <= 120; i++)
                 set120.insert(i);
 
             neighboursType = neighborsAtomicNumberRangesType;
@@ -492,17 +492,25 @@ namespace discamb {
         if (subtypeAtomInRing != typeAtomInRing)
             return false;
 
-        if (!possibleMoreRings && possibleMoreRingsSubtype)
-            return false;
+        //if (!possibleMoreRings && possibleMoreRingsSubtype)
+        //    return false;
 
         if (ringsOfAtomInTypeDefinition.empty())
             return true;
         else
         {
-            if (possibleMoreRings)
-                return set_theory::is_subset(ringsOfAtomInTypeDefinition, ringsOfAtomInSubtypeDefinition);
+            if (set_theory::is_subset(ringsOfAtomInSubtypeDefinition, ringsOfAtomInTypeDefinition))
+            {
+                if (!possibleMoreRings && possibleMoreRingsSubtype)
+                    return false;
+                return true;
+            }
             else
-                return ringsOfAtomInTypeDefinition == ringsOfAtomInSubtypeDefinition;
+                return false;
+            //if (possibleMoreRings)
+            //    return set_theory::is_subset(ringsOfAtomInTypeDefinition, ringsOfAtomInSubtypeDefinition);
+            //else
+            //    return ringsOfAtomInTypeDefinition == ringsOfAtomInSubtypeDefinition;
         }
 
     }

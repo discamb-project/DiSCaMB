@@ -25,6 +25,7 @@ namespace atom_typing_utilities{
             int &planarRingsRange,
             int &ring34range);
         
+
         // less general first
         // the less levels above the more general type
         void sortTypesByGenarality_LevelsAbove(std::vector<AtomType>& type);

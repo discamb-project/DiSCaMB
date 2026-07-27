@@ -1160,7 +1160,7 @@ namespace discamb {
                             defaultCetralAtomDescriptors,
                             atomType.atoms,
                             atomType.connectivity);
-
+                        
                     }
                     else
                     {
@@ -1178,6 +1178,24 @@ namespace discamb {
             std::vector<int> ringSizes;
 
             */
+
+            //int min_n_neighbours = 0;
+            //int max_n_neighbours = 0;
+            for(auto &atom: atomType.atoms)
+                if (atom.ringInfo.inRing == Tribool::Undefined)
+                {
+                    if (atom.fixedNumberOfNeighbors)
+                    {
+                        if (atom.nNeighbours != 2 && atom.nNeighbours != 3)
+                            atom.ringInfo.inRing = Tribool::False;
+                        
+                    }
+                    else
+                        if(atom.neighborsAtomicNumberRanges.size()+atom.neighborsAtomicNumbers.size()>3)
+                            atom.ringInfo.inRing = Tribool::False;
+                }
+            //if(atomType.atoms[0].fixedNumberOfNeighbors)
+            //    if(atomType.atoms[0].nNeighbours!=2 && )
 
             set<string> ringLabels;
             for (auto& atom : atomType.atoms)

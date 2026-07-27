@@ -88,7 +88,7 @@ void AssignAtomTypes::set()
         on_error::throwException("expected \"bank file\" field in setting.json", __FILE__, __LINE__);
 
     string selectedAtomIdsFile = data.value("selected atom type ids file", string(""));
-
+    mLimit_N_Structures = data.value("assign max n structures", mLimit_N_Structures);
     readBank(bankFile, selectedAtomIdsFile, mAtomTypes, mDescriptorsSettings);
 
     //vector<AtomType> atomTypes;
@@ -245,6 +245,10 @@ void AssignAtomTypes::run()
     map<string, double> typeDirectionsMaxCos;
     vector<string> resFiles;
     file_system_utilities::find_files("res", mChosenResFolder.string(), resFiles, false);
+
+    if (mLimit_N_Structures > 0)
+        if (mLimit_N_Structures < resFiles.size())
+            resFiles.resize(mLimit_N_Structures);
 
     ofstream out(mOutputFileName);
     

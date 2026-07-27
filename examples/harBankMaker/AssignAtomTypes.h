@@ -24,6 +24,7 @@ public:
         std::vector< discamb::AtomType>& atomTypes,
         discamb::DescriptorsSettings & descriptorsSettings);
 private:
+    int mLimit_N_Structures = -1;
     std::filesystem::path mChosenResFolder = std::filesystem::current_path() / std::string("chosen");
     std::filesystem::path mMolFolder = std::filesystem::current_path() / std::string("mol");
     std::string mOutputFileName = std::string("assignment.log");

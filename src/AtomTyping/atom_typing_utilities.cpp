@@ -245,6 +245,7 @@ namespace discamb {
         }
 
 
+
         void typeGeneralization(
             const std::vector<AtomType>& types,
             std::vector<std::vector<int> >& typesGeneralized,
@@ -265,6 +266,7 @@ namespace discamb {
                     if (i != j)
                         if (typeMatchAlgorithms[i].generalize(typeMatchAlgorithms[j]))
                             typesGeneralized[i].push_back(j);
+            
             
             for (int i = 0; i < nTypes; i++)
                 for(int j: typesGeneralized[i])
