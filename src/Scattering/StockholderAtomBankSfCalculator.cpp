@@ -10,6 +10,7 @@ namespace discamb
         const Crystal& crystal, 
         const nlohmann::json& data)
     {
+        mCrystal = crystal;
         string bankFile;
         bankFile = data.value("bank file", bankFile);
 
@@ -68,6 +69,7 @@ namespace discamb
 
     void StockholderAtomBankSfCalculator::update(const std::vector<AtomInCrystal>& atoms)
     {
+        mCrystal.atoms = atoms;
         mCalculator->update(atoms);
     }
 

@@ -42,6 +42,8 @@ namespace discamb {
 
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous) =0;
 
+        virtual Crystal const& getCrystal() const = 0;
+
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal>& atoms,
             const std::vector<Vector3i>& hkl,
@@ -89,6 +91,7 @@ namespace discamb {
 	 	virtual void calculateFormFactors(const Vector3i& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const = 0;
         // formFactors[hkl idx][atom idx]
         virtual void calculateFormFactors(const std::vector<Vector3i> &hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
+        virtual void calculateFormFactorsFrac(const std::vector<Vector3d>& hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
         // formFactors[hkl idx][atom idx]
         virtual void calculateFormFactorsCart(const Vector3d& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const;
 

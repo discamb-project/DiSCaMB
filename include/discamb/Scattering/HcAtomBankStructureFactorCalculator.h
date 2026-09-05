@@ -114,6 +114,7 @@ namespace discamb {
 
         virtual ~HcAtomBankStructureFactorCalculator();
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous);
+        virtual Crystal const& getCrystal() const { return mHcCalculator->getCrystal(); };
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,

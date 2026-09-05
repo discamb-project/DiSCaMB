@@ -291,6 +291,13 @@ namespace discamb{
             std::vector< std::vector<std::complex<double> > >& formFactors,
             const std::vector<bool>& includeAtom) const;
 
+        /**
+        formFactors[hkl idx][atom idx]
+        */
+        virtual void calculateFormFactorsCart(
+            const std::vector <Vector3d>& hkl,
+            std::vector < std::vector<std::complex<double> > >& formFactors,
+            const std::vector<bool>& includeAtom) const;
 
         //void calculateFormFactorsFrac(
         //    const Vector3d& hkl,

@@ -3,6 +3,7 @@
 #include "discamb/BasicChemistry/periodic_table.h"
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/IO/shelx_io.h"
+#include "discamb/IO/rsp_io.h"
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/structure_io.h"
 #include "discamb/Scattering/SfCalculator.h"
@@ -78,22 +79,40 @@ std::unique_ptr<SfCalculator> sfCalculatorFromJsonFile(
 
 void readHkl(
     const string& hklFile,
-    vector<Vector3i>& hkls,
-    bool shelxFreeFormat)
+    vector<Vector3i>& hkls_int,
+    vector<Vector3d>& hkls_float,
+    bool shelxFreeFormat,
+    bool &needToGrenerateSymmetryEquivalentHkl)
 {
-    hkls.clear();
+    hkls_int.clear();
+    hkls_float.clear();
     vector<int> batchNumbers;
     vector<double> intensities, sigmas;
 
-    if (filesystem::path(hklFile).extension().string() == string(".tsc"))
+    needToGrenerateSymmetryEquivalentHkl = false;
+
+    string extension = filesystem::path(hklFile).extension().string();
+
+    if (extension == string(".tsc"))
     {
         vector<string> atomLabels;
         vector<vector<complex<double> > > ff;
-        tsc_io::read_tsc(hklFile, atomLabels, hkls, ff);
-        hkls.push_back(Vector3i(0, 0, 0));
+        tsc_io::read_tsc(hklFile, atomLabels, hkls_int, ff);
+        hkls_int.push_back(Vector3i(0, 0, 0));
     }
     else
-        hkl_io::readShelxHkl(hklFile, hkls, intensities, sigmas, batchNumbers, shelxFreeFormat);
+    {
+        if (extension == string(".hkl"))
+        {
+            hkl_io::readShelxHkl(hklFile, hkls_int, intensities, sigmas, batchNumbers, shelxFreeFormat);
+            needToGrenerateSymmetryEquivalentHkl = true;
+        }
+        else
+        {
+            if (extension == string(".rsp"))
+                rsp_io::read(hklFile, hkls_float);
+        }
+    }
 
 }
 
@@ -130,9 +149,11 @@ int main(int argc, char *argv[])
 
             parse_cmd::get_args_and_options(argc, argv, arguments, options, optionsWithValues);
 
+
+
             if (arguments.size() != 2)
             {
-                cout << "expected two arguments: structure file (cif/ins) and hkl file (shelx hkl or tsc)\n";
+                cout << "expected two arguments: structure file (cif/ins) and hkl file (shelx hkl or tsc or rsp)\n";
                 exit(0);
             }
             else
@@ -144,11 +165,13 @@ int main(int argc, char *argv[])
             bool shelxFreeFormat = (find(options.begin(), options.end(), "-f") != options.end());
             structure_io::read_structure(structureFile, crystal);
 
-            vector<Vector3i> hkls, hklAll;
+            vector<Vector3i> hkls_int, hklAll;
+            vector<Vector3d> hkls_real;
+            bool generateSymmetryEquivalentHkl;
+            readHkl(hklFile, hkls_int, hkls_real, shelxFreeFormat, generateSymmetryEquivalentHkl);
 
-            readHkl(hklFile, hkls, shelxFreeFormat);
-
-            makeWholeHklSet(hkls, crystal.spaceGroup, hklAll);
+            if(generateSymmetryEquivalentHkl)
+                makeWholeHklSet(hkls_int, crystal.spaceGroup, hklAll);
 
 
             WallClockTimer timer;
@@ -178,17 +201,31 @@ int main(int argc, char *argv[])
 
             vector< vector<complex<double> > > formFactors;
             vector<bool> includeAtom(crystal.atoms.size(), true);
-            calculator->calculateFormFactors(hklAll, formFactors, includeAtom);
-
+            if(!hklAll.empty())
+                calculator->calculateFormFactors(hklAll, formFactors, includeAtom);
+            else
+            {
+                if (!hkls_int.empty())
+                    calculator->calculateFormFactors(hkls_int, formFactors, includeAtom);
+                else
+                {
+                    if (!hkls_real.empty())
+                        calculator->calculateFormFactorsFrac(hkls_real, formFactors, includeAtom);
+                    else
+                        on_error::throwException("no hkls defined", __FILE__, __LINE__);
+                }
+            }
+            //calculator->
             clog << "calculation of form factors: " << timer.stop() << " ms\n";
 
             string tsc_comment = "FORM FACTORS SOURCE:\n";
             for (auto& p : modelInfo)
                 tsc_comment += "   " + p.first + " - " + p.second + "\n";
 
-
-            tsc_io::write_tsc(outputFileName, atomLabels, hklAll, formFactors, tsc_comment);
-
+            if(hkls_real.empty())
+                tsc_io::write_tsc(outputFileName, atomLabels, hklAll, formFactors, tsc_comment);
+            else
+                tsc_io::write_tscd(outputFileName, atomLabels, hkls_real, formFactors, tsc_comment);
             //out.close();
 
             clog << "total time: " << timerAll.stop() << " ms\n";

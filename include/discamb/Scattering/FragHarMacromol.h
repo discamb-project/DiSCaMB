@@ -34,7 +34,7 @@ namespace discamb {
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
         virtual std::string name() const { return "frag_har_macromol"; }
         virtual void setAnomalous(const std::vector<std::complex<double> >& anomalous);
-
+        virtual Crystal const& getCrystal() const { return mSfCalculator->getCrystal(); };
 
         // ignores count atom contrib if iam atoms present
         virtual void calculateStructureFactorsAndDerivatives(

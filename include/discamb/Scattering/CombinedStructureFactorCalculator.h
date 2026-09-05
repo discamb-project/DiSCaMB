@@ -21,6 +21,7 @@ namespace discamb {
         virtual ~CombinedStructureFactorCalculator();
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const {};
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous);
+        virtual Crystal const& getCrystal() const { return mCalculators[0]->getCrystal(); };
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal> &atoms,
             const std::vector<Vector3i> &hkl,

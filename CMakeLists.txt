@@ -7,6 +7,7 @@ PROJECT(discamb)
 
 option(DISCAMB_BUILD_DOCS "Build the documentation" OFF)
 option(DISCAMB_BUILD_EXAMPLES "Build the example programs" OFF)
+option(DISCAMB_BUILD_TESTS "build tests" ON)
 option(DISCAMB_MSVC_MT "An options for MSVC to build multi-threaded statically-linked version" OFF)
 option(USE_EIGEN "incorporate eigen, enables symmetry operation analysis" OFF)
 
@@ -71,6 +72,11 @@ ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/src")
 IF(DISCAMB_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/examples")    
 ENDIF(DISCAMB_BUILD_EXAMPLES)
+
+IF(DISCAMB_BUILD_TESTS)
+    enable_testing()
+    ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/test")    
+ENDIF(DISCAMB_BUILD_TESTS)
 
 
 IF(DISCAMB_BUILD_DOCS)

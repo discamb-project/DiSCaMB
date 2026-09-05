@@ -156,6 +156,34 @@ namespace discamb {
     {
     }
 
+    bool OrcaRunner::findOrcaFolder(
+        std::string& orcaFolder)
+    {
+        string env = getenv("PATH");
+        vector<string> paths;
+        discamb::string_utilities::split(env, paths, ';');
+        bool found;
+
+#ifdef CMAKE_DETECTED_WIN32
+        string orca_exec = "orca.exe";
+#else
+        string orca_exec = "orca";
+#endif
+
+        for (auto& p : paths)
+        {
+            filesystem::path path(p);
+            path /= orca_exec;
+            cout << path.string() << "\n";
+            if (filesystem::exists(path))
+            {
+                orcaFolder = p;
+                return true;
+            }
+        }
+        return false;
+
+    }
 
     void OrcaRunner::set(
         const nlohmann::json& settings)

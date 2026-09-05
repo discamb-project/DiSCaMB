@@ -13,6 +13,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/SpaceGroup.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/SpaceGroupOperation.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/StructuralParametersConverter.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/structure_library.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/UnitCellContent.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/CrystalStructure/UnitCell.h")
              
@@ -28,6 +29,7 @@ SET(TARGET_SRC "AtomInCrystalID.cpp"
                "SpaceGroup.cpp"
                "SpaceGroupOperation.cpp"
                "StructuralParametersConverter.cpp"
+			   "structure_library.cpp"
                "UnitCell.cpp"
                "UnitCellContent.cpp"
 )

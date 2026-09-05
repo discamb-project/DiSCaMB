@@ -129,6 +129,8 @@ namespace discamb {
 
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
 
+        virtual Crystal const& getCrystal() const { return mCrystal; };
+
         void set(const Crystal& crystal,
             const nlohmann::json& data,
             const std::string& bankString/*,

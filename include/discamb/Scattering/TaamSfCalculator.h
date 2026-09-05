@@ -109,6 +109,7 @@ namespace discamb {
             const std::vector<bool>& countAtomContribution);
 
         virtual void update(const std::vector<AtomInCrystal>& atoms);
+        virtual Crystal const& getCrystal() const { return mImplementation->getCrystal(); };
 
         virtual void calculateStructureFactorsAndDerivatives(
             const Vector3i& hkl,

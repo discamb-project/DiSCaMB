@@ -136,6 +136,7 @@ namespace discamb {
 	void TscFileBasedSfCalculator::update(
 		const std::vector<AtomInCrystal>& atoms) 
 	{
+        mCrystal.atoms = atoms;
 		mCalculator->update(atoms);
 	}
 

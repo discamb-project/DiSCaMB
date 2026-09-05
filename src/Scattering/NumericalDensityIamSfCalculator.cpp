@@ -12,6 +12,7 @@ namespace discamb {
         const nlohmann::json& data)
     {
         //std::shared_ptr<AnyScattererStructureFactorCalculator2> mSfCalculator;
+        mCrystal = crystal;
         mSfCalculator = make_shared<AnyScattererStructureFactorCalculator2>(crystal);
         mFormFactorsCalculator = shared_ptr<NumericalDensityIamFfCalculator>(
             new NumericalDensityIamFfCalculator(crystal, data));
@@ -55,7 +56,8 @@ namespace discamb {
     void NumericalDensityIamSfCalculator::update(
         const std::vector<AtomInCrystal>& atoms)
     {
-
+        mCrystal.atoms = atoms;
+        mSfCalculator->update(atoms);
     }
 
     void NumericalDensityIamSfCalculator::calculateStructureFactorsAndDerivatives(

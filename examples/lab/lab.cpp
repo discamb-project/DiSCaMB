@@ -4486,7 +4486,83 @@ void testAsuWithNeighbours(
     for(auto &atom : asuWithNeoghbours)
         cout << atom.first << " " << atom.second << endl;
 }
+/*
 
+    "qm structure": [
+        {
+            "label": "subsystem_1",
+            "charge": 0,
+            "spin multiplicity": 1,
+            "atoms": " C O N N,-X,-Y+1,Z H1 H2 H1,-X,-Y+1,Z H2,-X,-Y+1,Z"
+        }
+    ],
+    "atom representatives": [
+        {
+            "label": "subsystem_1",
+            "atom weights": [
+                1.0,
+                1.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0
+            ]
+        }
+    ]
+
+*/
+void ice(const string structure_file)
+{
+    Crystal crystal;
+    structure_io::read_structure(structure_file, crystal);
+    UnitCellContent ucContent(crystal);
+    
+    vector < vector < pair<int, string> > > connectivity;
+    structural_properties::asymmetricUnitConnectivity(crystal, connectivity, 0.4);
+    vector<int> oxygens;
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+        if (crystal.atoms[i].type == "O")
+            oxygens.push_back(i);
+
+    int waterCounter = 0;
+    nlohmann::json data;
+    
+    data["qm structure"] = nlohmann::json::array();
+    data["atom representatives"] = nlohmann::json::array();
+    for (int i = 0; i < oxygens.size(); i++)
+    {
+        int oxygenIdx = oxygens[i];
+
+        for(int h1=0;h1<4;h1++)
+            for (int h2 = 0; h2 < h1; h2++)
+            {
+                waterCounter++;
+                nlohmann::json system;
+                string label = "conf_" + to_string(waterCounter);
+                system["label"] = label;
+                system["charge"] = 0;
+                system["spin multiplicity"] = 1;
+                system["atoms"] = 
+                    crystal.atoms[oxygenIdx].label + " " +
+                    crystal.atoms[connectivity[oxygenIdx][h1].first].label + "," + connectivity[oxygenIdx][h1].second + " " +
+                    crystal.atoms[connectivity[oxygenIdx][h2].first].label + "," + connectivity[oxygenIdx][h2].second;
+                
+                data["qm structure"].push_back(system);
+                nlohmann::json weightsJson;
+                double weight = crystal.atoms[connectivity[oxygenIdx][h1].first].occupancy *
+                    crystal.atoms[connectivity[oxygenIdx][h2].first].occupancy;
+                vector<double> weights(3, weight);
+                weightsJson["label"] = label;
+                weightsJson["atom weights"] = weights;
+                data["atom representatives"].push_back(weightsJson);
+            }
+    }
+    std::ofstream out("ice.json");
+    out<< std::setw(4) << data << std::endl;
+}
 
 int main(int argc, char* argv[])
 {
@@ -4494,6 +4570,11 @@ int main(int argc, char* argv[])
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (arguments.size() < 1)
+            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
+        ice(arguments[0]);
+        return 0;
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);

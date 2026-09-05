@@ -144,7 +144,7 @@ namespace discamb {
             const std::vector<bool> &countAtomContribution);
 
         virtual void update(const std::vector<AtomInCrystal> &atoms);
-
+        virtual Crystal const& getCrystal() const { return mCrystal; };
         virtual void calculateStructureFactorsAndDerivatives(
             const Vector3i &hkl,
             std::complex<double> &scatteringFactor,

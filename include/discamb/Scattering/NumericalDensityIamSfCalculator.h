@@ -8,13 +8,14 @@ namespace discamb {
         NumericalDensityIamSfCalculator();
         std::shared_ptr<AnyScattererStructureFactorCalculator2> mSfCalculator;
         std::shared_ptr<AtomicFormFactorCalculationsManager> mFormFactorsCalculator;
+        Crystal mCrystal;
     public:
         NumericalDensityIamSfCalculator(const Crystal& crystal, const nlohmann::json& data);
         ~NumericalDensityIamSfCalculator();
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;
 
         virtual void setAnomalous(const std::vector<std::complex<double> >& anomalous);
-
+        virtual Crystal const& getCrystal() const { return mCrystal; };
         virtual void calculateStructureFactorsAndDerivatives(
             const std::vector<AtomInCrystal>& atoms,
             const std::vector<Vector3i>& hkl,

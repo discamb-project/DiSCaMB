@@ -40,6 +40,7 @@ namespace discamb {
         virtual void runMultipleJobs(const std::vector<WaveFunctionCalculationData>& inputData, int nCores, int totalMemory, std::vector<bool>& succesful) const;
 
         static bool succesfulRun(const std::string& jobName);
+        static bool findOrcaFolder(std::string& orcaFolder);
         // fixes file jobName.log
         void ecpWfxPostPorcessing(const std::string& jobName, const std::string& wfxFile);
     private:

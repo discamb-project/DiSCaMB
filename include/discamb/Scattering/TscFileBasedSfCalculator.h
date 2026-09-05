@@ -17,6 +17,7 @@ namespace discamb {
 	class TscFileBasedSfCalculator : public SfCalculator {
 
 		AnyScattererStructureFactorCalculator* mCalculator;
+        Crystal mCrystal;
 		TscFileBasedSfCalculator();
 	public:
 
@@ -41,6 +42,7 @@ namespace discamb {
 			const std::vector<bool>& countAtomContribution);
 
 		virtual void update(const std::vector<AtomInCrystal>& atoms);
+        virtual Crystal const& getCrystal() const { return mCrystal; };
 
 		virtual void calculateStructureFactorsAndDerivatives(
 			const Vector3i& hkl,

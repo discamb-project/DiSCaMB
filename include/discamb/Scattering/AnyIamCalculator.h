@@ -29,7 +29,7 @@ namespace discamb {
         AnyIamCalculator(const Crystal &crystal, bool electronScattering = false, const std::string & table = std::string());
         AnyIamCalculator(const Crystal &crystal, const nlohmann::json &data);
         virtual ~AnyIamCalculator();
-
+        virtual Crystal const& getCrystal() const { return mCrystal; };
         virtual void setAnomalous(const std::vector<std::complex<double> > & anomalous);
 
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const;

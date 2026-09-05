@@ -246,6 +246,14 @@ namespace discamb{
             mManager->calculateFrac(hkl, formFactors, includeAtom);
         }
 
+        void AnyScattererStructureFactorCalculator2::calculateFormFactorsCart(
+            const std::vector <Vector3d>& hkl,
+            std::vector < std::vector<std::complex<double> > >& formFactors,
+            const std::vector<bool>& includeAtom)
+            const
+        {
+            mManager->calculateCart(hkl, formFactors, includeAtom);
+        }
 
         //int  AnyScattererStructureFactorCalculator2::findPreferredHklOrderingDirection(
         //    const std::vector<Vector3i>& hkl,

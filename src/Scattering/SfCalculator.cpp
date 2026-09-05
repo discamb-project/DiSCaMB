@@ -285,5 +285,23 @@ namespace discamb {
         //cout << "\ndone" << endl;
     }
 
+
+    void SfCalculator::calculateFormFactorsFrac(
+        const std::vector<Vector3d>& hkl,
+        std::vector< std::vector<std::complex<double> > >& formFactors,
+        const std::vector<bool>& includeAtom) const
+    {
+        UnitCell unitCell = this->getCrystal().unitCell;
+        ReciprocalLatticeUnitCell reciprocalUnitCell(unitCell);
+        vector < complex<double> > ff;
+        formFactors.clear();
+        Vector3d cartesianHkl;
+        for (auto const& h : hkl)
+        {
+            reciprocalUnitCell.fractionalToCartesian(h, cartesianHkl);
+            calculateFormFactorsCart(cartesianHkl, ff, includeAtom);
+            formFactors.push_back(ff);
+        }
+    }
 }
 

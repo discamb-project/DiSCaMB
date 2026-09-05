@@ -209,6 +209,25 @@ namespace discamb {
         mCalculator->calculateFormFactors(hkl, formFactors, includeAtom);
     }
                                                     
+    void StockholderAtomSfCalculator::calculateFormFactorsFrac(
+        const std::vector<Vector3d>& hkl,
+        std::vector< std::vector<std::complex<double> > >& formFactors,
+        const std::vector<bool>& includeAtom)
+        const
+    {
+        vector<Vector3d> q_vectors;
+
+        UnitCell unitCell = getCrystal().unitCell;
+        ReciprocalLatticeUnitCell reciprocalUnitCell(unitCell);
+        Vector3d q_cart;
+        for (auto const& q_frac : hkl)
+        {
+            reciprocalUnitCell.fractionalToCartesian(q_frac, q_cart);
+            q_vectors.push_back(q_cart);
+        }
+
+        mCalculator->calculateFormFactorsCart(q_vectors, formFactors, includeAtom);
+    }
 
 
 }

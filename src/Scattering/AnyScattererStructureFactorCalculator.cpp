@@ -256,6 +256,15 @@ namespace discamb{
             mManager->calculateCart(hkl, formFactors, includeAtom);
         }
 
+        void AnyScattererStructureFactorCalculator::calculateFormFactorsCart(
+            const std::vector <Vector3d>& hkl,
+            std::vector < std::vector<std::complex<double> > >& formFactors,
+            const std::vector<bool>& includeAtom)
+            const
+        {
+            mManager->calculateCart(hkl, formFactors, includeAtom);
+        }
+
 
         void AnyScattererStructureFactorCalculator::calculateFormFactors(
             const std::vector<Vector3i>& hkl,

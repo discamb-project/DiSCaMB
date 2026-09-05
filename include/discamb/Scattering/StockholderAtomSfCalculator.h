@@ -59,6 +59,7 @@ class StockholderAtomSfCalculator : public SfCalculator
 
 
         virtual void update(const std::vector<AtomInCrystal>& atoms);
+        virtual Crystal const& getCrystal() const { return mCrystal; };
 
         virtual void calculateStructureFactorsAndDerivatives(
             const Vector3i& hkl,
@@ -77,6 +78,7 @@ class StockholderAtomSfCalculator : public SfCalculator
 
         virtual void calculateFormFactors(const Vector3i& hkl, std::vector<std::complex<double> >& formFactors, const std::vector<bool>& includeAtom) const;
         virtual void calculateFormFactors(const std::vector<Vector3i>& hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
+        virtual void calculateFormFactorsFrac(const std::vector<Vector3d>& hkl, std::vector< std::vector<std::complex<double> > >& formFactors, const std::vector<bool>& includeAtom) const;
     private:
         HirshfeldAtomModelSettings mHamSettings;
 

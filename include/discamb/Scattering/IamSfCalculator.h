@@ -90,7 +90,7 @@ namespace discamb{
         void setAtomicFormfactorManager(std::shared_ptr<AtomicFormFactorCalculationsManager> &manager);
         /** Sets model of the electron density (note that the model is also set in constructor).*/
         void update(const std::vector<AtomInCrystal> &atoms);
-
+        virtual Crystal const& getCrystal() const { return mCrystal; };
         void setAnoumalous(const std::vector<std::complex<double> > &anoumalous);
 
         virtual void getModelInformation(std::vector<std::pair<std::string, std::string> >& modelInfo) const {};
