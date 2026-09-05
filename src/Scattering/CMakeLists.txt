@@ -20,7 +20,6 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine2.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine3.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine4.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_EngineSymm.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppensStructureFactorCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppensStructureFactorCalculatorDev.h"
@@ -48,7 +47,7 @@ SET(TARGET_H
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/StockholderAtomFormFactorCalcManager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/StockholderAtomSfCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/taam_utilities.h"
- "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TaamSfCalculator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TaamSfCalculator.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TaamSfCalculatorMultiOrderedImpl.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/TscFileBasedSfCalculator.h")
 
@@ -73,7 +72,6 @@ SET(TARGET_SRC
     HansenCoppens_SF_Engine.cpp
     HansenCoppens_SF_Engine2.cpp
     HansenCoppens_SF_Engine3.cpp
-    HansenCoppens_SF_Engine4.cpp
     HansenCoppens_SF_EngineSymm.cpp
     HansenCoppensStructureFactorCalculator.cpp
     # HansenCoppensStructureFactorCalculatorDev.cpp
@@ -102,6 +100,11 @@ SET(TARGET_SRC
     TaamSfCalculator.cpp
     TaamSfCalculatorMultiOrderedImpl.cpp
     TscFileBasedSfCalculator.cpp)
+
+if(TAAM_WITH_GPU_IMP_26)
+	LIST(APPEND TARGET_H "${CMAKE_CURRENT_SOURCE_DIR}/../../include/discamb/Scattering/HansenCoppens_SF_Engine4.h")
+	LIST(APPEND TARGET_SRC HansenCoppens_SF_Engine4.cpp)
+endif(TAAM_WITH_GPU_IMP_26)
 
 option(SYCL "Enable using SYCL for calculations.")
 option(SYCL_TARGETS "SYCL targets to compile for.")

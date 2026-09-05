@@ -10,6 +10,7 @@ option(DISCAMB_BUILD_EXAMPLES "Build the example programs" OFF)
 option(DISCAMB_BUILD_TESTS "build tests" ON)
 option(DISCAMB_MSVC_MT "An options for MSVC to build multi-threaded statically-linked version" OFF)
 option(USE_EIGEN "incorporate eigen, enables symmetry operation analysis" OFF)
+option(TAAM_WITH_GPU_IMP_26, "use GPU for TAAM" OFF)
 
 if(DISCAMB_MSVC_MT)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

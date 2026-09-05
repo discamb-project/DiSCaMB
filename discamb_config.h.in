@@ -4,3 +4,4 @@
 #endif
 #cmakedefine HAS_SPH_BESSEL
 #cmakedefine HAS_EIGEN
+#cmakedefine TAAM_WITH_GPU_IMP_26

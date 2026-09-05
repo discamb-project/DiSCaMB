@@ -11,6 +11,10 @@
     #include "cuda/HC_SF_GPU.h" 
 #endif
 
+#ifdef TAAM_WITH_GPU_IMP_26
+    #include "discamb/Scattering/HansenCoppens_SF_Engine4.h"
+#endif
+
 #include "discamb/BasicUtilities/on_error.h"
 #include "discamb/CrystalStructure/ReciprocalLatticeUnitCell.h"
 #include "discamb/CrystalStructure/crystal_structure_utilities.h"
@@ -21,10 +25,11 @@
 
 #include "discamb/Scattering/HansenCoppens_SF_Engine2.h"
 #include "discamb/Scattering/HansenCoppens_SF_Engine3.h"
-#include "discamb/Scattering/HansenCoppens_SF_Engine4.h"
 #include "discamb/Scattering/HansenCoppens_SF_EngineSymm.h"
-#include <fstream>
 
+
+
+#include <fstream>
 #include <exception>
 #include <iomanip>
 
@@ -435,6 +440,8 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
     }
     case CPU_v4:
     {
+#ifdef TAAM_WITH_GPU_IMP_26
+
         HansenCoppens_SF_Engine4 engine;
 
         engine.calculateSF(mUnitCell, mWfnParameters, mTypeParameters, mAtomToWfnTypeMap, mAtomToAtomTypeMap, mAtomicPositions,
@@ -442,6 +449,9 @@ void HansenCoppensStructureFactorCalculator::calculateStructureFactorsAndDerivat
             localCoordinateSystems, mSymmetryOperations, mIsCentrosymmetric, mInversionCenterTranslation,
             mHKL_Cartesian, hkl, f, dTarget_dparam, dTarget_df, countAtomContribution, mN_Threads, derivativesSelector,
             mElectronScattering, mAtomicNumbers);
+#else
+        on_error::throwException("the code was compiled with the option for GPU computing for TAAM (implementation from 2026)", __FILE__, __LINE__);
+#endif
         break;
     }
     case CPU:
