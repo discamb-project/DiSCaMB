@@ -1,18 +1,19 @@
-add_library(discamb
-            $<TARGET_OBJECTS:ucif>
-            $<TARGET_OBJECTS:vflib>
-            $<TARGET_OBJECTS:AtomTyping>
-            $<TARGET_OBJECTS:BasicChemistry>
-            $<TARGET_OBJECTS:BasicUtilities>
-            $<TARGET_OBJECTS:CrystalStructure>  
-            $<TARGET_OBJECTS:HC_Model>
-            $<TARGET_OBJECTS:IO>
-            $<TARGET_OBJECTS:MathUtilities>                                      
-            $<TARGET_OBJECTS:QuantumChemistry>
-            $<TARGET_OBJECTS:Scattering> 
-            $<TARGET_OBJECTS:StructuralProperties>
-            $<TARGET_OBJECTS:Test>            
-            discamb.cpp)
+add_library(discamb discamb.cpp)
+
+target_link_libraries(discamb PUBLIC
+            ucif
+            vflib
+            AtomTyping
+            BasicChemistry
+            BasicUtilities
+            CrystalStructure
+            HC_Model
+            IO
+            MathUtilities
+            QuantumChemistry
+            Scattering
+            StructuralProperties
+            Test)
 
 SET_PROPERTY(TARGET discamb PROPERTY FOLDER "libs")
 if(MT_MSVC_RUNTIME_LIB AND MSVC)

@@ -38,7 +38,9 @@ if(USE_STD_SPH_BESSEL)
 endif()
 
 
-find_package(OpenMP)
+if(NOT SYCL)
+  find_package(OpenMP)
+endif()
 
 if(USE_EIGEN)
     find_package (Eigen3)
