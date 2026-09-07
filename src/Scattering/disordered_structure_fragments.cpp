@@ -359,12 +359,12 @@ namespace disordered_structure_fragments{
 
     //}
 
-    void split_with_altlocs(
-        const Crystal& crystal,
-        const std::vector<char>& _altlocs,
-        const std::vector< std::vector<std::pair<int, std::string> > >& connectivity,
-        std::vector< std::vector<std::pair<std::string, double> > >& _ordered_parts)
-    {
+    //void split_with_altlocs(
+    //    const Crystal& crystal,
+    //    const std::vector<char>& _altlocs,
+    //    const std::vector< std::vector<std::pair<int, std::string> > >& connectivity,
+    //    std::vector< std::vector<std::pair<std::string, double> > >& _ordered_parts)
+    //{
         //_ordered_parts.clear();
         //std::vector<char> altlocs;
         //for(auto c: _altlocs)
@@ -545,7 +545,7 @@ namespace disordered_structure_fragments{
         //}
 
 
-    }
+    //}
 
     void split_with_macromol_info(
         const Crystal& _crystal,
@@ -975,8 +975,13 @@ namespace disordered_structure_fragments{
 
 
         int max_disorder_part = *max_element(atom_disorder_part.begin(), atom_disorder_part.end());
-        if (max_disorder_part <= 0)
+        if (max_disorder_part <= 0) // no disorder or noly one configuration possible
+        {
+            _ordered_parts.resize(1);
+            for (auto const& atom : crystal.atoms)
+                _ordered_parts[0].push_back({ atom.label, 1.0 });
             return;
+        }
 
         int nParts = max_disorder_part + 1;
 

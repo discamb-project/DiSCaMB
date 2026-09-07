@@ -212,28 +212,31 @@ namespace discamb {
                 //descriptors
             }
             //cout << "use TaamSfCalculatorMultiOrderedImpl" << endl;
-            auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(
-                crystal,
-                orderedSubcrystalAtoms,
-                settings.atomTypes,
-                settings.parameters,
-                settings.slaterWavefunctionsDatabankId,
-                settings.electronScattering,
-                settings.descriptorsSettings,
-                settings.assignmentInfoFile,
-                settings.assignmentCsvFile,
-                settings.parametersInfoFile,
-                settings.multipolarCif,
-                settings.nThreads,
-                settings.unitCellCharge,
-                settings.scaleToMatchCharge,
-                settings.iamTable,
-                settings.iamElectronScattering,
-                settings.frozen_lcs,
-                settings.algorithm,
-                descriptors);
-            mImplementation = impl;
-            return;
+            if (!orderedSubcrystalAtoms.empty())
+            {
+                auto impl = make_shared<TaamSfCalculatorMultiOrderedImpl>(
+                    crystal,
+                    orderedSubcrystalAtoms,
+                    settings.atomTypes,
+                    settings.parameters,
+                    settings.slaterWavefunctionsDatabankId,
+                    settings.electronScattering,
+                    settings.descriptorsSettings,
+                    settings.assignmentInfoFile,
+                    settings.assignmentCsvFile,
+                    settings.parametersInfoFile,
+                    settings.multipolarCif,
+                    settings.nThreads,
+                    settings.unitCellCharge,
+                    settings.scaleToMatchCharge,
+                    settings.iamTable,
+                    settings.iamElectronScattering,
+                    settings.frozen_lcs,
+                    settings.algorithm,
+                    descriptors);
+                mImplementation = impl;
+                return;
+            }
         }
         if (!settings.taamFragments.empty())
         {
