@@ -73,7 +73,7 @@ std::unique_ptr<SfCalculator> sfCalculatorFromJsonFile(
     }
     else
         on_error::throwException("no aspher.json file", __FILE__, __LINE__);
-
+    
     return std::unique_ptr<SfCalculator>(SfCalculator::create(crystal, jsonData));
 }
 
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
             timer.start();
 
             clog << "file created at " << ctime(&time_now) << "\n";
-           
+            
             
             std::unique_ptr<SfCalculator> calculator = 
                 sfCalculatorFromJsonFile(crystal);
@@ -198,6 +198,7 @@ int main(int argc, char *argv[])
 
 
             timer.start();
+
 
             vector< vector<complex<double> > > formFactors;
             vector<bool> includeAtom(crystal.atoms.size(), true);
@@ -232,7 +233,6 @@ int main(int argc, char *argv[])
             
             std::clog.rdbuf(clog_orginal_rdbuf);
             logFile.close();
-
         }
         catch (nlohmann::json::parse_error& e)
         {

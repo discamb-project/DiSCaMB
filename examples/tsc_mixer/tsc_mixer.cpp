@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
                     weights_sum[idxInCrystal] += tscSource.weight;
                     
                     for (int hklIdx = 0; hklIdx < nHkl; hklIdx++)
-                        finalFf[hklIdx][idxInCrystal] += ff[hklIdx][idxInTsc];
+                        finalFf[hklIdx][idxInCrystal] += ff[hklIdx][idxInTsc] * tscSource.weight;
                 }
             }
 

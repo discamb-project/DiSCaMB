@@ -288,6 +288,73 @@ namespace discamb {
             return false;
         }
 
+        
+            //std::set<std::string> mPreexistingFiles;
+        
+        NewFilesRemover::NewFilesRemover() {
+
+            for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+                if (filesystem::is_regular_file(it.status()))
+                    mPreexistingFiles.insert(it.path().filename().string());
+                else if (filesystem::is_directory(it.status()))
+                    mPreexistingFolders.insert(it.path().string());
+
+        }
+
+        void NewFilesRemover::cleanNew(
+            bool cleanNewFolders) 
+        {
+            for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+            {
+                if (filesystem::is_regular_file(it.status()))
+                {
+                    string fileName = it.path().filename().string();
+                    if (mPreexistingFiles.find(fileName) == mPreexistingFiles.end())
+                        filesystem::remove(it.path());
+                }
+                if (cleanNewFolders)
+                    if (filesystem::is_directory(it.status()))
+                    {
+                        if (mPreexistingFolders.find(it.path().string()) == mPreexistingFolders.end())
+                            filesystem::remove_all(it.path());
+                    }
+            }
+
+        }
+
+        void NewFilesRemover::cleanNewExceptOf(
+            const std::set<std::string>& filesToSave)
+        {
+            for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+                if (filesystem::is_regular_file(it.status()))
+                {
+                    string fileName = it.path().filename().string();
+                    if (mPreexistingFiles.find(fileName) == mPreexistingFiles.end())
+                        if(filesToSave.find(fileName) == filesToSave.end())
+                            filesystem::remove(it.path());
+                }
+
+        }
+
+        void NewFilesRemover::cleanNewExceptOfType(
+            const std::set<std::string>& fileTypesToSave)
+        {
+            for (auto it : filesystem::directory_iterator(filesystem::current_path()))
+                if (filesystem::is_regular_file(it.status()))
+                {
+                    
+                    string fileName = it.path().filename().string();
+                    if (mPreexistingFiles.find(fileName) == mPreexistingFiles.end())
+                    {
+                        string fileExtension = it.path().extension().string();
+                        if (!fileExtension.size() > 1)
+                            fileExtension = fileExtension.substr(1);
+                        if(fileTypesToSave.find(fileExtension) == fileTypesToSave.end())
+                            filesystem::remove(it.path());
+                    }
+                }
+        }
+
 
     }
 }

@@ -1008,16 +1008,18 @@ namespace discamb {
 		const
 	{
 		Vector3d frac;
-		vector<Vector3i> hklFracVec;
+		//vector<Vector3i> hklFracVec;
+        vector<Vector3d> hklFracVec;
 		Vector3i hklFrac;
 
 		for (auto& h : hkl)
 		{
 			mReciprocalSpaceUnitCell.cartesianToFractional(h, frac);
-			hklFrac[0] = math_utilities::roundInt(frac[0]);
-			hklFrac[1] = math_utilities::roundInt(frac[1]);
-			hklFrac[2] = math_utilities::roundInt(frac[2]);
-			hklFracVec.push_back(hklFrac);
+            hklFracVec.push_back(frac);
+			//hklFrac[0] = math_utilities::roundInt(frac[0]);
+			//hklFrac[1] = math_utilities::roundInt(frac[1]);
+			//hklFrac[2] = math_utilities::roundInt(frac[2]);
+			//hklFracVec.push_back(hklFrac);
 		}
 
 

@@ -1,5 +1,5 @@
 add_test_exec(test_har_ff test_har_ff.cpp)
-add_test(NAME test_har_ff COMMAND test_har_ff)
+add_test(NAME test_har_ff COMMAND test_har_ff WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_test_exec(orca_setup orca_setup.cpp)
 add_test(NAME orca_setup COMMAND orca_setup)

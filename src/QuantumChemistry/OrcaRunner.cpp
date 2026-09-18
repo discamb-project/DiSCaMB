@@ -174,7 +174,6 @@ namespace discamb {
         {
             filesystem::path path(p);
             path /= orca_exec;
-            cout << path.string() << "\n";
             if (filesystem::exists(path))
             {
                 orcaFolder = p;

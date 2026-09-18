@@ -1,7 +1,7 @@
 MACRO(add_example_exec)
     add_executable(${ARGN})
+    
     target_link_libraries(${ARGV0} discamb)
-
     SET_PROPERTY(TARGET ${ARGV0} PROPERTY CXX_STANDARD 17)
     SET_PROPERTY(TARGET ${ARGV0} PROPERTY FOLDER "Examples")
     if(MT_MSVC_RUNTIME_LIB AND MSVC)
