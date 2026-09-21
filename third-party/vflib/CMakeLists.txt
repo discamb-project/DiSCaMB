@@ -5,7 +5,6 @@ SET(TARGET_H
     "./vflib-2.0.6/src/sortnodes.h"
     "./vflib-2.0.6/include/allocpool.h"
     "./vflib-2.0.6/include/argedit.h"
-    "./vflib-2.0.6/include/argloader.h"
     "./vflib-2.0.6/include/argraph.h"
     "./vflib-2.0.6/include/dict.h"
     "./vflib-2.0.6/include/error.h"
@@ -27,7 +26,6 @@ SET(TARGET_H
 
 SET(TARGET_SRC 
     "./vflib-2.0.6/src/argedit.cc"
-    "./vflib-2.0.6/src/argloader.cc"
     "./vflib-2.0.6/src/argraph.cc"
     "./vflib-2.0.6/src/error.cc"
     "./vflib-2.0.6/src/gene.cc"

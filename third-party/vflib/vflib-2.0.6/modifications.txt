@@ -4,13 +4,10 @@ register int a, b, c;
 was changed to:
 int a, b, c;
 
-file include/argloader.h
-has been modified, the following lines were added starting from line 67:
-
-#ifndef _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-#endif
-
-to silence msvc warning caused by deprecation of strstream, 
-warning caused by line: #include <strstream>
+file src/argloader.cc is not used in the project
+i.e. removed from project without deleting files
+(files include/argloader.h and src/argloader.cc 
+are not part of the CMake target 'vflib')
+This is due to the deprecation of <strstream>
+included in argloader.h
 
