@@ -29,6 +29,7 @@
 #include "discamb/IO/tsc_io.h"
 #include "discamb/IO/xyz_io.h"
 #include "discamb/MathUtilities/algebra3d.h"
+#include "discamb/MathUtilities/statistics.h"
 #include "discamb/MathUtilities/SphConverter.h"
 #include "discamb/QuantumChemistry/fragmentation.h"
 #include "discamb/Scattering/agreement_factors.h"
@@ -4564,12 +4565,80 @@ void ice(const string structure_file)
     out<< std::setw(4) << data << std::endl;
 }
 
+void ice_bond_lengths(const string& cifFile)
+{
+    vector<cif_io::DataSet> cifData;
+    cif_io::readCif(cifFile, cifData);
+    vector<int> tagIndices;
+    vector<string> tags = { "_geom_bond_atom_site_label_1", "_geom_bond_atom_site_label_2", "_geom_bond_distance" };
+    int loopIdx;
+    if (cif_io::findLoopIndex(cifData[0], tags, loopIdx, tagIndices))
+    {
+        cif_io::Loop& loop = cifData[0].loops[loopIdx];
+        int nBonds = loop.values[0].size();
+        vector<double> diff;
+        for (int bondIdx = 0; bondIdx < nBonds; bondIdx++)
+        {
+            bool hasHydrogen = false;
+            bool hasOxygen = false;
+            string label1 = loop.values[tagIndices[0]][bondIdx];
+            string label2 = loop.values[tagIndices[1]][bondIdx];
+            if (label1[0] == 'D' || label1[0] == 'H' || label2[0] == 'D' || label2[0] == 'H')
+                hasHydrogen = true;
+            if (label1[0] == 'O' || label2[0] == 'O')
+                hasOxygen = true;
+            if (hasHydrogen && hasOxygen)
+                diff.push_back(abs(stod(loop.values[tagIndices[2]][bondIdx]) - 0.96));
+        }
+        if (!diff.empty())
+            cout<< diff.size() << " " << statistics::average(diff) << endl;
+    }
+
+}
+
+void find_hkl(const string& hklFile, int h, int k, int l)
+{
+    vector<Vector3i> hkls;
+    vector<double> intesities;
+    vector<double> sigma;
+    vector<int> batch;
+    vector<Vector3i> multipliers = { {1,1,1}, {-1, 1, -1}, {-1, -1, -1}, {1, -1,  1} };
+    hkl_io::readShelxHkl(hklFile, hkls, intesities, sigma, batch, false);
+
+    for (int i = 0; i < 4; i++)
+    {
+        Vector3i symmEqHkl = { h * multipliers[i][0], k * multipliers[i][1], l * multipliers[i][2] };
+        auto it = find(hkls.begin(), hkls.end(), symmEqHkl);
+        cout << symmEqHkl << "   ";
+        if (it != hkls.end())
+        {
+            int index = std::distance(hkls.begin(), it);
+            cout << intesities[index] << "   " << sigma[index] << endl;
+        }
+        else
+            cout << "-\n";
+    }
+}
+
+
 int main(int argc, char* argv[])
 {
 
     try {
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
+
+        if (argc < 5)
+            on_error::throwException("expected 4 arguments: hkl file and h k l\n", __FILE__, __LINE__);
+        find_hkl(argv[1], atoi(argv[2]), atoi(argv[3]), atoi(argv[4]));
+        return 0;
+
+
+        if (arguments.size() < 1)
+            on_error::throwException("expected cif file\n", __FILE__, __LINE__);
+        ice_bond_lengths(arguments[0]);
+        return 0;
+
 
         if (arguments.size() < 1)
             on_error::throwException("expected structure file\n", __FILE__, __LINE__);
