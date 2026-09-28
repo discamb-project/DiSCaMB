@@ -197,8 +197,10 @@ namespace discamb {
 
         if (!neighborsCompatible(vertex_type, vertex_structure))
             return false;
-
-        if (!comparePlanarity(vertex_type->planar, vertex_structure->planar))
+        Tribool structureVertexPlanarity = vertex_structure->planar;
+        if (vertex_structure->nNeighbors < 3)
+            structureVertexPlanarity = Tribool::Undefined;
+        if (!comparePlanarity(vertex_type->planar, structureVertexPlanarity))
             return false;
 
         if (!compareN_Rings(vertex_type->isIn3Ring, vertex_type->n3Rings, vertex_structure->n3Rings.value()))

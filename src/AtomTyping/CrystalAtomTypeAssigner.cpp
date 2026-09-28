@@ -481,7 +481,7 @@ namespace discamb {
             atomicLabels.push_back(crystal.atoms[atomIndexInAsymmetricUnit].label);
         }
         //_DEBUG
-        //xyz_io::writeXyz("asignment_struct.xyz", atomicNumbers, positions);
+        xyz_io::writeXyz("asignment_struct.xyz", atomicNumbers, positions);
         //END DEBUG
 
 
