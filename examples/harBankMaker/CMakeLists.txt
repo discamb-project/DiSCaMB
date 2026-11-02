@@ -17,5 +17,6 @@ add_example_exec(harBankMaker
                  WfnCalc.cpp
                  WfnCalc.h)
 
-
-target_link_libraries(harBankMaker OpenMP::OpenMP_CXX)
+if(OpenMP_FOUND)
+	target_link_libraries(harBankMaker OpenMP::OpenMP_CXX)
+endif()

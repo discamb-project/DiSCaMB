@@ -905,7 +905,14 @@ namespace discamb {
 
         vector< vector<complex<double> > > formFactorsExtended;
 
-        if (mN_Threads == 1)
+        int nThreads = 1;
+#ifdef _OPENMP
+        nThreads = std::min<int>(mN_Threads, omp_get_max_threads());
+        omp_set_dynamic(0);
+        omp_set_num_threads(nThreads);
+#endif
+
+        if (nThreads == 1)
         {
             formFactorsExtended.resize(hkl.size());
             for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
@@ -915,25 +922,25 @@ namespace discamb {
         else
         {
 
-            vector< vector<Vector3i> > hklsPerThread(mN_Threads);
-            vector < vector< vector<complex<double> > > > formFactorsPerThread(mN_Threads);
+            vector< vector<Vector3i> > hklsPerThread(nThreads);
+            vector < vector< vector<complex<double> > > > formFactorsPerThread(nThreads);
 
             int nHkl = hkl.size();
-            int reminder = nHkl % mN_Threads;
-            int quotient = nHkl / mN_Threads;
+            int reminder = nHkl % nThreads;
+            int quotient = nHkl / nThreads;
 
-            for (int i = 0; i < mN_Threads; i++)
+            for (int i = 0; i < nThreads; i++)
             {
                 int start = i * quotient + min(i, reminder);
                 int end = (i + 1) * quotient + min(i + 1, reminder);
                 hklsPerThread[i].insert(hklsPerThread[i].begin(), hkl.begin() + start, hkl.begin() + end);
             }
-
-            omp_set_num_threads(static_cast<int>(mN_Threads));
 #pragma omp parallel
             {
-
-                int id = omp_get_thread_num();
+                int id = 0;
+#ifdef _OPENMP
+                id = omp_get_thread_num();
+#endif  
                 cout << "thread " << id << "\n";
                 int nHkl = hklsPerThread[id].size();
                 formFactorsPerThread[id].resize(nHkl);
@@ -944,7 +951,7 @@ namespace discamb {
             }
 
             formFactorsExtended.clear();
-            for (int i = 0; i < mN_Threads; i++)
+            for (int i = 0; i < nThreads; i++)
                 formFactorsExtended.insert(formFactorsExtended.end(), formFactorsPerThread[i].begin(), formFactorsPerThread[i].end());
         }
         mergeExtendedFormFactors(formFactorsExtended, includeAtom, formFactors);

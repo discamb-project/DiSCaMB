@@ -651,7 +651,7 @@ namespace disordered_structure_fragments{
             label2idx[crystal.atoms[atomIdx].label] = atomIdx;
         vector<int> atomicNumbers;
         crystal_structure_utilities::atomicNumbers(crystal, atomicNumbers);
-        vector<bool> atomInPart; (nAtomsCrystal, false);
+        vector<bool> atomInPart; //(nAtomsCrystal, false);
         for (int partIdx = 0; partIdx < nParts; partIdx++)
         {
             atomInPart.assign(nAtomsCrystal, false);

@@ -122,7 +122,10 @@ namespace discamb {
         int nAtoms = static_cast<int>(mAtomicNumbers.size());
         mElectronDensityGrids.resize(nAtoms);
         cout << "n threads = " << mN_Cores << "\n";
+#ifdef _OPENMP
+        omp_set_dynamic(0);
         omp_set_num_threads(static_cast<int>(mN_Cores));
+#endif
         
         vector<int> threadIdx(nAtoms);
         
@@ -136,7 +139,10 @@ namespace discamb {
         for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
             //cout << omp_get_thread_num() << "\n";
-            int threadId = omp_get_thread_num();
+            int threadId = 0;
+#ifdef _OPENMP
+            threadId = omp_get_thread_num();
+#endif
             threadIdx[atomIdx] = threadId;
             int z = mAtomicNumbers[atomIdx];
             int pointIdx, nPoints = mElementGridPoints[z].size();
@@ -595,7 +601,11 @@ namespace discamb {
 
         newExponentsIverted.resize(nAtoms);
         newPopulations.resize(nAtoms);
+#ifdef _OPENMP
+        omp_set_dynamic(0);
         omp_set_num_threads(int(mN_Cores));
+#endif
+
 #pragma omp parallel for
         for (int atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
@@ -702,7 +712,10 @@ namespace discamb {
        const
     {
         int atomIdx, nAtoms = int(mAtomicNumbers.size());
+#ifdef _OPENMP
+        omp_set_dynamic(0);
         omp_set_num_threads(int(mN_Cores));
+#endif
         //cout << mN_Cores << "\n";
         //cout << omp_get_max_threads() << endl;
 #pragma omp for

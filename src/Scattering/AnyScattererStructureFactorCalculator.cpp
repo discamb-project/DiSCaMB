@@ -462,8 +462,8 @@ namespace discamb{
 #pragma omp parallel for
             for (int hklIndex = 0; hklIndex < nHklVectors; hklIndex++)
             {
-                if (hklIndex == 0)
-                    cout << "n threads " << omp_get_max_threads() << endl;
+                //if (hklIndex == 0)
+                //    cout << "n threads " << omp_get_max_threads() << endl;
                 //
                 vector < vector<complex<double> > > atomic_ff(nSymmOps, vector < complex<double> >(nAtoms));
                 REAL temperature_factor, hVectorLength, hVectorLength2;

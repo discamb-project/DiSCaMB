@@ -664,7 +664,10 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCartSphExp_in_thr
     on_error::throwException("this compilation does not support multipole expansion for HAR", __FILE__, __LINE__);
 #endif
 
-    int threadIdx = omp_get_thread_num();
+    int threadIdx = 0;
+#ifdef _OPENMP    
+    threadIdx = omp_get_thread_num();
+#endif
 
     double h_length = sqrt(hkl * hkl);
     if (h_length == 0.0)
@@ -781,8 +784,11 @@ void StockholderAtomBankFormFactorCalculationManager::calculateCart(
     {
         cout << "parallel version with " << mN_Threads << " thread(s)\n";
         
-
+#ifdef _OPENMP            
+        omp_set_dynamic(0);
         omp_set_num_threads(mN_Threads);
+#endif
+
 #pragma omp parallel for
         for (int i = 0; i < nHkl; i++)
             calculateCartSphExp_in_thread(hkl[i], formFactors[i], includeAtom);

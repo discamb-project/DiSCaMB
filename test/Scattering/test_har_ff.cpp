@@ -2,8 +2,11 @@
 #include "discamb/CrystalStructure/structure_library.h"
 #include "discamb/QuantumChemistry/OrcaRunner.h"
 #include "discamb/BasicUtilities/file_system_utilities.h"
+
 #include <string>
 #include <iostream>
+#include <exception>
+#include <filesystem>
 
 using namespace std;
 using namespace discamb;
@@ -61,6 +64,7 @@ int main(int argc, char *argv[])
         StockholderAtomSfCalculator calculator(crystal, data);
         vector<vector<complex<double> > > formFactors;
         int nAtoms = crystal.atoms.size();
+        cout << filesystem::current_path() << endl;
         calculator.calculateFormFactors(hkl, formFactors, vector<bool>(nAtoms, true));
 
         for (int hklIdx = 0; hklIdx < hkl.size(); hklIdx++)
@@ -72,8 +76,31 @@ int main(int argc, char *argv[])
                 if (abs(formFactors[hklIdx][atomIdx].real() - ff_reference[hklIdx][atomIdx].real()) > 1e-06)
                     passed = false;
             }
-
         }
+
+        // remove new files created during the test if passed
+        //if (passed)
+        //{
+        //    vector<string> filesToRemove = { "noname_subsystem_1_wfn_001.log", "noname_subsystem_1_wfn_001.property.txt",
+        //        "noname_subsystem_1_wfn_001.gbw", "noname_subsystem_1_wfn_001.inp", "rep_atoms_1", "noname_subsystem_1_wfn_001.ges" };
+
+        //    for(const auto & file : filesToRemove)
+        //    {
+        //        if (filesystem::exists(file))
+        //            filesystem::remove(file);
+        //    }
+        //    filesystem::remove_all("orca_dir");
+        //}
+    }
+    catch (nlohmann::json::parse_error& e)
+    {
+        std::cout << "exeption " << e.what() << endl;
+        return 1;
+    }
+    catch (exception& e)
+    {
+        cout << "exeption " << e.what() << endl;
+        return 1;
     }
     catch (...)
     {

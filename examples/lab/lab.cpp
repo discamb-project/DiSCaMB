@@ -4533,6 +4533,9 @@ void ice(const string structure_file)
     
     data["qm structure"] = nlohmann::json::array();
     data["atom representatives"] = nlohmann::json::array();
+
+    constexpr std::array<std::array<int, 2>, 6> pair_indices = { {  {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}} };
+
     for (int i = 0; i < oxygens.size(); i++)
     {
         int oxygenIdx = oxygens[i];
@@ -4565,6 +4568,175 @@ void ice(const string structure_file)
     out<< std::setw(4) << data << std::endl;
 }
 
+// Oblicza prawdopodobieñstwa par q_XY na podstawie p_A, p_B, p_C, p_D.
+// Warunki: 0 <= p_i <= 1 oraz p_A + p_B + p_C + p_D = 2.
+// Z 4 równañ brzegowych i 6 niewiadomych zostaj¹ 2 stopnie swobody;
+// "¿adna para nie jest uprzywilejowana" = rozk³ad o maksymalnej entropii,
+// który ma postaæ iloczynow¹ q_ij = w_i * w_j.
+std::array<double, 6> pairProbabilities(
+    double pA, 
+    double pB, 
+    double pC, 
+    double pD,
+    double eps = 1e-12, 
+    int maxIter = 100000)
+{
+    constexpr std::array<std::array<int, 2>, 6> pair_indices = { {  {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}} };
+    const std::array<double, 4> p = { pA, pB, pC, pD };
+    double suma = 0.0;
+    for (double x : p) {
+        if (x < -eps || x > 1.0 + eps)
+            throw std::invalid_argument("Kazde p_i musi byc w przedziale [0, 1].");
+        suma += x;
+    }
+    if (std::fabs(suma - 2.0) > 1e-4)
+        throw std::invalid_argument("Suma p_A + p_B + p_C + p_D musi wynosic 2.");
+
+    std::array<double, 6> q{};
+
+    // Przypadek brzegowy: kula rodzaju i jest na pewno -> q_ij = p_j
+    for (int i = 0; i < 4; ++i) {
+        if (p[i] >= 1.0 - eps) {
+            for (int k = 0; k < 6; ++k) {
+                auto [a, b] = pair_indices[k];
+                if (a == i) q[k] = p[b];
+                else if (b == i) q[k] = p[a];
+            }
+            return q;
+        }
+    }
+
+    // Iteracja multiplikatywna: w_i <- w_i * sqrt(p_i / m_i),
+    // gdzie m_i = w_i * (W - w_i) to bie¿¹cy brzeg dla rodzaju i.
+    std::array<double, 4> w = { 1.0, 1.0, 1.0, 1.0 };
+    for (int i = 0; i < 4; ++i) w[i] = (p[i] > 0) ? 1.0 / std::sqrt(6.0) : 0.0;
+
+    for (int it = 0; it < maxIter; ++it) {
+        double W = w[0] + w[1] + w[2] + w[3];
+        double maxBlad = 0.0;
+        std::array<double, 4> nw = w;
+        for (int i = 0; i < 4; ++i) {
+            if (w[i] == 0.0) continue;
+            double m = w[i] * (W - w[i]);
+            maxBlad = std::max(maxBlad, std::fabs(m - p[i]));
+            nw[i] = w[i] * std::sqrt(p[i] / m);
+        }
+        w = nw;
+        if (maxBlad < eps) break;
+    }
+
+    double s = 0.0;
+    for (int k = 0; k < 6; ++k) {
+        q[k] = w[pair_indices[k][0]] * w[pair_indices[k][1]];
+        s += q[k];
+    }
+    for (double& x : q) x /= s;   // drobna korekta numeryczna
+    return q;
+}
+
+
+void ice2(const string structure_file)
+{
+    Crystal crystal;
+    structure_io::read_structure(structure_file, crystal);
+    UnitCellContent ucContent(crystal);
+
+    vector < vector < pair<int, string> > > connectivity;
+    //structural_properties::asymmetricUnitConnectivity(crystal, connectivity, 0.4);
+    connectivity.resize(18);
+    vector<int> oxygens;
+
+    vector<vector<int> > hydrogenIndices(4);
+    vector<int> oxygenIndices(4);
+    for (int i = 0; i < crystal.atoms.size(); i++)
+        if (crystal.atoms[i].label[0] == 'D' || crystal.atoms[i].label[0] == 'H')
+            hydrogenIndices[stoi(crystal.atoms[i].label.substr(1,1))-1].push_back(i);
+        else
+            oxygenIndices[stoi(crystal.atoms[i].label.substr(1, 1))-1] = i;
+    
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < hydrogenIndices[i].size(); j++)
+        {
+            connectivity[oxygenIndices[i]].push_back({ hydrogenIndices[i][j], "X,Y,Z" });
+            connectivity[hydrogenIndices[i][j]].push_back({ oxygenIndices[i], "X,Y,Z" });
+        }
+        if (i == 1)
+        {
+            connectivity[oxygenIndices[1]].push_back({ hydrogenIndices[1][0], "-X+1,Y,-Z+1/2" });
+            connectivity[oxygenIndices[1]].push_back({ hydrogenIndices[1][1], "-X+1,Y,-Z+1/2" });
+        }
+    }
+
+
+    //for (int i = 0; i < connectivity.size(); i++)
+    //{
+    //    cout << "{ ";
+    //    for (int j = 0; j < connectivity[i].size(); j++)
+    //    {
+    //        cout << "{ " << connectivity[i][j].first << ", \" " << connectivity[i][j].second << "\" }";
+    //        if(j!= connectivity[i].size()-1)
+    //            cout << ", ";
+    //    }
+    //    cout << "},\n";
+    //}
+    //return;
+
+    
+
+    for (int i = 0; i < crystal.atoms.size(); i++)
+        if (crystal.atoms[i].type == "O")
+            oxygens.push_back(i);
+
+    int waterCounter = 0;
+    nlohmann::json data;
+
+    data["qm structure"] = nlohmann::json::array();
+    data["atom representatives"] = nlohmann::json::array();
+
+    constexpr std::array<std::array<int, 2>, 6> pair_indices = { {  {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}} };
+
+    for (int i = 0; i < oxygens.size(); i++)
+    {
+        int oxygenIdx = oxygens[i];
+
+        
+        double pA = crystal.atoms[connectivity[oxygenIdx][0].first].occupancy;
+        double pB = crystal.atoms[connectivity[oxygenIdx][1].first].occupancy;
+        double pC = crystal.atoms[connectivity[oxygenIdx][2].first].occupancy;
+        double pD = crystal.atoms[connectivity[oxygenIdx][3].first].occupancy;
+
+        auto pPairs = pairProbabilities( pA, pB, pC, pD);
+
+        for (int p = 0; p < 6; p++)
+        {
+            int h1 = pair_indices[p][0];
+            int h2 = pair_indices[p][1];
+            waterCounter++;
+            nlohmann::json system;
+            string label = "conf_" + to_string(waterCounter);
+            system["label"] = label;
+            system["charge"] = 0;
+            system["spin multiplicity"] = 1;
+            system["atoms"] =
+                crystal.atoms[oxygenIdx].label + " " +
+                crystal.atoms[connectivity[oxygenIdx][h1].first].label + "," + connectivity[oxygenIdx][h1].second + " " +
+                crystal.atoms[connectivity[oxygenIdx][h2].first].label + "," + connectivity[oxygenIdx][h2].second;
+
+            data["qm structure"].push_back(system);
+            nlohmann::json weightsJson;
+            double weight = pPairs[p];
+            vector<double> weights(3, weight);
+            weightsJson["label"] = label;
+            weightsJson["atom weights"] = weights;
+            data["atom representatives"].push_back(weightsJson);
+        }
+    }
+    std::ofstream out("ice.json");
+    out << std::setw(4) << data << std::endl;
+}
+
+
 void ice_bond_lengths(const string& cifFile)
 {
     vector<cif_io::DataSet> cifData;
@@ -4595,6 +4767,135 @@ void ice_bond_lengths(const string& cifFile)
     }
 
 }
+
+void ice_bonds_compare_to_neutrons(const string& resFileN, const string& resFileX)
+{
+    Crystal crystalN, crystalX;
+    structure_io::read_structure(resFileN, crystalN);
+    structure_io::read_structure(resFileX, crystalX);
+
+    vector<pair<string, string> > bondsN{ 
+        {"O1", "D5"},  {"O1", "D6"},
+        {"O2", "D7"},  {"O2", "D8"},  {"O2", "D9"},  {"O2", "D10"},
+        {"O3", "D11"}, {"O3", "D12"}, {"O3", "D13"}, {"O3", "D14"},
+        {"O4", "D15"}, {"O4", "D16"}, {"O4", "D17"}, {"O4", "D18"},
+    };
+    vector<pair<string, string> > bondsX;
+    map<string, string> n2x;
+    n2x["O2"] = "O4";
+    n2x["O1"] = "O2";
+    n2x["O4"] = "O3";
+    n2x["O3"] = "O1";
+    n2x["D5"] = "D2b";
+    n2x["D6"] = "D2a";
+    n2x["D7"] = "D4b";
+    n2x["D8"] = "D4a";
+    n2x["D9"] = "D4c";
+    n2x["D10"] = "D4d";
+    n2x["D11"] = "D1a";
+    n2x["D12"] = "D1b";
+    n2x["D13"] = "D1c";
+    n2x["D14"] = "D1d";
+    n2x["D15"] = "D3a";
+    n2x["D16"] = "D3b";
+    n2x["D17"] = "D3d";
+    n2x["D18"] = "D3c";
+    vector<pair<int, int> > bondsIndicesN, bondsIndicesX;
+    map<string, int> label2IdxN, label2IdxX;
+    for (int i = 0; i < crystalN.atoms.size(); i++)
+        label2IdxN[crystalN.atoms[i].label] = i;
+    for (int i = 0; i < crystalX.atoms.size(); i++)
+        label2IdxX[crystalX.atoms[i].label] = i;
+    for (auto& bons : bondsN)
+    {
+        bondsIndicesN.push_back({ label2IdxN[bons.first], label2IdxN[bons.second] });
+        bondsIndicesX.push_back({ label2IdxX[n2x[bons.first]], label2IdxX[n2x[bons.second]] });
+    }
+
+    int nBonds = bondsIndicesN.size();
+    double diffSum = 0.0;
+    for (int i = 0; i < nBonds; i++)
+    {
+        string symm_D_neut;
+        if (bondsN[i].second == "D7")
+            symm_D_neut = "X,Y-1,Z";
+        else if (bondsN[i].second == "D15" || bondsN[i].second == "D16")
+            symm_D_neut = "X,Y,Z+1";
+        else
+            symm_D_neut = "X,Y,Z";
+        double distN = crystal_structure_utilities::interatomicDistance(crystalN, bondsN[i].first, "X,Y,Z", bondsN[i].second, symm_D_neut);
+        double distX = crystal_structure_utilities::interatomicDistance(crystalX, n2x[bondsN[i].first], "X,Y,Z", n2x[bondsN[i].second], "X,Y,Z");
+        double diff = abs(distN - distX);
+        diffSum += abs(diff);
+    }
+    cout << diffSum/nBonds << endl;
+}
+
+
+void ice_stats(const string& cifFile)
+{
+    vector<cif_io::DataSet> cifData;
+    cif_io::readCif(cifFile, cifData);
+    vector<int> tagIndices;
+    vector<string> tags = { "_geom_bond_atom_site_label_1", "_geom_bond_atom_site_label_2", "_geom_bond_distance" };
+    int loopIdx;
+
+    cif_io::findLoopIndex(cifData[0], {"_atom_site_label","_atom_site_occupancy","_atom_site_U_iso_or_equiv"}, loopIdx, tagIndices);
+    vector<double> occupancies;
+    vector<double> u_iso;
+    cif_io::Loop& loop = cifData[0].loops[loopIdx];
+    int nAtoms = loop.values[0].size();
+    for(int atomIdx=0;atomIdx<nAtoms;atomIdx++)
+    {
+        string label = loop.values[tagIndices[0]][atomIdx];
+        string occString = loop.values[tagIndices[1]][atomIdx];
+        double occupancy = stod(occString.substr(0, occString.find_first_of('(')));
+        string uString = loop.values[tagIndices[2]][atomIdx];
+        double u = stod(uString.substr(0, uString.find_first_of('(')));
+        
+        if (label[0] == 'D' || label[0] == 'H')
+        {
+            occupancies.push_back(occupancy);
+            u_iso.push_back(u);
+        }
+    }
+
+
+    if (cif_io::findLoopIndex(cifData[0], tags, loopIdx, tagIndices))
+    {
+        cif_io::Loop& loop = cifData[0].loops[loopIdx];
+        int nBonds = loop.values[0].size();
+        vector<double> diff, bonds;
+        for (int bondIdx = 0; bondIdx < nBonds; bondIdx++)
+        {
+            bool hasHydrogen = false;
+            bool hasOxygen = false;
+            string label1 = loop.values[tagIndices[0]][bondIdx];
+            string label2 = loop.values[tagIndices[1]][bondIdx];
+            if (label1[0] == 'D' || label1[0] == 'H' || label2[0] == 'D' || label2[0] == 'H')
+                hasHydrogen = true;
+            if (label1[0] == 'O' || label2[0] == 'O')
+                hasOxygen = true;
+            if (hasHydrogen && hasOxygen)
+            {
+                double value = stod(loop.values[tagIndices[2]][bondIdx]);
+                diff.push_back(abs(value - 0.96));
+                bonds.push_back(value);
+            }
+        }
+        // 
+        if (!diff.empty())
+            cout << "dR " << setw(10) << setprecision(4) << statistics::average(diff);
+        cout << " maxR" << setw(10) << setprecision(4) << fixed << *std::max_element(bonds.begin(), bonds.end());
+        cout << " minR" << setw(10) << setprecision(4) << fixed << *std::min_element(bonds.begin(), bonds.end());
+        cout << " maxU" << setw(10) << setprecision(4) << fixed << *std::max_element(u_iso.begin(), u_iso.end());
+        cout << " minU" << setw(10) << setprecision(4) << fixed << *std::min_element(u_iso.begin(), u_iso.end());
+        cout << " minO" << setw(10) << setprecision(4) << fixed << *std::min_element(occupancies.begin(), occupancies.end());
+        cout << endl;
+    }
+
+}
+
 
 void find_hkl(const string& hklFile, int h, int k, int l)
 {
@@ -4628,11 +4929,21 @@ int main(int argc, char* argv[])
         vector<string> arguments, options;
         parse_cmd::get_args_and_options(argc, argv, arguments, options);
 
-        if (argc < 5)
-            on_error::throwException("expected 4 arguments: hkl file and h k l\n", __FILE__, __LINE__);
-        find_hkl(argv[1], atoi(argv[2]), atoi(argv[3]), atoi(argv[4]));
+        if (arguments.size() < 2)
+            on_error::throwException("expected neutron and x-ray ice V res files\n", __FILE__, __LINE__);
+
+        ice_bonds_compare_to_neutrons(arguments[0], arguments[1]);
         return 0;
 
+        if (arguments.size() < 1)
+            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
+        ice2(arguments[0]);
+        return 0;
+
+        if (arguments.size() < 1)
+            on_error::throwException("expected cif file\n", __FILE__, __LINE__);
+        ice_stats(arguments[0]);
+        return 0;
 
         if (arguments.size() < 1)
             on_error::throwException("expected cif file\n", __FILE__, __LINE__);
@@ -4640,10 +4951,12 @@ int main(int argc, char* argv[])
         return 0;
 
 
-        if (arguments.size() < 1)
-            on_error::throwException("expected structure file\n", __FILE__, __LINE__);
-        ice(arguments[0]);
+        if (argc < 5)
+            on_error::throwException("expected 4 arguments: hkl file and h k l\n", __FILE__, __LINE__);
+        find_hkl(argv[1], atoi(argv[2]), atoi(argv[3]), atoi(argv[4]));
         return 0;
+
+
 
         if (arguments.size() < 2)
             on_error::throwException("expected structure and hkl file\n", __FILE__, __LINE__);

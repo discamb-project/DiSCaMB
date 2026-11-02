@@ -31,7 +31,9 @@
 #include <chrono>
 #include <ctime>
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 using namespace discamb;
 using namespace std;
@@ -2046,14 +2048,21 @@ int main(int argc, char *argv[])
 		nConsideredStructures = nCompletelyRecognizedStructures = 0;
         cout << "n threads = " << nCores << "\n";
         cout << "    processing:\n";
+#ifdef _OPENMP
+        omp_set_dynamic(0);
         omp_set_num_threads(nCores);
+#endif
 
 
 #pragma omp parallel for num_threads(nCores)        
         for (int structureIdx = 0; structureIdx < nStructures; structureIdx++)
         {
             string error_message;
-            int thread_id = omp_get_thread_num();
+            int thread_id = 0;
+
+#ifdef _OPENMP
+            thread_id = omp_get_thread_num();
+#endif
             structureIdxPerThread[thread_id].push_back(structureIdx);
             if(thread_id==0)
                 cout << "\r" << setw(15) << structureIds[structureIdx];

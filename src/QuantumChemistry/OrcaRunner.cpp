@@ -161,14 +161,17 @@ namespace discamb {
     {
         string env = getenv("PATH");
         vector<string> paths;
-        discamb::string_utilities::split(env, paths, ';');
         bool found;
 
 #ifdef CMAKE_DETECTED_WIN32
+        char split_char = ';';
         string orca_exec = "orca.exe";
 #else
+        char split_char = ':';
         string orca_exec = "orca";
 #endif
+
+        discamb::string_utilities::split(env, paths, split_char);
 
         for (auto& p : paths)
         {

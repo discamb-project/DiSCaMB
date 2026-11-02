@@ -13,6 +13,7 @@
 
 
 #include <cstdio>
+#include <exception>
 #include <fstream>
 #include <memory>
 #include <sstream>

@@ -227,12 +227,14 @@ namespace discamb {
             for (int i = 0; i < 119; i++)
                 if (string(symbols[i]) == symbol)
                     return i;
-            return 0;
-            if (periodicTableData.symbolToAtomicNumber.find(symbol) != periodicTableData.symbolToAtomicNumber.end())
-                return periodicTableData.symbolToAtomicNumber.find(symbol)->second;
-            if (symbol == string("D"))
+            if(symbol == string("D"))
                 return 1;
             return 0;
+            //if (periodicTableData.symbolToAtomicNumber.find(symbol) != periodicTableData.symbolToAtomicNumber.end())
+            //    return periodicTableData.symbolToAtomicNumber.find(symbol)->second;
+            //if (symbol == string("D"))
+            //    return 1;
+            //return 0;
         }
 
         Block block(

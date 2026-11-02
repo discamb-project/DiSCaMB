@@ -97,7 +97,10 @@ void HansenCoppensStructureFactorCalculator::setN_Threads(
 {
     mN_Threads = n;
     #ifdef _OPENMP
+        omp_set_dynamic(0);
         omp_set_num_threads(n);
+    #else
+        mN_Threads = 1;
     #endif
 
 }

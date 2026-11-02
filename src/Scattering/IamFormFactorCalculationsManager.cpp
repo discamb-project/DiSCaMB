@@ -40,6 +40,9 @@ namespace discamb {
         for (atomIdx = 0; atomIdx < nAtoms; atomIdx++)
         {
             type = crystal.atoms[atomIdx].type;
+            if (type == "D")
+                type = "H";
+
             if (type.empty())
             {
                 int atomicNumber=0;
@@ -54,7 +57,6 @@ namespace discamb {
             if (it == atomTypeToIndexMap.end())
             {
                 typeIdx = mFormFactors.size();
-                
                 if (!n_gaussian_form_factors_table::hasFormFactor(type, table_type))
                     on_error::throwException(string("undefined scatterer type: '") + type + string("'"), __FILE__, __LINE__);
 

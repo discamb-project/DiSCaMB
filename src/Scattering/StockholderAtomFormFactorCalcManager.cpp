@@ -700,7 +700,12 @@ namespace discamb {
 
         int nAtoms = includeAtom.size();
         int nHkl = hkl.size();
-        int nThreads = omp_get_max_threads();
+        int nThreads = 1;
+#ifdef _OPENMP            
+        nThreads = mSettings.hardware.nCores;// min<int>(omp_get_max_threads(), mSettings.hardware.nCores);
+        omp_set_dynamic(0);
+        omp_set_num_threads(nThreads);
+#endif
 
         //formFactors[hkl idx][atom idx]
         formFactors.assign(nHkl, vector<complex<double> >(nAtoms, 0.0));
@@ -739,7 +744,10 @@ namespace discamb {
         {
             Vector3d hklCart, twoPiHklCartAu;
             double realPart, imaginaryPart, phase;
-            int threadIdx = omp_get_thread_num();
+            int threadIdx = 0;
+#ifdef _OPENMP                        
+            threadIdx = omp_get_thread_num();
+#endif
             int halfN_Points;
 
             mReciprocalSpaceUnitCell.fractionalToCartesian(hkl[hklIdx], hklCart);
@@ -858,7 +866,12 @@ namespace discamb {
 
 		int nAtoms = includeAtom.size();
 		int nHkl = hkl.size();
-		int nThreads = omp_get_max_threads();
+        int nThreads = 1;
+#ifdef _OPENMP  
+        nThreads = mSettings.hardware.nCores;
+        omp_set_dynamic(0);
+        omp_set_num_threads(nThreads);
+#endif
 		
 		//formFactors[hkl idx][atom idx]
 		formFactors.assign(nHkl, vector<complex<double> >(nAtoms, 0.0));
@@ -897,7 +910,10 @@ namespace discamb {
 		{
 			Vector3d hklCart, twoPiHklCartAu;
 			double realPart, imaginaryPart, phase;
-			int threadIdx = omp_get_thread_num();
+            int threadIdx = 0;
+#ifdef _OPENMP
+            threadIdx = omp_get_thread_num();
+#endif
 			int halfN_Points;
 
 			mReciprocalSpaceUnitCell.fractionalToCartesian(hkl[hklIdx], hklCart);
@@ -1532,7 +1548,13 @@ namespace discamb {
         vector<shared_ptr<ElectronDensityPartition> > edPartitions(1);
         setElectronDensityPartition(subsystemIdx, wfnFileName, format, edPartitions[0]);
 
-		int nThreads = omp_get_max_threads();
+        int nThreads = 1;
+#ifdef _OPENMP
+        //nThreads = min<int>(omp_get_max_threads(), mSettings.hardware.nCores);
+        nThreads = mSettings.hardware.nCores;
+        omp_set_dynamic(0);
+        omp_set_num_threads(nThreads);
+#endif
 
 		for (int i = 1; i < nThreads; i++)
 			edPartitions.push_back(shared_ptr<ElectronDensityPartition>(edPartitions[0]->clone()));
@@ -1570,7 +1592,11 @@ namespace discamb {
 #pragma omp parallel for
 			for (int i = 0; i < nAtomsToBeConsidered; i++)
 			{
-				int threadNumber = omp_get_thread_num();
+
+                int threadNumber = 0;
+#ifdef _OPENMP
+                threadNumber = omp_get_thread_num();
+#endif
 				int atomInCluster = atomIndices[i];
 				int z = mSubsystemAtomicNumbers[subsystemIdx][atomInCluster];
 
@@ -1636,8 +1662,12 @@ namespace discamb {
         setElectronDensityPartition(subsystemIdx, wfnFileName, format, edPartitions[0]);
 		//setHirshfeldPartitition(clusterIdx, wfnFileName, format, hPartitions[0]);
 		
-        int nThreads = min<int>(omp_get_max_threads(), mSettings.hardware.nCores);
+        int nThreads = 1;
+#ifdef _OPENMP        
+        nThreads = mSettings.hardware.nCores;// min<int>(omp_get_max_threads(), mSettings.hardware.nCores);
+        omp_set_dynamic(0);
         omp_set_num_threads(nThreads);
+#endif
 
 		for (int i = 1; i < nThreads; i++)
             edPartitions.push_back(shared_ptr<ElectronDensityPartition>(edPartitions[0]->clone()));
@@ -1677,7 +1707,10 @@ namespace discamb {
 #pragma omp parallel for
 			for (int i=0; i< nAtomsToBeConsidered; i++)
 			{
-				int threadNumber = omp_get_thread_num();
+                int threadNumber = 0;
+#ifdef _OPENMP
+                threadNumber = omp_get_thread_num();
+#endif
 				int atomInCluster = atomIndices[i];
 				int z = mSubsystemAtomicNumbers[subsystemIdx][atomInCluster];
 
