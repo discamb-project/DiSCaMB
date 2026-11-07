@@ -173,6 +173,47 @@ const std::vector<SpaceGroupOperation> &_operations)
     set(operations_subset, mCentering, mObverse, mIsCentrosymmetric, mInversionCenterTranslation);
 }
 
+bool SpaceGroup::isPolar(
+    std::vector<Vector3d>& polarDirections) const
+{   
+    polarDirections.clear();
+    if (mIsCentrosymmetric)
+        return false;
+    Matrix3d rotation, projector;
+    for (const auto& symmOp : mOperations[0][0])
+    {
+        symmOp.getRotation(rotation);
+        projector += rotation;
+    }
+    projector /= mOperations[0][0].size();
+    double asymmetry = 0.0;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            asymmetry += fabs(projector(i, j) - projector(j, i));
+    if (asymmetry > 1e-10)
+        on_error::throwException("problem when looking for space grouop polarity, projection operator is non symmetric", __FILE__, __LINE__);
+    Vector3d vec1, vec2, vec3;
+    double val1, val2, val3;
+    algebra3d::eigensystemRealSymm(projector, vec1, vec2, vec3, val1, val2, val3);
+
+    if (val1 > 1e-10)
+        polarDirections.push_back(vec1);
+    if (val2 > 1e-10)
+        polarDirections.push_back(vec2);
+    if (val3 > 1e-10)
+        polarDirections.push_back(vec3);
+    if (polarDirections.empty())
+        return true;
+}
+
+bool SpaceGroup::isPolar()
+const
+{
+    vector<Vector3d> polarDirections;
+    return isPolar(polarDirections);
+}
+
+
 void SpaceGroup::removeCenteringTranslations(
     std::vector<Vector3<CrystallographicRational> > &t,
     char centering, 

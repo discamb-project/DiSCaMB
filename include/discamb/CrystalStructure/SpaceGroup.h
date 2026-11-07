@@ -81,6 +81,9 @@ public:
 
     bool isCentrosymmetric() const;
 
+    bool isPolar(std::vector<Vector3d>& polarDirections) const;
+    bool isPolar() const;
+
     /** Translation operation associated with inversion operation. I.e. \f$ \mathbf{t} \f$ in \f$ \{\bar{\mathbf{1}}|\mathbf{t}\} \f$.*/
     void inversionCenterTranslation(Vector3<CrystallographicRational> &translation) const;
     /** Returns centering symbol (A, B, C, I, F, R, H) and in the case of rhombohedral lattice specifies setting is obverse. */
