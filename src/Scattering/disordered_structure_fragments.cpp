@@ -643,6 +643,11 @@ namespace disordered_structure_fragments{
             string message = "connectivity information size does not match number of atoms in the crystal";
             on_error::throwException(message, __FILE__, __LINE__);
         }
+        if (!macromolInfo.planes.empty() && macromolInfo.planes.size() != crystal.atoms.size())
+        {
+            string message = "planes information size does not match number of atoms in the crystal";
+            on_error::throwException(message, __FILE__, __LINE__);
+        }
         int nAtomsCrystal = crystal.atoms.size();
         int nParts = ordered_parts.size();
         structureDescriptors.resize(nParts);
@@ -658,6 +663,7 @@ namespace disordered_structure_fragments{
             int nAtomsPart = ordered_parts[partIdx].size();
             vector<vector<int> > connectivity(nAtomsPart);
             vector<bool> planarity(nAtomsPart, false);
+            vector<vector<int> > planes(nAtomsPart);
             vector<int> atomicNumbersPart;
             vector<Vector3d> positionsPart;
             vector<string> labels;
@@ -712,7 +718,15 @@ namespace disordered_structure_fragments{
                             }
                         }
                         planarity[atomIdxInPart] = planar;
-
+                    //planes
+                        for (auto& atomInPlane : macromolInfo.planes[atomIdx])
+                            {
+                                if (atomInPart[atomInPlane.first])
+                                {
+                                    int idxInPart = partLabel2idx[crystal.atoms[atomInPlane.first].label];
+                                    planes[atomIdxInPart].push_back(idxInPart);
+                                }
+                            }
                     }
                     else // planarity descriptor calculation is not implemented for structures without planarity information provided
                         on_error::not_implemented(__FILE__, __LINE__);
@@ -723,7 +737,7 @@ namespace disordered_structure_fragments{
             structureDescriptors[partIdx].set(
                 atomicNumbersPart,
                 positionsPart, connectivity,
-                planarity, labels);
+                planarity, planes, labels);
         }
 
     }
