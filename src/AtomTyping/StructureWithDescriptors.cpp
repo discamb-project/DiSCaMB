@@ -14,6 +14,30 @@ using namespace std;
 namespace {
 
 	int maxRingSize = 8;
+
+    bool ringLiesInOnePlaneGroup(
+        const vector<int> &ring, 
+        const vector<vector<int> > &planes, 
+        const vector<bool> &predefinedAtomicPlanarity, 
+        const vector<discamb::AtomInStructureDescriptors> &atomDescriptors)
+    {
+        bool liesInOnePlane = true;
+        int ringSize = ring.size();
+        int ringRoot = ring[0];
+        const vector<int> &refPlane = planes[ringRoot];
+        for (int i = 0; i < ringSize; i++)
+        {
+            int atomIndex = ring[i];
+            bool isAtomInPlane = i == 0 || find(refPlane.begin(), refPlane.end(), atomIndex) != refPlane.end();
+            bool isAtomFlat = predefinedAtomicPlanarity[atomIndex] || atomDescriptors[atomIndex].nNeighbors < 3;
+            if (!isAtomInPlane || !isAtomFlat)
+            {
+                liesInOnePlane = false;
+                break;
+            }
+        }
+        return liesInOnePlane;
+    }
 }
 
 
@@ -95,6 +119,7 @@ void StructureWithDescriptors::set(
     const std::vector<Vector3d>& positions,
     const std::vector<std::vector<int> >& predefinedConnectivity,
     const std::vector<bool>& predefinedAtomicPlanarity,
+    const std::vector< std::vector<int> >& planes,
     const  std::vector<std::string>& _labels)
 {
     int nAtoms, atomIndex, ringIndex, nRings, ringSize, j, nNeighbors;
@@ -149,18 +174,22 @@ void StructureWithDescriptors::set(
     for (int i = 0; i < nAtoms; i++)
         atomPlanarityEsd[i] = atomDescriptors[i].planarityDisplacementEsd;
 
-    ringCalculator.calculateRings(connectivity, predefinedAtomicPlanarity, maxRingSize, planarRings);
+    vector<bool> noPlanarityPruning(nAtoms, true);
+    ringCalculator.calculateRings(connectivity, noPlanarityPruning, maxRingSize, planarRings);
         
     nRings = planarRings.size();
     vector<vector<pair<int, int> > > atomsRings(nAtoms);
 
     for (ringIndex = 0; ringIndex < nRings; ringIndex++)
     {
-        ringSize = planarRings[ringIndex].size();
-        for (int i = 0; i < ringSize; i++)
+        if (ringLiesInOnePlaneGroup(planarRings[ringIndex], planes, predefinedAtomicPlanarity, atomDescriptors))
         {
-            atomIndex = planarRings[ringIndex][i];
-            atomsRings[atomIndex].push_back({ ringSize , ringIndex });
+            ringSize = planarRings[ringIndex].size();
+            for (int i = 0; i < ringSize; i++)
+            {
+                atomIndex = planarRings[ringIndex][i];
+                atomsRings[atomIndex].push_back({ ringSize , ringIndex });
+            }
         }
     }
 
