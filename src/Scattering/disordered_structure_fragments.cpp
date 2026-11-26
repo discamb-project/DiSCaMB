@@ -648,6 +648,10 @@ namespace disordered_structure_fragments{
             string message = "planes information size does not match number of atoms in the crystal";
             on_error::throwException(message, __FILE__, __LINE__);
         }
+        bool matchingNamesSize = (macromolInfo.atomNames.size() == crystal.atoms.size() && 
+            macromolInfo.residueNames.size() == crystal.atoms.size());
+        if (!matchingNamesSize)
+            clog << "Warning: ARG NE planarity correction not applied because at least one of the names vectors' size does not match atom number.\n";
         int nAtomsCrystal = crystal.atoms.size();
         int nParts = ordered_parts.size();
         structureDescriptors.resize(nParts);
@@ -717,7 +721,9 @@ namespace disordered_structure_fragments{
                                     planar = false;
                             }
                         }
-                        planarity[atomIdxInPart] = planar;
+                        planarity[atomIdxInPart] = planar || (matchingNamesSize && macromolInfo.residueNames[atomIdx] == "ARG" && 
+                            macromolInfo.atomNames[atomIdx] == "NE"); 
+                            //hardcoded planar for ARG NE due to HE missing from planes, assume stripped names
                     //planes
                         for (auto& atomInPlane : macromolInfo.planes[atomIdx])
                             {
